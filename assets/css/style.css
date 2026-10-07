@@ -161,7 +161,7 @@ p { margin: 0; }
 @media (max-width: 900px) {
   .menu-btn { display: inline-flex; }
   .site-header.menu-open { background: rgba(5, 9, 24, .96); border-bottom-color: var(--line); }
-  .nav-links { position: absolute; left: 0; right: 0; top: 100%; flex-direction: column; align-items: stretch; gap: 0; background: rgba(9, 15, 43, .98); border-bottom: 1px solid var(--line); padding: 6px var(--gutter) 20px; visibility: hidden; opacity: 0; transform: translateY(-8px); transition: opacity .25s ease, transform .3s var(--ease), visibility 0s .3s; }
+  .nav-links { position: absolute; left: 0; right: 0; top: 100%; flex-direction: column; align-items: stretch; gap: 0; background: rgb(9, 15, 43); border-bottom: 1px solid var(--line); padding: 6px var(--gutter) 20px; visibility: hidden; opacity: 0; transform: translateY(-8px); transition: opacity .25s ease, transform .3s var(--ease), visibility 0s .3s; }
   .menu-open .nav-links { visibility: visible; opacity: 1; transform: none; transition: opacity .25s ease, transform .3s var(--ease); }
   .nav-links li a:not(.btn) { display: block; padding: 15px 0; border-bottom: 1px solid var(--line); font-size: 1.02rem; }
   .nav-links li a:not(.btn)::after { display: none; }
