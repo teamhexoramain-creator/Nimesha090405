@@ -45,7 +45,7 @@
     const set = open => {
       header.classList.toggle("menu-open", open);
       menuBtn.setAttribute("aria-expanded", String(open));
-      menuBtn.setAttribute("aria-label", open ? "Menu eka wahanna" : "Menu eka arinna");
+      menuBtn.setAttribute("aria-label", open ? "Menu එක වහන්න" : "Menu එක අරින්න");
     };
     menuBtn.addEventListener("click", () => set(!header.classList.contains("menu-open")));
     $$(".nav-links a").forEach(a => a.addEventListener("click", () => set(false)));
@@ -122,7 +122,7 @@
     const sync = () => {
       if (!vBtn) return;
       vBtn.innerHTML = video.paused ? playIcon : pauseIcon;
-      vBtn.setAttribute("aria-label", video.paused ? "Video eka play karanna" : "Video eka pause karanna");
+      vBtn.setAttribute("aria-label", video.paused ? "Video එක play කරන්න" : "Video එක pause කරන්න");
     };
     video.muted = true;
     if (reduce) { video.removeAttribute("autoplay"); video.pause(); userPaused = true; } else tryPlay();
@@ -273,7 +273,7 @@
       pills.forEach(p => {
         p.classList.toggle("offline", !res.live);
         const txt = p.querySelector("[data-rate-text]");
-        if (txt) txt.textContent = "1 USD = LKR " + res.rate.toFixed(2) + (res.live ? " · ada rate eka" : " · approx.");
+        if (txt) txt.textContent = "1 USD = LKR " + res.rate.toFixed(2) + (res.live ? " · අද rate එක" : " · approx.");
       });
       if ("IntersectionObserver" in window && !reduce) {
         const io = new IntersectionObserver(es => es.forEach(e => {

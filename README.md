@@ -61,7 +61,8 @@ then visit http://localhost:3000 (or :8000).
 **Vercel:** `npx vercel` inside the folder.
 
 ## Notes
-- Fonts (Michroma, Manrope, JetBrains Mono) load from Google Fonts.
+- Fonts (Michroma, Manrope, JetBrains Mono, and Noto Sans Sinhala for Sinhala text) load from Google Fonts.
+- Customer-facing text is Sinhala in Sinhala script, with English words (app, logo, Flutter…) left in English.
 - After the site is online, add a share image: put a 1200×630 image in `assets/brand/` and add
   `<meta property="og:image" content="https://YOUR-DOMAIN/assets/brand/share.jpg">` to every page.
 - Animations turn off automatically for people who set "Reduce motion" on their phone.

@@ -29,9 +29,9 @@
     return '<div class="cr-item" data-key="' + k + '">' +
       '<button type="button" class="cr-info" data-toggle="' + k + '"><span class="t">' + esc(it.label) + '</span>' +
       '<span class="s">' + esc(it.note) + '</span><span class="p" data-p="creative:' + k + '"></span></button>' +
-      '<div class="qty"><button type="button" data-d="-1" aria-label="' + esc(it.label) + ' adu karanna">−</button>' +
-      '<input type="number" inputmode="numeric" min="0" max="' + MAXQ + '" value="0" name="cr-' + k + '" aria-label="' + esc(it.label) + ' gana">' +
-      '<button type="button" data-d="1" aria-label="' + esc(it.label) + ' wadi karanna">+</button></div></div>';
+      '<div class="qty"><button type="button" data-d="-1" aria-label="' + esc(it.label) + ' අඩු කරන්න">−</button>' +
+      '<input type="number" inputmode="numeric" min="0" max="' + MAXQ + '" value="0" name="cr-' + k + '" aria-label="' + esc(it.label) + ' ගණන">' +
+      '<button type="button" data-d="1" aria-label="' + esc(it.label) + ' වැඩි කරන්න">+</button></div></div>';
   }
   function buildOptions() {
     $("#opt-type").innerHTML = Object.entries(C.types).map(([k, t]) => tile("radio", "type", k, t.label, t.note, "")).join("");
@@ -80,8 +80,8 @@
     const mb = $("#est-maint-box"); if (mb) mb.hidden = t !== "dev";
     const note = $(".estimate .est-note");
     if (note) note.textContent = t === "dev"
-      ? "Meka estimate ekak. Final price eka free call eken passe fixed quote ekak widiyata denawa. Google / Apple / domain fees wenama."
-      : "Meka estimate ekak. Revisions include. Final price eka chat eken confirm karala wada patan gannawa.";
+      ? "මේක estimate එකක්. Final price එක free call එකෙන් පස්සේ fixed quote එකක් විදියට දෙනවා. Google / Apple / domain fees වෙනම."
+      : "මේක estimate එකක්. Revisions include. Final price එක chat එකෙන් confirm කරලා වැඩ පටන් ගන්නවා.";
   }
 
   /* ---------- enable / disable dev options that don't fit the type ---------- */
@@ -94,7 +94,7 @@
       if (inc) adminBox.checked = false;
       const s = adminBox.parentElement.querySelector(".s");
       const box = adminBox.parentElement.querySelector(".opt-box");
-      if (inc && !s) box.insertAdjacentHTML("beforeend", '<span class="s">Me type ekata danatama include</span>');
+      if (inc && !s) box.insertAdjacentHTML("beforeend", '<span class="s">මේ type එකට දැනටම include</span>');
       if (!inc && s) s.remove();
     }
     $$('input[name="extras"]', form).forEach(i => {
@@ -119,20 +119,20 @@
     el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump");
   }
   const rnd = v => P.formatLKR(P.roundLKR(v, 100));
-  const totalHtml = (lo, hi, sub) => rnd(lo) + '<span class="to">' + (hi != null ? "dakwa " + rnd(hi) : sub) + "</span>";
+  const totalHtml = (lo, hi, sub) => rnd(lo) + '<span class="to">' + (hi != null ? "දක්වා " + rnd(hi) : sub) + "</span>";
 
   /* ---------- current estimate (either track) in one shape ---------- */
   function currentEstimate() {
     if (track() === "creative") {
       const e = P.estimateCreative(C, creativeItems(), val("urgency") || "normal", rate.rate);
       if (!e) return null;
-      return { kind: "creative", lo: e.totalLKR, hi: null, usdText: "≈ USD " + e.usd, time: "Dawas " + e.daysLow + " – " + e.daysHigh,
+      return { kind: "creative", lo: e.totalLKR, hi: null, usdText: "≈ USD " + e.usd, time: "දවස් " + e.daysLow + " – " + e.daysHigh,
         advance: e.advanceLKR, lines: e.lines, raw: e };
     }
     const e = P.estimate(C, selection(), rate.rate);
     if (!e) return null;
     return { kind: "dev", lo: e.lowLKR, hi: e.highLKR, usdText: "≈ USD " + e.usd.toLocaleString("en-US") + " – " + e.usdHigh.toLocaleString("en-US"),
-      time: "Sathi " + e.weeksLow + " – " + e.weeksHigh, advance: e.advanceLKR, lines: e.lines, maintenance: e.maintenanceLKR, raw: e };
+      time: "සති " + e.weeksLow + " – " + e.weeksHigh, advance: e.advanceLKR, lines: e.lines, maintenance: e.maintenanceLKR, raw: e };
   }
 
   /* ---------- render estimate ---------- */
@@ -141,8 +141,8 @@
     const e = currentEstimate();
     const total = $("#est-total"), bar = $("#bar-total");
     if (!e) {
-      total.textContent = track() === "creative" ? "Items thoraganna" : "Type & size thoraganna";
-      bar.textContent = track() === "creative" ? "Items thoraganna" : "Type eka thoraganna";
+      total.textContent = track() === "creative" ? "Items තෝරගන්න" : "Type & size තෝරගන්න";
+      bar.textContent = track() === "creative" ? "Items තෝරගන්න" : "Type එක තෝරගන්න";
       $("#est-usd").textContent = "";
       ["#est-weeks", "#est-adv", "#est-maint"].forEach(s => $(s).textContent = "—");
       $("#est-lines").innerHTML = "";
@@ -168,7 +168,7 @@
     $("#est-usd").textContent = e.usdText;
     $("#est-weeks").textContent = e.time;
     tweenText($("#est-adv"), prev ? prev.advance : null, e.advance, rnd);
-    if (e.maintenance != null) $("#est-maint").textContent = P.formatLKR(e.maintenance) + " / masayata";
+    if (e.maintenance != null) $("#est-maint").textContent = P.formatLKR(e.maintenance) + " / මාසයට";
     $("#est-lines").innerHTML = e.lines.map(l => "<li><span>" + esc(l.label) + "</span><b>" + P.formatLKR(l.lkr) + "</b></li>").join("");
     bar.textContent = P.formatLKR(e.lo) + (e.hi != null ? " +" : "");
     last = e;
@@ -286,7 +286,7 @@
     L.push("WhatsApp: " + v("f-phone"));
     L.push("Email: " + (v("f-email") || "-"));
     L.push("Business: " + (v("f-business") || "-"));
-    L.push("Contact karanna: " + (val("contact") || "WhatsApp"));
+    L.push("Contact කරන්න: " + (val("contact") || "WhatsApp"));
     L.push("");
     L.push("*Idea*");
     L.push("Name: " + (v("f-appname") || "-"));
@@ -319,7 +319,7 @@
     else L.push(P.formatLKR(est.lo) + " (" + est.usdText + ")");
     L.push("Time: " + est.time);
     L.push("Advance (" + C.advancePercent + "%): " + P.formatLKR(est.advance));
-    if (est.kind === "dev") L.push("Maintenance: " + P.formatLKR(est.maintenance) + " / masayata (optional)");
+    if (est.kind === "dev") L.push("Maintenance: " + P.formatLKR(est.maintenance) + " / මාසයට (optional)");
     L.push("Rate: 1 USD = LKR " + rate.rate.toFixed(2) + " (" + rd + ")");
     return L.join("\n");
   }
@@ -339,10 +339,10 @@
     const fallback = () => {
       selectText(pre);
       let ok = false; try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
-      toast(ok ? "Copy kala ✓" : "Text eka select kala — Copy karanna");
+      toast(ok ? "Copy කළා ✓" : "Text එක select කළා — Copy කරන්න");
     };
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(() => toast("Copy kala ✓"), fallback);
+      navigator.clipboard.writeText(text).then(() => toast("Copy කළා ✓"), fallback);
     } else fallback();
   }
 
@@ -394,7 +394,7 @@
     const errs = validate();
     const alert = $("#form-alert");
     if (errs.length) {
-      alert.textContent = "Rathu karapu thanawal " + errs.length + " ka hadanna.";
+      alert.textContent = "රතු කරපු තැනවල් " + errs.length + " ක හදන්න.";
       alert.hidden = false;
       const first = errs[0];
       first.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" });

@@ -35,8 +35,8 @@
     if (!r) return null;
     return r.kind === "maint" ? r.item.maintenanceUsd : r.item.usd;
   }
-  const weeksText = w => { const lo = Math.max(1, Math.round(w)); return "Sathi " + lo + " – " + Math.max(lo + 1, Math.round(w * 1.3)); };
-  const daysText = d => { const lo = Math.max(1, Math.round(d)); return "Dawas " + lo + " – " + Math.max(lo + 1, Math.ceil(d * 1.3)); };
+  const weeksText = w => { const lo = Math.max(1, Math.round(w)); return "සති " + lo + " – " + Math.max(lo + 1, Math.round(w * 1.3)); };
+  const daysText = d => { const lo = Math.max(1, Math.round(d)); return "දවස් " + lo + " – " + Math.max(lo + 1, Math.ceil(d * 1.3)); };
 
   /* {support} {advance} {urgent} {feature:ai} {creative:photo} ... */
   function fill(text) {
@@ -66,39 +66,39 @@
     if (!r) return "";
     const it = r.item, hot = !!ref.featured;
     const amt = usd => '<div class="price-amt' + (hot ? " grad-text" : "") + '" data-price-usd="' + usd + '">' + lkrText(usd) + "</div>";
-    let title = it.label, from = "Patan ganne", price, sub, points = [], href = "start-project.html";
+    let title = it.label, from = "පටන් ගන්නේ", price, sub, points = [], href = "start-project.html";
     if (r.kind === "type") {
       price = amt(it.usd); sub = "≈ USD " + it.usd;
-      points = [it.note, weeksText(it.weeks) + " witara (small)", it.includesAdmin ? "Admin panel include" : ""];
+      points = [it.note, weeksText(it.weeks) + " විතර (small)", it.includesAdmin ? "Admin panel include" : ""];
       href = "start-project.html?type=" + r.key;
     } else if (r.kind === "creative") {
-      price = amt(it.usd); sub = "≈ USD " + it.usd + " · " + it.unit + " ekak";
-      points = [it.note, daysText(it.days) + " witara"];
+      price = amt(it.usd); sub = "≈ USD " + it.usd + " · " + it.unit + " එකක්";
+      points = [it.note, daysText(it.days) + " විතර"];
       href = "start-project.html?track=creative&item=" + r.key;
     } else if (r.kind === "feature") {
       from = "Add-on feature"; price = amt(it.usd); sub = "≈ USD " + it.usd;
-      points = ["App / website / system ekakata ekathu karanna", "Kalayata sathi " + it.weeks + " k ekathu wenawa"];
+      points = ["App / website / system එකකට එකතු කරන්න", "කාලයට සති " + it.weeks + " ක් එකතු වෙනවා"];
     } else if (r.kind === "extra") {
       from = "Launch extra"; price = amt(it.usd); sub = "≈ USD " + it.usd;
       points = [it.note];
     } else if (r.kind === "maint") {
-      title = "Maintenance · " + it.label; from = "Masayata";
-      price = amt(it.maintenanceUsd); sub = "≈ USD " + it.maintenanceUsd + " · masayata";
+      title = "Maintenance · " + it.label; from = "මාසයට";
+      price = amt(it.maintenanceUsd); sub = "≈ USD " + it.maintenanceUsd + " · මාසයට";
       points = [it.note, "Updates, bug fixes, server checks"];
     } else if (r.kind === "design") {
       from = "Design";
       if (it.percent) {
         price = '<div class="price-amt' + (hot ? " grad-text" : "") + '">+' + it.percent + "%</div>";
-        sub = "Project price ekata" + (it.usd ? " + " + money(it.usd) : "");
+        sub = "Project price එකට" + (it.usd ? " + " + money(it.usd) : "");
       } else if (it.usd) { price = amt(it.usd); sub = "≈ USD " + it.usd; }
-      else { price = '<div class="price-amt">Free</div>'; sub = "Design charge ekak na"; }
+      else { price = '<div class="price-amt">Free</div>'; sub = "Design charge එකක් නෑ"; }
       points = [it.note];
     }
     return '<article class="price-card spot rv' + (hot ? " featured" : "") + '" style="--rd:' + (i % 4) + '">' +
       "<h3>" + esc(title) + '</h3><span class="price-from">' + esc(from) + "</span>" +
       "<div>" + price + '<div class="price-usd">' + sub + "</div></div>" +
       "<ul>" + points.filter(Boolean).map(p => "<li>" + esc(p) + "</li>").join("") + "</ul>" +
-      '<a class="btn' + (hot ? " btn-primary" : "") + '" href="' + esc(href) + '">Estimate ganna</a></article>';
+      '<a class="btn' + (hot ? " btn-primary" : "") + '" href="' + esc(href) + '">Estimate ගන්න</a></article>';
   }
 
   /* ---------- animations (pure HTML + CSS, see style.css) ---------- */
@@ -107,7 +107,7 @@
     browser: '<div class="br"><div class="br-top"><i></i><i></i><i></i><span>oyage-business.lk</span></div><div class="br-body"><span class="br-nav"></span><span class="br-h1"></span><span class="br-p"></span><span class="br-cta"></span><div class="br-row"><span></span><span></span><span></span></div></div><span class="an-cursor"></span></div>',
     dashboard: '<div class="db"><div class="db-kpis"><div><small>Sales</small><b>LKR 248K</b></div><div><small>Orders</small><b>1,204</b></div><div><small>Users</small><b>36</b></div></div><div class="db-chart"><i style="--h:38%"></i><i style="--h:56%"></i><i style="--h:44%"></i><i style="--h:72%"></i><i style="--h:60%"></i><i style="--h:86%"></i><i style="--h:70%"></i></div></div>',
     backend: '<div class="be"><div class="be-db"><span></span><span></span><span></span><small>Database</small></div><div class="be-wire"><i></i><i></i><i></i></div><div class="be-panel"><div class="be-head"><span class="be-lock"></span>Admin</div><span class="be-row"></span><span class="be-row"></span><span class="be-row"></span></div></div>',
-    chat: '<div class="ch"><div class="ch-top"><span class="ch-av"></span><b>AI Assistant</b><small>online</small></div><div class="ch-msg me m1">Mage order eka kohenda?</div><div class="ch-msg bot m2"><span class="ch-dots"><i></i><i></i><i></i></span><span class="ch-txt">Order eka ada delivery wenawa.</span></div><div class="ch-msg me m3">Thank you!</div></div>',
+    chat: '<div class="ch"><div class="ch-top"><span class="ch-av"></span><b>AI Assistant</b><small>online</small></div><div class="ch-msg me m1">මගේ order එක කොහෙද?</div><div class="ch-msg bot m2"><span class="ch-dots"><i></i><i></i><i></i></span><span class="ch-txt">Order එක අද delivery වෙනවා.</span></div><div class="ch-msg me m3">Thank you!</div></div>',
     server: '<div class="sv"><div class="sv-rack"><div class="sv-u"><i></i><i></i><span></span></div><div class="sv-u"><i></i><i></i><span></span></div><div class="sv-u"><i></i><i></i><span></span></div><svg class="sv-pulse" viewBox="0 0 160 40"><polyline points="0,20 40,20 48,8 56,32 64,20 96,20 104,5 112,35 120,20 160,20"/></svg></div><ul class="sv-checks"><li>Updates</li><li>Bug fixes</li><li>Domain</li><li>Server checks</li></ul></div>',
     logo: '<div class="lg"><div class="lg-art"><svg class="lg-svg" viewBox="0 0 64 64"><circle class="lg-guide" cx="32" cy="32" r="30"/><path class="lg-guide" d="M2 32h60M32 2v60"/><path class="lg-hex" d="M32 3l26 15v28L32 61 6 46V18z"/></svg><span class="lg-mark"></span></div><div class="lg-sw"><i></i><i></i><i></i></div></div>',
     social: '<div class="so">' + '<div class="so-post"><span class="so-img"></span><span class="so-line"></span><span class="so-act"><i class="so-heart"></i><b>1.2K</b></span></div>'.repeat(3) + "</div>",
@@ -146,16 +146,16 @@
       '<h3><a class="svc-link" href="' + link(s) + '">' + esc(s.name) + "</a></h3>" +
       "<p>" + fill(s.summary) + "</p>" +
       '<div class="tags">' + (s.tags || []).map(t => "<span>" + esc(t) + "</span>").join("") + "</div>" +
-      '<span class="svc-more" aria-hidden="true">Wisthara balanna →</span></article>';
+      '<span class="svc-more" aria-hidden="true">විස්තර බලන්න →</span></article>';
   }
 
   function ctaBand(s) {
-    const wa = s ? "Hi Hexora! Mata " + s.name + " gana katha karanna ona." : "Hi Hexora! Mata project ekak gana katha karanna ona.";
+    const wa = s ? "Hi Hexora! මට " + s.name + " ගැන කතා කරන්න ඕන." : "Hi Hexora! මට project එකක් ගැන කතා කරන්න ඕන.";
     return '<section><div class="wrap"><div class="cta-band rv"><div>' +
-      '<h2 class="display">' + (s ? esc(s.name) + " ona da?" : "Project ekak thiyenawada?") + "</h2>" +
-      '<p class="lead">Prashna tikakata uththara dila minute 2kin estimate price ekak ganna. Salli ona na, commitment ekak na.</p></div>' +
-      '<div class="cta-actions"><a class="btn btn-primary" href="' + esc(s ? ctaHref(s) : "start-project.html") + '">Estimate ganna</a>' +
-      '<a class="btn btn-wa" data-wa-link="' + esc(wa) + '" href="https://wa.me/' + esc((C.whatsapp || "").replace(/\D/g, "")) + '" target="_blank" rel="noopener">WhatsApp karanna</a></div>' +
+      '<h2 class="display">' + (s ? esc(s.name) + " ඕන ද?" : "Project එකක් තියෙනවද?") + "</h2>" +
+      '<p class="lead">ප්‍රශ්න ටිකකට උත්තර දීලා විනාඩි 2කින් estimate price එකක් ගන්න. සල්ලි ඕන නෑ, commitment එකක් නෑ.</p></div>' +
+      '<div class="cta-actions"><a class="btn btn-primary" href="' + esc(s ? ctaHref(s) : "start-project.html") + '">Estimate ගන්න</a>' +
+      '<a class="btn btn-wa" data-wa-link="' + esc(wa) + '" href="https://wa.me/' + esc((C.whatsapp || "").replace(/\D/g, "")) + '" target="_blank" rel="noopener">WhatsApp කරන්න</a></div>' +
       "</div></div></section>";
   }
 
@@ -171,33 +171,33 @@
           '<h1 class="display" data-split style="--d:180ms">' + esc(s.name) + "</h1>" +
           '<p class="lead fade-up" style="--d:500ms">' + fill(s.intro) + "</p>" +
           '<div class="tags fade-up" style="--d:600ms">' + (s.tags || []).map(t => "<span>" + esc(t) + "</span>").join("") + "</div>" +
-          '<div class="hero-actions fade-up" style="--d:700ms"><a class="btn btn-primary" href="' + esc(ctaHref(s)) + '">Estimate ganna' + arrow + "</a>" +
-          '<a class="btn" href="#svc-pricing">Prices balanna</a></div>' +
+          '<div class="hero-actions fade-up" style="--d:700ms"><a class="btn btn-primary" href="' + esc(ctaHref(s)) + '">Estimate ගන්න' + arrow + "</a>" +
+          '<a class="btn" href="#svc-pricing">Prices බලන්න</a></div>' +
         "</div>" +
         '<div class="svc-stage fade-up" style="--d:300ms"><div class="video-frame">' + stageHtml(s) + "</div></div>" +
       "</div></section>" +
 
       '<section id="svc-details" class="svc-section"><div class="wrap"><div class="svc-detail">' +
-        '<div class="svc-box rv"><span class="eyebrow">Mokada labenne</span><h2 class="display">' + esc(s.name) + " eke thiyena dewal</h2>" +
+        '<div class="svc-box rv"><span class="eyebrow">මොකද ලැබෙන්නේ</span><h2 class="display">' + esc(s.name) + " එකේ තියෙන දේවල්</h2>" +
           '<ul class="inc-list">' + (s.includes || []).map(x => "<li>" + fill(x) + "</li>").join("") + "</ul></div>" +
-        '<div class="svc-box rv" style="--rd:1"><span class="eyebrow">Wada karana widiya</span>' +
+        '<div class="svc-box rv" style="--rd:1"><span class="eyebrow">වැඩ කරන විදිය</span>' +
           '<ol class="mini-steps">' + (cat.steps || []).map((st, i) => '<li><span class="n">0' + (i + 1) + "</span><div><b>" + esc(st.t) + "</b><p>" + fill(st.d) + "</p></div></li>").join("") + "</ol></div>" +
       "</div></div></section>" +
 
       '<section id="svc-pricing" class="band"><div class="wrap">' +
-        '<div class="section-head rv"><span class="eyebrow">Pricing</span><h2 class="display">' + esc(s.name) + " ganan</h2>" +
-          '<p class="lead">Meka patan ganna ganan. Ada dollar rate eken LKR walata auto maru wenawa. Final price eka oyata ona features, items gana anuwa wenas wenawa.</p>' +
+        '<div class="section-head rv"><span class="eyebrow">Pricing</span><h2 class="display">' + esc(s.name) + " ගණන්</h2>" +
+          '<p class="lead">මේක පටන් ගන්න ගණන්. අද dollar rate එකෙන් LKR වලට auto මාරු වෙනවා. Final price එක ඔයාට ඕන features, items ගණන අනුව වෙනස් වෙනවා.</p>' +
           '<span class="rate-pill" data-rate-pill><span class="live"></span><span data-rate-text>1 USD = LKR ' + Number(C.fallbackRate).toFixed(2) + " · approx.</span></span></div>" +
         '<div class="prices svc-prices">' + (s.prices || []).map(priceCard).join("") + "</div>" +
       "</div></section>" +
 
       '<section id="svc-faq"><div class="wrap">' +
-        '<div class="section-head center rv"><span class="eyebrow">FAQ</span><h2 class="display">' + esc(s.name) + " gana prashna</h2></div>" +
+        '<div class="section-head center rv"><span class="eyebrow">FAQ</span><h2 class="display">' + esc(s.name) + " ගැන ප්‍රශ්න</h2></div>" +
         '<div class="faq rv">' + faq.map((f, i) => "<details" + (i ? "" : " open") + "><summary>" + esc(f.q) + '</summary><div class="ans"><div><p>' + fill(f.a) + "</p></div></div></details>").join("") + "</div>" +
       "</div></section>" +
 
       (others.length ? '<section class="band"><div class="wrap">' +
-        '<div class="section-head rv"><span class="eyebrow">' + esc(cat.label) + '</span><h2 class="display">Me category eke anith services</h2></div>' +
+        '<div class="section-head rv"><span class="eyebrow">' + esc(cat.label) + '</span><h2 class="display">මේ category එකේ අනිත් services</h2></div>' +
         '<div class="services">' + others.map(card).join("") + "</div>" +
       "</div></section>" : "") +
 
@@ -208,10 +208,10 @@
   function hubHtml(missing) {
     return '<section class="svc-hero svc-hub"><div class="wrap">' +
       '<div class="section-head">' +
-        (missing ? '<div class="form-alert" role="alert">Me service eka hambune na. Pahala list eken service ekak thoraganna.</div>' : "") +
+        (missing ? '<div class="form-alert" role="alert">මේ service එක හම්බුනේ නෑ. පහළ list එකෙන් service එකක් තෝරගන්න.</div>' : "") +
         '<ol class="crumbs fade-up" style="--d:80ms"><li><a href="index.html">Home</a></li><li>Services</li></ol>' +
-        '<h1 class="display" data-split style="--d:150ms">Okkoma services</h1>' +
-        '<p class="lead fade-up" style="--d:450ms">Service ekak thoraganna. Hama ekakama animation eka, mokada labenne, pricing saha FAQ thiyenawa.</p>' +
+        '<h1 class="display" data-split style="--d:150ms">ඔක්කොම services</h1>' +
+        '<p class="lead fade-up" style="--d:450ms">Service එකක් තෝරගන්න. හැම එකකම animation එක, මොකද ලැබෙන්නේ, pricing සහ FAQ තියෙනවා.</p>' +
       "</div>" +
       Object.keys(S.categories).map(k =>
         '<div class="svc-group rv"><span class="svc-label ' + k + '">' + esc(S.categories[k].label) + '</span><p class="muted">' + esc(S.categories[k].note) + "</p></div>" +

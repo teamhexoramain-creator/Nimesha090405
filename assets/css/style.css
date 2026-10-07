@@ -26,9 +26,10 @@
   --wa: #1FA855;
   --grad: linear-gradient(120deg, var(--cyan) 0%, var(--blue) 52%, var(--violet) 100%);
 
-  --f-display: "Michroma", "Eurostile", "Arial Black", sans-serif;
-  --f-body: "Manrope", "Segoe UI", system-ui, -apple-system, sans-serif;
-  --f-mono: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+  /* Sinhala letters fall through to Noto Sans Sinhala in every stack */
+  --f-display: "Michroma", "Noto Sans Sinhala", "Eurostile", "Arial Black", sans-serif;
+  --f-body: "Manrope", "Noto Sans Sinhala", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --f-mono: "JetBrains Mono", "Noto Sans Sinhala", "Cascadia Code", Consolas, monospace;
 
   --r: 16px;
   --r-lg: 24px;
