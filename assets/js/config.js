@@ -14,6 +14,9 @@ window.HEXORA = {
   facebook: "",                          // add your Facebook page link (https://...)
   youtube: "",                           // add your YouTube channel link (https://...)
 
+  /* ---------- Notice bar at the top of every page (admin panel → Notice) ---------- */
+  notice: { show: false, text: "", linkText: "", link: "" },
+
   /* ---------- Exchange rate ---------- */
   rateApi: "https://open.er-api.com/v6/latest/USD",   // free, no API key
   fallbackRate: 331,                     // LKR for 1 USD, used if the API fails

@@ -240,11 +240,32 @@
   $$("[data-wa-link]").forEach(a => { a.href = window.hxWhatsAppLink(a.getAttribute("data-wa-link")); });
   $$("[data-email]").forEach(el => { el.textContent = C.email; if (el.tagName === "A") el.href = "mailto:" + C.email; });
   $$("[data-phone]").forEach(el => { el.textContent = C.phoneDisplay; if (el.tagName === "A") el.href = "tel:+" + wa; });
+  $$("[data-phone-label]").forEach(el => { el.textContent = C.phoneDisplay; });
   $$("[data-facebook]").forEach(a => { if (C.facebook) a.href = C.facebook; else (a.closest("li") || a).hidden = true; });
   $$("[data-youtube]").forEach(a => { if (C.youtube) a.href = C.youtube; else (a.closest("li") || a).hidden = true; });
   $$("[data-advance]").forEach(el => el.textContent = (C.advancePercent || 50) + "%");
   $$("[data-support]").forEach(el => { const m = C.freeSupportMonths || 1; el.textContent = m + (m === 1 ? " month" : " months"); });
   $$("[data-year]").forEach(el => el.textContent = new Date().getFullYear());
+
+  /* ---------- notice bar (set from the admin panel) ---------- */
+  const N = C.notice || {};
+  let noticeClosed = "";
+  try { noticeClosed = sessionStorage.getItem("hx_notice_closed") || ""; } catch (e) { /* storage blocked */ }
+  if (N.show && N.text && noticeClosed !== N.text) {
+    const bar = document.createElement("div");
+    bar.className = "notice-bar"; bar.setAttribute("role", "status");
+    const txt = document.createElement("span"); txt.textContent = N.text; bar.appendChild(txt);
+    if (N.link && /^(https:\/\/|[\w-]+\.html)/.test(N.link)) {
+      const a = document.createElement("a"); a.href = N.link; a.textContent = N.linkText || "බලන්න →";
+      if (/^https:/.test(N.link)) { a.target = "_blank"; a.rel = "noopener"; }
+      bar.appendChild(a);
+    }
+    const x = document.createElement("button");
+    x.type = "button"; x.className = "notice-close"; x.setAttribute("aria-label", "Notice එක වහන්න"); x.textContent = "×";
+    x.addEventListener("click", () => { bar.remove(); try { sessionStorage.setItem("hx_notice_closed", N.text); } catch (e) { /* ignore */ } });
+    bar.appendChild(x);
+    document.body.insertBefore(bar, document.body.firstChild);
+  }
 
   /* ---------- live prices on the home page ---------- */
   function countUp(el, to) {

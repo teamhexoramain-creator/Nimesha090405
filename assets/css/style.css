@@ -339,6 +339,18 @@ section { padding-block: clamp(70px, 9vw, 120px); }
 .foot-bottom { margin-top: 40px; padding-top: 22px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; color: var(--faint); font-size: .86rem; }
 @media (max-width: 780px) { .foot-grid { grid-template-columns: 1fr; } }
 
+/* admin lock (footer corner) */
+.foot-end { display: inline-flex; align-items: center; gap: 12px; }
+.admin-lock { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; color: var(--faint); opacity: .5; transition: opacity .2s ease, color .2s ease, background-color .2s ease; }
+.admin-lock:hover, .admin-lock:focus-visible { opacity: 1; color: var(--cyan); background: var(--surface); }
+.admin-lock svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* notice bar (admin panel → Notice) */
+.notice-bar { position: relative; z-index: 51; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px 14px; padding: 10px 48px; background: var(--grad); color: #fff; font-weight: 700; font-size: .92rem; text-align: center; }
+.notice-bar a { color: #fff; text-underline-offset: 3px; }
+.notice-close { position: absolute; right: 10px; top: 50%; width: 30px; height: 30px; margin-top: -15px; border: 0; border-radius: 50%; background: rgba(5, 9, 24, .25); color: #fff; font-size: 1.1rem; line-height: 1; cursor: pointer; }
+.notice-close:hover { background: rgba(5, 9, 24, .45); }
+
 /* floating WhatsApp button */
 .wa-float { position: fixed; right: 18px; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); z-index: 45; width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: var(--wa); box-shadow: 0 14px 34px -10px rgba(31, 168, 85, .9); transition: transform .25s var(--ease); }
 .wa-float:hover { transform: scale(1.08); }

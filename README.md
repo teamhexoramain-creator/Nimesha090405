@@ -46,6 +46,21 @@ hexora-website/
 - `anim` picks the built-in animation (`phone`, `browser`, `dashboard`, `backend`, `chat`, `server`, `logo`, `social`, `photo`, `timeline`, `uiux`). To show your own video instead, set `video: "assets/video/your-file.mp4"`.
 - New service: copy one block in `list`, give it a new `slug`, and add a card linking to it in the Services section of `index.html`.
 
+## Admin panel (`admin.html`)
+Open it from the small lock icon in the bottom-right corner of any page's footer (or go to `/admin.html`).
+
+1. **PIN** (6 digits). Only a PBKDF2 hash of it is stored, in `assets/js/admin-pin.js`. Change it from the **Security** tab. 5 wrong tries lock the screen for 60 seconds.
+2. **GitHub token**, once per device. On GitHub: Settings → Developer settings → Fine-grained tokens → Generate new token → Repository access: only `Nimesha090405` → Permissions: **Contents: Read and write**. Paste it into the admin panel. It is stored only on that device, encrypted with the PIN, and sent only to `api.github.com`.
+3. **Save to GitHub** commits `assets/js/config.js` / `services.js` to the repo's default branch (pick another branch in **Security**). Your hosting (GitHub Pages / Netlify) rebuilds the site from that branch.
+
+Tabs: Dashboard, Notice (a bar at the top of every page), Contact, Prices, Services (text, FAQ, prices, animation, new services), History (go back to an earlier version), Security (PIN, branch, disconnect).
+
+Good to know:
+- The PIN only hides the panel. The GitHub token is what allows changes, so never share it. If a device is lost, delete the token on GitHub (Settings → Developer settings → Fine-grained tokens).
+- A new PIN starts working after the site redeploys with the new `admin-pin.js`. Other devices then need the token again.
+- A new service appears on the service pages; add a card for it in the Services section of `index.html` if you want it on the home page too.
+- Customer project requests still go to WhatsApp / Email. Listing them in the admin panel needs a database (Firebase or Google Sheets).
+
 ## How to open it on your computer
 Double-click `index.html`. For the live exchange rate to work, open it through a local server:
 ```
