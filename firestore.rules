@@ -1,0 +1,43 @@
+rules_version = '2';
+
+// HEXORA — Firestore security rules.
+// Paste this into Firebase console → Firestore Database → Rules → Publish.
+// Change ADMIN_EMAIL below to the admin user's email (the same as adminEmail in assets/js/firebase-config.js).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email == 'ADMIN_EMAIL';
+    }
+    function text(field, max) {
+      return request.resource.data[field] is string && request.resource.data[field].size() <= max;
+    }
+
+    // Site content (prices, contact, services, notice): everyone can read, only the admin can change.
+    match /site/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Older saved versions for the History tab.
+    match /history/{id} {
+      allow read, write: if isAdmin();
+    }
+
+    // Project requests: anyone can send one from start-project.html; only the admin can see or change them.
+    match /requests/{id} {
+      allow create: if request.resource.data.keys().hasOnly(['ref', 'name', 'phone', 'email', 'business', 'contact', 'track', 'estimate', 'message', 'status', 'createdAt'])
+        && request.resource.data.keys().hasAll(['ref', 'name', 'phone', 'message', 'status', 'createdAt'])
+        && text('ref', 20) && text('name', 100) && request.resource.data.name.size() > 1
+        && text('phone', 30) && text('message', 6000)
+        && (!('email' in request.resource.data) || text('email', 120))
+        && (!('business' in request.resource.data) || text('business', 120))
+        && (!('contact' in request.resource.data) || text('contact', 20))
+        && (!('track' in request.resource.data) || request.resource.data.track in ['dev', 'creative'])
+        && (!('estimate' in request.resource.data) || text('estimate', 60))
+        && request.resource.data.status == 'new'
+        && request.resource.data.createdAt == request.time;
+      allow read, update, delete: if isAdmin();
+    }
+  }
+}

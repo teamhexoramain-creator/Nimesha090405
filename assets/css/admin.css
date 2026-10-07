@@ -114,6 +114,28 @@
   .ad-svc-list { position: static; max-height: none; }
 }
 
+/* requests */
+.ad-badge { display: inline-grid; place-items: center; min-width: 20px; height: 20px; margin-left: 4px; padding: 0 6px; border-radius: 999px; background: var(--danger); color: #fff; font-family: var(--f-mono); font-size: .7rem; }
+.ad-filters { display: flex; flex-wrap: wrap; gap: 6px; flex: 1 1 auto; }
+.ad-filters button { padding: 7px 12px; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: var(--muted); font-weight: 700; font-size: .84rem; cursor: pointer; }
+.ad-filters button span { margin-left: 2px; font-family: var(--f-mono); font-size: .74rem; color: var(--faint); }
+.ad-filters button[aria-pressed="true"] { color: var(--fg); border-color: var(--cyan); background: rgba(22, 217, 255, .07); }
+.ad-reqs { display: grid; gap: 12px; }
+.ad-req { display: grid; gap: 10px; padding: 14px; border-radius: 14px; border: 1px solid var(--line); border-left: 3px solid var(--faint); background: var(--bg-2); min-width: 0; }
+.ad-req.s-new { border-left-color: var(--cyan); }
+.ad-req.s-contacted { border-left-color: var(--violet); }
+.ad-req.s-done { border-left-color: var(--ok); opacity: .8; }
+.ad-req-head { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: flex-start; }
+.ad-req-head > div { display: grid; gap: 2px; min-width: 0; }
+.ad-req-head small { color: var(--faint); font-size: .78rem; }
+.ad-req-status { width: auto; min-height: 36px; padding: 6px 10px; font-size: .84rem; }
+.ad-req-meta { display: flex; flex-wrap: wrap; gap: 6px; }
+.ad-req-meta span { padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); font-size: .78rem; }
+.ad-req-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ad-req-actions .ad-mini { margin-left: auto; }
+.ad-req details summary { cursor: pointer; color: var(--cyan); font-size: .84rem; font-weight: 700; }
+.ad-req pre { margin-top: 8px; padding: 12px; border-radius: 10px; background: var(--surface); color: var(--muted); font-family: var(--f-mono); font-size: .78rem; line-height: 1.55; white-space: pre-wrap; word-break: break-word; max-height: 360px; overflow: auto; }
+
 /* notice preview */
 .ad-preview { display: grid; gap: 6px; }
 .notice-bar.static { position: static; border-radius: 12px; }

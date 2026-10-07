@@ -234,6 +234,7 @@
               Copy කරන්න
             </button>
           </div>
+          <p class="saved-note" id="saved-note" hidden>✓ Request එක Hexora වලට ලැබුණා. WhatsApp හරි Email එකෙන් එව්වොත් ඉක්මනට reply කරන්න පුළුවන්.</p>
           <p class="contact-line">Button එක වැඩ නැත්නම්, copy කරලා <b data-phone-label>076 679 2617</b> (WhatsApp) හරි <b data-email>teamhexoramain@gmail.com</b> ට එවන්න.</p>
           <pre id="summary-text"></pre>
           <button class="btn" id="edit-btn" type="button">← වෙනස් කරන්න</button>
@@ -303,9 +304,8 @@
 
 <div class="toast" id="toast" role="status"></div>
 
+<script src="assets/js/firebase-config.js"></script>
 <script src="assets/js/config.js"></script>
-<script src="assets/js/pricing.js"></script>
-<script src="assets/js/main.js"></script>
-<script src="assets/js/planner.js"></script>
+<script src="assets/js/boot.js" data-load="pricing.js main.js planner.js"></script>
 </body>
 </html>

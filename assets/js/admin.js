@@ -1,25 +1,26 @@
-/* HEXORA — admin panel (admin.html)
-   1. PIN screen. The PIN is checked against a PBKDF2 hash in admin-pin.js.
-      It only hides the panel; it is not what protects the site.
-   2. GitHub token. This is what really allows changes. It is kept on this
-      device only, encrypted with the PIN, and sent only to api.github.com.
-   3. Saving rewrites assets/js/config.js, services.js or admin-pin.js through
-      the GitHub contents API. The hosting rebuilds the site from that branch. */
+/* HEXORA — admin panel (admin.html), backed by Firebase (REST, no SDK).
+   • Log in: the 6-digit PIN is the password of one Firebase Auth user
+     (HX_FIREBASE.adminEmail). Firebase checks it; the PIN is not in the site code.
+   • Content: prices, contact, services and the notice bar are saved to
+     Firestore (site/content). The public pages load them through boot.js.
+   • Requests: the project form saves every request to Firestore (requests).
+   • History: every save also keeps a copy in Firestore (history). */
 (function () {
   "use strict";
-  const A = window.HX_ADMIN, P = window.HXPrice;
+  const F = window.HX_FIREBASE || {}, P = window.HXPrice;
   const root = document.getElementById("admin-root");
-  if (!root || !A || !P) return;
+  if (!root || !P) return;
 
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
   const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const clone = o => JSON.parse(JSON.stringify(o));
-  const PATHS = { config: "assets/js/config.js", services: "assets/js/services.js", pin: "assets/js/admin-pin.js" };
-  const KEYS = { token: "hx_admin_token_v1", branch: "hx_admin_branch_v1", tries: "hx_admin_tries_v1" };
-  const PIN_LEN = 6, MAX_TRIES = 5, LOCK_MS = 60000, IDLE_MS = 30 * 60000, PIN_ITER = 250000;
+  const KEYS = { tries: "hx_admin_tries_v1" };
+  const PIN_LEN = 6, MAX_TRIES = 5, LOCK_MS = 60000, IDLE_MS = 30 * 60000;
   const ANIMS = ["phone", "browser", "dashboard", "backend", "chat", "server", "logo", "social", "photo", "timeline", "uiux"];
-  const S = { pin: "", token: "", branch: "", defaultBranch: "", files: {}, data: {}, saved: {}, tab: "home", svc: 0, last: Date.now() };
+  const STATUS = [["new", "New"], ["contacted", "Contacted"], ["done", "Done"]];
+  const S = { auth: null, content: { exists: false, updateTime: "" }, data: {}, saved: {}, reqs: null, reqFilter: "all", tab: "home", svc: 0, last: Date.now() };
+  const ready = !!(F.apiKey && F.projectId && F.adminEmail);
 
   const store = {
     get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
@@ -27,107 +28,77 @@
     del(k) { try { localStorage.removeItem(k); } catch (e) { /* storage blocked */ } }
   };
 
-  /* ---------- crypto (Web Crypto) ---------- */
-  const enc = new TextEncoder(), dec = new TextDecoder();
-  const hex = buf => Array.from(new Uint8Array(buf), b => b.toString(16).padStart(2, "0")).join("");
-  const unhex = h => new Uint8Array((h.match(/../g) || []).map(x => parseInt(x, 16)));
-  const randHex = n => hex(crypto.getRandomValues(new Uint8Array(n)));
-  async function pbkdf2(secret, saltHex, iterations) {
-    const key = await crypto.subtle.importKey("raw", enc.encode(secret), "PBKDF2", false, ["deriveBits"]);
-    return crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt: unhex(saltHex), iterations: iterations }, key, 256);
-  }
-  const pinHash = async (pin, salt, iter) => hex(await pbkdf2(pin, salt, iter));
-  async function aesKey(pin, salt) {
-    return crypto.subtle.importKey("raw", await pbkdf2(pin, salt, 150000), "AES-GCM", false, ["encrypt", "decrypt"]);
-  }
-  async function sealToken(token, pin) {
-    const salt = randHex(16), iv = crypto.getRandomValues(new Uint8Array(12));
-    const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, await aesKey(pin, salt), enc.encode(token));
-    return { salt: salt, iv: hex(iv), ct: hex(ct), at: new Date().toISOString() };
-  }
-  async function openToken(box, pin) {
-    const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: unhex(box.iv) }, await aesKey(pin, box.salt), unhex(box.ct));
-    return dec.decode(pt);
-  }
-
-  /* ---------- GitHub contents API ---------- */
-  const repoPath = () => "/repos/" + A.repo.owner + "/" + A.repo.name;
-  async function gh(path, opts) {
-    opts = opts || {};
-    const headers = { Accept: "application/vnd.github+json", Authorization: "Bearer " + S.token, "X-GitHub-Api-Version": "2022-11-28" };
-    if (opts.body) headers["Content-Type"] = "application/json";
-    const r = await fetch("https://api.github.com" + path, { method: opts.method || "GET", headers: headers, body: opts.body, cache: "no-store" });
+  /* ---------- Firebase REST ---------- */
+  async function http(url, opts) {
+    let r;
+    try { r = await fetch(url, Object.assign({ cache: "no-store" }, opts)); }
+    catch (e) { const er = new Error("network"); er.reason = "NETWORK"; throw er; }
+    const body = r.status === 204 ? null : await r.json().catch(() => null);
     if (!r.ok) {
-      const e = new Error("GitHub " + r.status); e.status = r.status;
-      try { e.detail = (await r.json()).message; } catch (x) { /* no body */ }
-      throw e;
+      const x = (body && body.error) || {};
+      const er = new Error(x.message || "HTTP " + r.status);
+      er.status = r.status; er.reason = String(x.status || ""); er.msg = String(x.message || "");
+      throw er;
     }
-    return r.status === 204 ? null : r.json();
+    return body;
   }
-  const b64encode = text => { let bin = ""; enc.encode(text).forEach(b => { bin += String.fromCharCode(b); }); return btoa(bin); };
-  const b64decode = b64 => dec.decode(Uint8Array.from(atob(String(b64).replace(/\s/g, "")), c => c.charCodeAt(0)));
-  async function readFile(path, ref) {
-    const j = await gh(repoPath() + "/contents/" + path + "?ref=" + encodeURIComponent(ref || S.branch));
-    return { text: b64decode(j.content), sha: j.sha };
+  const json = body => ({ method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  function setAuth(id, refresh, expiresIn, email) {
+    S.auth = { id: id, refresh: refresh, exp: Date.now() + (Number(expiresIn) || 3600) * 1000, email: email || (S.auth && S.auth.email) || F.adminEmail };
   }
-  function writeFile(path, text, sha, message) {
-    const body = { message: message, content: b64encode(text), branch: S.branch };
-    if (sha) body.sha = sha;
-    return gh(repoPath() + "/contents/" + path, { method: "PUT", body: JSON.stringify(body) });
+  async function signIn(pin) {
+    const j = await http("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=" + encodeURIComponent(F.apiKey),
+      json({ email: F.adminEmail, password: pin, returnSecureToken: true }));
+    setAuth(j.idToken, j.refreshToken, j.expiresIn, j.email);
   }
-  // the data files are our own plain "window.X = {...}" scripts
-  function evalData(text, name) {
-    const w = {};
-    new Function("window", text)(w);
-    if (!w[name]) throw new Error(name + " not found");
-    return w[name];
+  async function idToken() {
+    if (!S.auth) { const er = new Error("signed out"); er.reason = "UNAUTHENTICATED"; throw er; }
+    if (Date.now() > S.auth.exp - 5 * 60000) {
+      const j = await http("https://securetoken.googleapis.com/v1/token?key=" + encodeURIComponent(F.apiKey), {
+        method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: "grant_type=refresh_token&refresh_token=" + encodeURIComponent(S.auth.refresh)
+      });
+      setAuth(j.id_token, j.refresh_token, j.expires_in);
+    }
+    return S.auth.id;
   }
-
-  /* ---------- files written back to the repo ---------- */
-  const CONFIG_HEAD = "/* ==========================================================================\n" +
-    "   HEXORA — SITE SETTINGS\n" +
-    "   Saved from the admin panel (admin.html). You can still edit it by hand.\n" +
-    "   --------------------------------------------------------------------------\n" +
-    "   • All prices are in US DOLLARS (USD).\n" +
-    "   • The site gets today's USD → LKR rate automatically and shows LKR.\n" +
-    "   • If the live rate can't be loaded, \"fallbackRate\" is used.\n" +
-    "   ========================================================================== */\n\n";
-  const SERVICES_HEAD = "/* ==========================================================================\n" +
-    "   HEXORA — SERVICES  (each service gets its own page: service.html?s=<slug>)\n" +
-    "   Saved from the admin panel (admin.html). You can still edit it by hand.\n" +
-    "   --------------------------------------------------------------------------\n" +
-    "   • \"prices\" points to items in config.js: { type }, { creative }, { feature },\n" +
-    "     { extra }, { maint } or { design }. featured: true highlights one card.\n" +
-    "   • Text can use {support}, {advance}, {urgent} or a price like {creative:photo}.\n" +
-    "   • anim = phone, browser, dashboard, backend, chat, server, logo, social, photo,\n" +
-    "     timeline or uiux. video = \"assets/video/file.mp4\" shows a video instead.\n" +
-    "   ========================================================================== */\n\n";
-  const PIN_HEAD = "/* HEXORA — admin panel lock (admin.html).\n" +
-    "   Only a PBKDF2-SHA256 hash of the PIN is stored here, never the PIN itself.\n" +
-    "   Change the PIN from the admin panel: Security tab. */\n";
-  const fileText = {
-    config: o => CONFIG_HEAD + "window.HEXORA = " + JSON.stringify(o, null, 2) + ";\n",
-    services: o => SERVICES_HEAD + "window.HX_SERVICES = " + JSON.stringify(o, null, 2) + ";\n",
-    pin: o => PIN_HEAD + "window.HX_ADMIN = " + JSON.stringify(o, null, 2) + ";\n"
-  };
-  const dirty = k => S.saved[k] != null && JSON.stringify(S.data[k]) !== S.saved[k];
-  const anyDirty = () => dirty("config") || dirty("services");
+  async function changePin(pin) {
+    const j = await http("https://identitytoolkit.googleapis.com/v1/accounts:update?key=" + encodeURIComponent(F.apiKey),
+      json({ idToken: await idToken(), password: pin, returnSecureToken: true }));
+    setAuth(j.idToken, j.refreshToken, j.expiresIn);
+  }
+  const DOCS = () => "https://firestore.googleapis.com/v1/projects/" + encodeURIComponent(F.projectId) + "/databases/(default)/documents";
+  async function fs(method, path, body, query) {
+    const headers = { Authorization: "Bearer " + await idToken() };
+    if (body) headers["Content-Type"] = "application/json";
+    return http(DOCS() + path + (query ? "?" + query : ""), { method: method, headers: headers, body: body ? JSON.stringify(body) : undefined });
+  }
+  const val = v => v instanceof Date ? { timestampValue: v.toISOString() } : typeof v === "boolean" ? { booleanValue: v } : { stringValue: String(v == null ? "" : v) };
+  const toFields = o => { const f = {}; Object.keys(o).forEach(k => { f[k] = val(o[k]); }); return f; };
+  const unval = v => !v ? null : "stringValue" in v ? v.stringValue : "timestampValue" in v ? v.timestampValue : "booleanValue" in v ? v.booleanValue :
+    "integerValue" in v ? Number(v.integerValue) : "doubleValue" in v ? v.doubleValue : null;
+  const fromDoc = d => { const o = { id: d.name.split("/").pop(), updateTime: d.updateTime }; Object.keys(d.fields || {}).forEach(k => { o[k] = unval(d.fields[k]); }); return o; };
+  const mask = keys => keys.map(k => "updateMask.fieldPaths=" + encodeURIComponent(k)).join("&");
+  async function query(coll, orderBy, limit) {
+    const rows = await fs("POST", ":runQuery", { structuredQuery: { from: [{ collectionId: coll }], orderBy: [{ field: { fieldPath: orderBy }, direction: "DESCENDING" }], limit: limit } });
+    return (rows || []).filter(r => r.document).map(r => fromDoc(r.document));
+  }
 
   /* ---------- small helpers ---------- */
+  const dirty = k => S.saved[k] != null && JSON.stringify(S.data[k]) !== S.saved[k];
+  const anyDirty = () => dirty("config") || dirty("services");
   const icon = (inner, cls) => '<svg class="' + (cls || "ad-ico") + '" viewBox="0 0 24 24" aria-hidden="true">' + inner + "</svg>";
   const I = {
     lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
     up: '<path d="M12 19V5M6 11l6-6 6 6"/>', down: '<path d="M12 5v14M6 13l6 6 6-6"/>',
     del: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>', back: '<path d="M14 6l-6 6 6 6"/>',
-    ext: '<path d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6"/>', plus: '<path d="M12 5v14M5 12h14"/>'
+    ext: '<path d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6"/>', plus: '<path d="M12 5v14M5 12h14"/>',
+    reload: '<path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/>'
   };
   const lkr = usd => P.formatLKR(P.smartRound((Number(usd) || 0) * (Number(S.data.config.fallbackRate) || 0), S.data.config));
-  const fmtDate = iso => { const d = new Date(iso); return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) + " · " + d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }); };
+  const fmtDate = iso => { if (!iso) return "—"; const d = new Date(iso); return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) + " · " + d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }); };
   function get(path) { return path.split(".").reduce((o, k) => (o == null ? undefined : o[k]), S.data); }
-  function set(path, val) {
-    const ks = path.split("."), last = ks.pop();
-    ks.reduce((o, k) => o[k], S.data)[last] = val;
-  }
+  function set(path, v) { const ks = path.split("."), last = ks.pop(); ks.reduce((o, k) => o[k], S.data)[last] = v; }
   let toastT;
   function toast(msg, bad) {
     const t = $("#ad-toast"); if (!t) return;
@@ -142,23 +113,32 @@
     return false;
   }
   function errText(e) {
-    if (e.status === 401) return "GitHub token එක වැරදියි හරි expire වෙලා.";
-    if (e.status === 403) return "GitHub token එකට මේ repo එක වෙනස් කරන්න permission නෑ (Contents: Read and write).";
-    if (e.status === 404) return "Repo එක හරි file එක හම්බුනේ නෑ. Token එකට " + A.repo.name + " repo එකට access දීලා තියෙනවද බලන්න.";
-    if (e.status === 409 || e.status === 422) return "GitHub එකේ file එක මේ අතරේ වෙනස් වෙලා. Reload කරලා ආයෙත් try කරන්න.";
-    return (e.detail || e.message || "Error") + "";
+    const m = (e.msg || e.message || "") + " " + (e.reason || "");
+    if (/INVALID_LOGIN_CREDENTIALS|INVALID_PASSWORD|EMAIL_NOT_FOUND/.test(m)) return "PIN එක වැරදියි.";
+    if (/TOO_MANY_ATTEMPTS/.test(m)) return "වැරදි PIN ගොඩක් ගැහුව නිසා Firebase එක ටික වෙලාවකට lock කරලා. පස්සේ try කරන්න.";
+    if (/USER_DISABLED/.test(m)) return "Firebase එකේ admin account එක disable කරලා.";
+    if (/PERMISSION_DENIED/.test(m)) return "Firebase rules වලින් permission නෑ. Rules වල admin email එක හරිද බලන්න.";
+    if (/FAILED_PRECONDITION|ABORTED|ALREADY_EXISTS/.test(m)) return "මේ අතරේ වෙන තැනකින් data වෙනස් වෙලා. Reload කරලා ආයෙත් try කරන්න.";
+    if (/CREDENTIAL_TOO_OLD|TOKEN_EXPIRED|UNAUTHENTICATED/.test(m)) return "Login එක පරණ වෙලා. Lock කරලා ආයෙත් log වෙන්න.";
+    if (/WEAK_PASSWORD/.test(m)) return "PIN එක අඩුම තරමේ digits 6ක් වෙන්න ඕන.";
+    if (/API_KEY|API key/i.test(m)) return "Firebase apiKey එක වැරදියි (firebase-config.js).";
+    if (/NETWORK/.test(m)) return "Internet / Firebase එකට connect වෙන්න බැරි උනා.";
+    return (e.msg || e.message || "Error") + "";
   }
+  const gate = inner => '<section class="ad-gate"><div class="ad-gate-card">' + inner + "</div></section>";
 
   /* ==================== 1. PIN screen ==================== */
   function lockScreen(msg) {
-    S.token = ""; S.pin = "";
-    if (!window.crypto || !crypto.subtle) {
-      root.innerHTML = gate('<h1>Admin</h1><p class="ad-gate-msg">මේ page එක https:// හරි localhost හරහා open කරන්න. (Browser එකේ secure crypto නෑ.)</p>');
+    S.auth = null;
+    if (!ready) {
+      root.innerHTML = gate("<h1>Firebase setup</h1>" +
+        '<p class="muted">Admin panel එක වැඩ කරන්න Firebase project එකක් ඕන. <code>assets/js/firebase-config.js</code> එකේ apiKey, projectId, adminEmail තාම දාලා නෑ.</p>' +
+        '<p class="ad-note">Steps ටික README එකේ "Admin panel" කොටසේ තියෙනවා.</p><a class="ad-back" href="index.html">← Site එකට</a>');
       return;
     }
     root.innerHTML = gate(
       '<span class="logo-part lp-mark ad-gate-mark" aria-hidden="true"></span>' +
-      "<h1>Admin</h1><p class=\"muted\">PIN එක ගහන්න</p>" +
+      '<h1>Admin</h1><p class="muted">PIN එක ගහන්න</p>' +
       '<div class="pin-dots" id="pin-dots" aria-hidden="true">' + "<i></i>".repeat(PIN_LEN) + "</div>" +
       '<input class="pin-input" id="pin-input" type="password" inputmode="numeric" autocomplete="off" maxlength="' + PIN_LEN + '" aria-label="PIN">' +
       '<p class="ad-gate-msg" id="pin-msg" role="alert">' + esc(msg || "") + "</p>" +
@@ -172,15 +152,21 @@
       const tries = store.get(KEYS.tries) || { n: 0, until: 0 };
       if (Date.now() < tries.until) { msgEl.textContent = "Lock එක ඇරෙන්න තත්පර " + Math.ceil((tries.until - Date.now()) / 1000) + "ක් ඉන්න."; entry = ""; input.value = ""; paint(); return; }
       busy = true; msgEl.textContent = "Check කරනවා…";
-      const ok = (await pinHash(entry, A.pin.salt, A.pin.iterations)) === A.pin.hash;
-      busy = false;
-      if (ok) { store.del(KEYS.tries); S.pin = entry; afterPin(); return; }
-      tries.n += 1;
-      if (tries.n >= MAX_TRIES) { tries.n = 0; tries.until = Date.now() + LOCK_MS; }
-      store.set(KEYS.tries, tries);
-      msgEl.textContent = tries.until > Date.now() ? "වැරදි PIN " + MAX_TRIES + "ක්. තත්පර " + LOCK_MS / 1000 + "ක් ඉන්න." : "PIN එක වැරදියි. (" + (MAX_TRIES - tries.n) + " පාරක් ඉතුරුයි)";
-      $("#pin-dots").classList.remove("shake"); void $("#pin-dots").offsetWidth; $("#pin-dots").classList.add("shake");
-      entry = ""; input.value = ""; paint();
+      try {
+        await signIn(entry);
+        store.del(KEYS.tries); busy = false; loadAll(); return;
+      } catch (e) {
+        busy = false;
+        const wrong = /INVALID_LOGIN_CREDENTIALS|INVALID_PASSWORD|EMAIL_NOT_FOUND/.test((e.msg || "") + e.message);
+        if (wrong) {
+          tries.n += 1;
+          if (tries.n >= MAX_TRIES) { tries.n = 0; tries.until = Date.now() + LOCK_MS; }
+          store.set(KEYS.tries, tries);
+          msgEl.textContent = tries.until > Date.now() ? "වැරදි PIN " + MAX_TRIES + "ක්. තත්පර " + LOCK_MS / 1000 + "ක් ඉන්න." : "PIN එක වැරදියි. (" + (MAX_TRIES - tries.n) + " පාරක් ඉතුරුයි)";
+        } else msgEl.textContent = errText(e);
+        $("#pin-dots").classList.remove("shake"); void $("#pin-dots").offsetWidth; $("#pin-dots").classList.add("shake");
+        entry = ""; input.value = ""; paint();
+      }
     }
     function press(k) {
       if (busy) return;
@@ -193,110 +179,76 @@
     input.addEventListener("input", () => { if (busy) { input.value = entry; return; } entry = input.value.replace(/\D/g, "").slice(0, PIN_LEN); input.value = entry; paint(); if (entry.length === PIN_LEN) check(); });
     input.focus({ preventScroll: true });
   }
-  const gate = inner => '<section class="ad-gate"><div class="ad-gate-card">' + inner + "</div></section>";
 
-  async function afterPin() {
-    const box = store.get(KEYS.token);
-    if (!box) return connectScreen();
-    try { S.token = await openToken(box, S.pin); loadAll(); }
-    catch (e) { connectScreen("මේ device එකේ තියෙන token එක දැන් තියෙන PIN එකෙන් අරින්න බෑ (PIN එක මාරු කරලා වගේ). Token එක ආයෙත් දාන්න."); }
-  }
-
-  /* ==================== 2. connect GitHub (once per device) ==================== */
-  function connectScreen(msg) {
-    root.innerHTML = gate(
-      "<h1>GitHub connect කරන්න</h1>" +
-      '<p class="muted">Admin panel එකෙන් කරන වෙනස් GitHub එකේ <b>' + esc(A.repo.owner + "/" + A.repo.name) + "</b> repo එකට save වෙනවා. ඒකට මේ device එකේ එක පාරක් GitHub token එකක් දාන්න ඕන.</p>" +
-      '<ol class="ad-steps">' +
-        '<li><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com → Fine-grained token</a> එකක් හදන්න.</li>' +
-        "<li>Repository access: <b>Only select repositories</b> → <b>" + esc(A.repo.name) + "</b></li>" +
-        "<li>Permissions → Repository → <b>Contents: Read and write</b></li>" +
-        "<li>Generate කරලා token එක copy කරලා පහළ දාන්න.</li>" +
-      "</ol>" +
-      '<form id="connect-form" class="ad-connect"><label for="tok">GitHub token</label>' +
-      '<input class="input" id="tok" type="password" autocomplete="off" placeholder="github_pat_…" required>' +
-      '<p class="ad-hint">Token එක save වෙන්නේ මේ device එකේ විතරයි, PIN එකෙන් encrypt කරලා. ඒක යවන්නේ api.github.com එකට විතරයි.</p>' +
-      '<p class="ad-gate-msg" id="connect-msg" role="alert">' + esc(msg || "") + "</p>" +
-      '<button class="btn btn-primary btn-block" type="submit">Connect කරන්න</button></form>' +
-      '<button class="ad-back" type="button" id="relock">' + icon(I.lock) + " Lock කරන්න</button>");
-    $("#relock").addEventListener("click", () => lockScreen());
-    $("#connect-form").addEventListener("submit", async e => {
-      e.preventDefault();
-      const tok = $("#tok").value.trim(), m = $("#connect-msg"), btn = e.target.querySelector("button[type=submit]");
-      if (!tok) return;
-      btn.disabled = true; m.textContent = "Check කරනවා…";
-      S.token = tok;
-      try {
-        const repo = await gh(repoPath());
-        if (!repo.permissions || !repo.permissions.push) { const er = new Error("no push"); er.status = 403; throw er; }
-        store.set(KEYS.token, await sealToken(tok, S.pin));
-        loadAll(repo);
-      } catch (err) { S.token = ""; m.textContent = errText(err); btn.disabled = false; }
-    });
-    $("#tok").focus();
-  }
-
-  /* ==================== 3. load data from the repo ==================== */
-  async function loadAll(repo) {
-    root.innerHTML = gate('<p class="muted">GitHub එකෙන් data ගන්නවා…</p>');
+  /* ==================== 2. load content ==================== */
+  function normalize() { if (!S.data.config.notice) S.data.config.notice = { show: false, text: "", linkText: "", link: "" }; }
+  async function loadAll() {
+    root.innerHTML = gate('<p class="muted">Firebase එකෙන් data ගන්නවා…</p>');
     try {
-      repo = repo || await gh(repoPath());
-      S.defaultBranch = repo.default_branch;
-      S.branch = store.get(KEYS.branch) || repo.default_branch;
-      const [c, s, p] = await Promise.all([readFile(PATHS.config), readFile(PATHS.services), readFile(PATHS.pin).catch(() => null)]);
-      S.data.config = evalData(c.text, "HEXORA"); S.files.config = c.sha;
-      S.data.services = evalData(s.text, "HX_SERVICES"); S.files.services = s.sha;
-      S.data.pin = p ? evalData(p.text, "HX_ADMIN") : clone(A); S.files.pin = p ? p.sha : null;
-      if (!S.data.config.notice) S.data.config.notice = { show: false, text: "", linkText: "", link: "" };
-      S.saved = { config: JSON.stringify(S.data.config), services: JSON.stringify(S.data.services) };
+      let doc = null;
+      try { doc = fromDoc(await fs("GET", "/site/content")); } catch (e) { if (e.status !== 404) throw e; }
+      if (doc && doc.config && doc.services) {
+        S.data.config = JSON.parse(doc.config); S.data.services = JSON.parse(doc.services);
+        S.content = { exists: true, updateTime: doc.updateTime, updatedAt: doc.updatedAt };
+        normalize();
+        S.saved = { config: JSON.stringify(S.data.config), services: JSON.stringify(S.data.services) };
+      } else {
+        // first run: start from the site's built-in config.js / services.js and offer to publish them
+        S.data.config = clone(window.HEXORA); S.data.services = clone(window.HX_SERVICES);
+        S.content = { exists: !!doc, updateTime: doc ? doc.updateTime : "" };
+        normalize();
+        S.saved = { config: "", services: "" };
+      }
       S.svc = Math.min(S.svc, S.data.services.list.length - 1);
       panel();
+      loadRequests();
     } catch (e) {
-      if (e.status === 401) { store.del(KEYS.token); return connectScreen(errText(e)); }
-      root.innerHTML = gate("<h1>Data ගන්න බැරි උනා</h1>" +
-        '<p class="ad-gate-msg">' + esc(errText(e)) + "</p>" +
-        '<p class="muted">Branch: <b>' + esc(S.branch) + "</b>. Site එකේ අලුත් version එක (services.js එක්ක) තියෙන්නේ වෙන branch එකක නම්, ඒක තෝරන්න.</p>" +
-        '<div class="ad-connect"><select class="input" id="br-pick"><option>' + esc(S.branch) + "</option></select>" +
-        '<button class="btn btn-primary" type="button" id="br-go">ඒ branch එකෙන් ගන්න</button>' +
-        '<button class="btn" type="button" id="retry">ආයෙත් try කරන්න</button></div>' +
+      root.innerHTML = gate("<h1>Data ගන්න බැරි උනා</h1><p class=\"ad-gate-msg\">" + esc(errText(e)) + "</p>" +
+        '<div class="ad-connect"><button class="btn btn-primary" type="button" id="retry">ආයෙත් try කරන්න</button></div>' +
         '<button class="ad-back" type="button" id="relock">' + icon(I.lock) + " Lock කරන්න</button>");
       $("#retry").addEventListener("click", () => loadAll());
       $("#relock").addEventListener("click", () => lockScreen());
-      $("#br-go").addEventListener("click", () => { store.set(KEYS.branch, $("#br-pick").value); loadAll(); });
-      gh(repoPath() + "/branches?per_page=100").then(bs => {
-        $("#br-pick").innerHTML = bs.map(b => '<option' + (b.name === S.branch ? " selected" : "") + ">" + esc(b.name) + "</option>").join("");
-      }).catch(() => { /* keep the single option */ });
     }
   }
+  async function loadRequests() {
+    try { S.reqs = await query("requests", "createdAt", 200); }
+    catch (e) { S.reqs = null; S.reqErr = errText(e); }
+    paintTabs();
+    if (S.tab === "requests" || S.tab === "home") renderTab();
+  }
 
-  /* ==================== 4. the panel ==================== */
-  const TABS = [["home", "Dashboard"], ["notice", "Notice"], ["contact", "Contact"], ["prices", "Prices"], ["services", "Services"], ["history", "History"], ["security", "Security"]];
+  /* ==================== 3. the panel ==================== */
+  const TABS = [["home", "Dashboard"], ["requests", "Requests"], ["notice", "Notice"], ["contact", "Contact"], ["prices", "Prices"], ["services", "Services"], ["history", "History"], ["security", "Security"]];
+  const newCount = () => (S.reqs || []).filter(r => r.status === "new").length;
   function panel() {
     root.innerHTML =
       '<div class="ad-shell">' +
         '<header class="ad-top"><a class="ad-brand" href="index.html" target="_blank" rel="noopener"><span class="logo-part lp-mark ad-brand-mark" aria-hidden="true"></span><b>Admin</b></a>' +
-          '<span class="ad-pill" title="Save වෙන තැන">' + esc(A.repo.name) + " · " + esc(S.branch) + "</span>" +
+          '<span class="ad-pill" title="Firebase project">' + esc(F.projectId) + "</span>" +
           '<span class="ad-top-end"><a class="btn ad-small" href="index.html" target="_blank" rel="noopener">Site එක ' + icon(I.ext) + "</a>" +
           '<button class="btn ad-small" type="button" data-act="lock">' + icon(I.lock) + " Lock</button></span></header>" +
-        '<nav class="ad-tabs" role="tablist" aria-label="Admin sections">' + TABS.map(([k, t]) =>
-          '<button type="button" role="tab" data-act="tab" data-tab="' + k + '" aria-selected="' + (k === S.tab) + '">' + t + "</button>").join("") + "</nav>" +
+        '<nav class="ad-tabs" role="tablist" aria-label="Admin sections" id="ad-tabs"></nav>' +
         '<section class="ad-main" id="ad-main"></section>' +
         '<div class="ad-savebar" id="ad-savebar" hidden><div class="ad-save-info" id="ad-save-info"></div>' +
-          '<input class="input" id="commit-msg" type="text" maxlength="72" placeholder="මොකද වෙනස් කළේ? (optional)">' +
+          '<input class="input" id="commit-msg" type="text" maxlength="80" placeholder="මොකද වෙනස් කළේ? (optional)">' +
           '<button class="btn" type="button" data-act="discard">Discard</button>' +
-          '<button class="btn btn-primary" type="button" data-act="save" id="save-btn">Save to GitHub</button></div>' +
+          '<button class="btn btn-primary" type="button" data-act="save" id="save-btn">Save කරන්න</button></div>' +
         '<div class="toast" id="ad-toast" role="status"></div>' +
       "</div>";
-    renderTab();
-    updateSaveBar();
+    paintTabs(); renderTab(); updateSaveBar();
+  }
+  function paintTabs() {
+    const nav = $("#ad-tabs"); if (!nav) return;
+    const n = newCount();
+    nav.innerHTML = TABS.map(([k, t]) => '<button type="button" role="tab" data-act="tab" data-tab="' + k + '" aria-selected="' + (k === S.tab) + '">' + t +
+      (k === "requests" && n ? ' <span class="ad-badge">' + n + "</span>" : "") + "</button>").join("");
   }
   function renderTab() {
     const main = $("#ad-main"); if (!main) return;
     const y = window.scrollY;
     main.innerHTML = VIEWS[S.tab]();
-    $$(".ad-tabs [data-tab]").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === S.tab)));
+    $$("#ad-tabs [data-tab]").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === S.tab)));
     if (S.tab === "history") loadHistory();
-    if (S.tab === "security") loadBranches();
     window.scrollTo(0, y);
     refreshLive();
   }
@@ -305,7 +257,7 @@
   function field(path, label, o) {
     o = o || {};
     const v = get(path), id = "f-" + path.replace(/[^\w]/g, "-"), t = o.type || "text";
-    const attrs = ' id="' + id + '" data-path="' + path + '"' + (o.rerender ? " data-rerender" : "");
+    const attrs = ' id="' + id + '" data-path="' + path + '"';
     let control;
     if (t === "bool") {
       return '<div class="ad-field' + (o.wide ? " wide" : "") + '"><label class="ad-check"><input type="checkbox"' + attrs + ' data-type="bool"' + (v ? " checked" : "") + "><span>" + esc(label) + "</span></label>" + (o.hint ? '<small class="ad-hint">' + esc(o.hint) + "</small>" : "") + "</div>";
@@ -332,13 +284,40 @@
     const c = S.data.config, s = S.data.services;
     const count = ["types", "sizes", "features", "design", "extras", "creative", "urgency"].reduce((n, g) => n + Object.keys(c[g] || {}).length, 0);
     const stat = (n, t, tab) => '<button type="button" class="ad-stat" data-act="tab" data-tab="' + tab + '"><b>' + n + "</b><span>" + t + "</span></button>";
-    return card("Hexora admin",
-      '<div class="ad-stats">' + stat(s.list.length, "Services", "services") + stat(count, "Price items", "prices") +
-        stat(c.notice && c.notice.show ? "On" : "Off", "Notice bar", "notice") + stat(esc(c.phoneDisplay || "—"), "WhatsApp", "contact") + "</div>" +
-      '<p class="ad-note">Save කළාම GitHub එකේ <b>' + esc(S.branch) + "</b> branch එකට commit එකක් යනවා. Site එක host කරලා තියෙන තැන (GitHub Pages / Netlify) ඒ branch එකෙන් auto update වෙනවා, ඒකට විනාඩියක් දෙකක් යයි.</p>",
-      "GitHub එකට connect වෙලා: " + esc(A.repo.owner + "/" + A.repo.name)) +
-    card("Project requests", '<p class="ad-note">Customersලා form එකෙන් එවන requests දැනට එන්නේ WhatsApp / Email වලට. ඒවා මෙතන list එකක් විදියට බලන්න database එකක් (Firebase හරි Google Sheets) ඕන.</p>');
+    const first = S.saved.config === "" ? card("පළවෙනි පාර", '<p class="ad-note">Firebase එකේ තාම site data නෑ. දැන් පේන්නේ site එකේ තියෙන data. පහළ <b>Save කරන්න</b> එබුවම මේ data Firebase එකට යනවා, ඊට පස්සේ මෙතනින් කරන වෙනස් site එකේ පේනවා.</p>') : "";
+    return first + card("Hexora admin",
+      '<div class="ad-stats">' + stat(S.reqs ? newCount() : "…", "අලුත් requests", "requests") + stat(s.list.length, "Services", "services") +
+        stat(count, "Price items", "prices") + stat(c.notice && c.notice.show ? "On" : "Off", "Notice bar", "notice") + "</div>" +
+      '<p class="ad-note">Save කළාම වෙනස් Firebase එකට යනවා. Site එකට අලුතෙන් එන අයට එකපාරම පේනවා. දැනටමත් site එකේ ඉන්න අයට ඊළඟ page එකේ ඉඳන් පේනවා.' +
+        (S.content.updatedAt ? " අන්තිමට save කළේ: " + esc(fmtDate(S.content.updatedAt)) + "." : "") + "</p>",
+      "Firebase project: " + esc(F.projectId));
   };
+
+  VIEWS.requests = () => {
+    if (!S.reqs) return card("Project requests", S.reqErr ? '<p class="ad-gate-msg">' + esc(S.reqErr) + '</p><button type="button" class="btn ad-small" data-act="reload-reqs">' + icon(I.reload) + " ආයෙත් try කරන්න</button>" : '<p class="muted">Requests ගන්නවා…</p>');
+    const counts = { all: S.reqs.length }; STATUS.forEach(([k]) => { counts[k] = S.reqs.filter(r => r.status === k).length; });
+    const list = S.reqs.filter(r => S.reqFilter === "all" || r.status === S.reqFilter);
+    return card("Project requests",
+      '<div class="ad-add"><div class="ad-filters" role="group" aria-label="Filter">' + [["all", "All"]].concat(STATUS).map(([k, t]) =>
+        '<button type="button" data-act="req-filter" data-f="' + k + '" aria-pressed="' + (S.reqFilter === k) + '">' + t + " <span>" + (counts[k] || 0) + "</span></button>").join("") + "</div>" +
+        '<button type="button" class="btn ad-small" data-act="reload-reqs">' + icon(I.reload) + " Refresh</button></div>" +
+      (list.length ? '<div class="ad-reqs">' + list.map(reqCard).join("") + "</div>" : '<p class="muted">මෙතන requests නෑ.</p>'),
+      "Customersලා project form එක submit කරන හැම request එකක්ම මෙතන save වෙනවා (WhatsApp / Email එක එව්වෙ නැති උනත්).");
+  };
+  const waNum = p => { let d = String(p || "").replace(/\D/g, ""); if (/^0\d{9}$/.test(d)) d = "94" + d.slice(1); return d.length >= 10 ? d : ""; };
+  function reqCard(r) {
+    const wa = waNum(r.phone);
+    return '<article class="ad-req s-' + esc(r.status) + '">' +
+      '<div class="ad-req-head"><div><b>' + esc(r.name || "—") + "</b><small>" + esc(fmtDate(r.createdAt)) + " · <code>" + esc(r.ref) + "</code></small></div>" +
+        '<select class="input ad-req-status" data-req="' + esc(r.id) + '" aria-label="Status">' + STATUS.map(([k, t]) => '<option value="' + k + '"' + (k === r.status ? " selected" : "") + ">" + t + "</option>").join("") + "</select></div>" +
+      '<div class="ad-req-meta">' + [r.track === "creative" ? "Logo, Design & Video" : "App / Website / System", r.estimate, r.business, "Contact: " + (r.contact || "WhatsApp")].filter(Boolean).map(x => "<span>" + esc(x) + "</span>").join("") + "</div>" +
+      '<div class="ad-req-actions">' +
+        (wa ? '<a class="btn btn-wa ad-small" href="https://wa.me/' + wa + '" target="_blank" rel="noopener">WhatsApp</a>' : "") +
+        (r.phone ? '<a class="btn ad-small" href="tel:' + esc(r.phone.replace(/[^\d+]/g, "")) + '">Call</a>' : "") +
+        (r.email ? '<a class="btn ad-small" href="mailto:' + esc(r.email) + '">Email</a>' : "") +
+        mini("req-del", I.del, "මකන්න", ' data-id="' + esc(r.id) + '"') + "</div>" +
+      "<details><summary>සම්පූර්ණ request එක</summary><pre>" + esc(r.message) + "</pre></details></article>";
+  }
 
   VIEWS.notice = () => {
     const n = S.data.config.notice;
@@ -361,7 +340,7 @@
     "Site එකේ හැම තැනම WhatsApp, call, email buttons මේවා use කරනවා.");
 
   const GROUPS = [
-    { key: "types", title: "Project types", note: "Small project එකක patan ganne price එක (USD).", fixed: true,
+    { key: "types", title: "Project types", note: "Small project එකක පටන් ගන්නේ price එක (USD).", fixed: true,
       fields: [["label", "Name"], ["note", "Note"], ["usd", "USD", "num", 1], ["weeks", "Weeks", "num"], ["kind", "Kind", "kind"], ["includesAdmin", "Admin panel include", "bool"]] },
     { key: "sizes", title: "Size", note: "Small = ×1. Medium / Large price එකයි කාලයයි ගුණ වෙනවා.", fixed: true,
       fields: [["label", "Name"], ["note", "Note"], ["priceX", "Price ×", "num"], ["weeksX", "Time ×", "num"], ["maintenanceUsd", "Maintenance USD / මාසයට", "num", 1]] },
@@ -444,7 +423,7 @@
     const side = '<nav class="ad-svc-list" aria-label="Services">' + cats.map(ck =>
       '<span class="ad-svc-cat">' + esc(sv.categories[ck].label) + "</span>" +
       list.map((x, j) => x.cat !== ck ? "" : '<button type="button" data-act="pick-svc" data-i="' + j + '"' + (j === i ? ' aria-current="true"' : "") + ">" +
-        '<svg class="ad-ico" viewBox="0 0 24 24" aria-hidden="true">' + (x.icon || "") + "</svg><span data-live=\"services.list." + j + '.name">' + esc(x.name || "(නමක් නෑ)") + "</span></button>").join("")).join("") +
+        '<svg class="ad-ico" viewBox="0 0 24 24" aria-hidden="true">' + (x.icon || "") + '</svg><span data-live="services.list.' + j + '.name">' + esc(x.name || "(නමක් නෑ)") + "</span></button>").join("")).join("") +
       '<button type="button" class="btn ad-small" data-act="add-svc">' + icon(I.plus) + " අලුත් service</button></nav>";
     const form = !s ? "<p>Service එකක් නෑ.</p>" :
       '<div class="ad-svc-form">' +
@@ -473,47 +452,32 @@
   };
 
   VIEWS.history = () => card("History",
-    '<div id="history-list" class="ad-history"><p class="muted">GitHub එකෙන් ගන්නවා…</p></div>',
-    "config.js / services.js වල අන්තිම වෙනස් 10. වැරදීමක් උනොත් කලින් version එකකට ආපහු යන්න පුළුවන්.");
+    '<div id="history-list" class="ad-history"><p class="muted">Firebase එකෙන් ගන්නවා…</p></div>',
+    "Save කරපු අන්තිම versions 20. කලින් version එකක් load කරලා Save කළොත් site එක ඒ version එකට යනවා.");
   async function loadHistory() {
     const box = $("#history-list"); if (!box) return;
     try {
-      const lists = await Promise.all([PATHS.config, PATHS.services].map(p =>
-        gh(repoPath() + "/commits?path=" + encodeURIComponent(p) + "&sha=" + encodeURIComponent(S.branch) + "&per_page=10")
-          .then(cs => cs.map((c, idx) => ({ path: p, sha: c.sha, current: idx === 0, msg: (c.commit.message || "").split("\n")[0], date: c.commit.author.date, who: c.commit.author.name, url: c.html_url })))));
-      const all = lists[0].concat(lists[1]).sort((a, b) => b.date.localeCompare(a.date));
+      const rows = await query("history", "at", 20);
       if (!$("#history-list")) return;
-      box.innerHTML = all.length ? all.map(c =>
-        '<div class="ad-hist"><div><b>' + esc(c.msg) + '</b><small>' + esc(fmtDate(c.date)) + " · " + esc(c.who) + ' · <code>' + esc(c.path.split("/").pop()) + "</code></small></div>" +
-        '<div class="ad-hist-actions"><a class="btn ad-small" href="' + esc(c.url) + '" target="_blank" rel="noopener">GitHub ' + icon(I.ext) + "</a>" +
-        (c.current ? '<span class="ad-pill ok">දැන් තියෙන්නේ</span>' : '<button type="button" class="btn ad-small" data-act="restore" data-path="' + esc(c.path) + '" data-sha="' + esc(c.sha) + '">මේකට ආපහු යන්න</button>') +
-        "</div></div>").join("") : '<p class="muted">Commits නෑ.</p>';
+      S.hist = rows;
+      const shown = {};
+      box.innerHTML = rows.length ? rows.map((h, i) => {
+        const current = !shown[h.file] && h.json === S.saved[h.file]; shown[h.file] = 1;
+        return '<div class="ad-hist"><div><b>' + esc(h.note || (h.file === "config" ? "Site settings" : "Services")) + "</b><small>" + esc(fmtDate(h.at)) + " · " + esc(h.by || "") + " · <code>" + esc(h.file) + "</code></small></div>" +
+          '<div class="ad-hist-actions">' + (current ? '<span class="ad-pill ok">දැන් තියෙන්නේ</span>' : '<button type="button" class="btn ad-small" data-act="restore" data-i="' + i + '">මේක load කරන්න</button>') + "</div></div>";
+      }).join("") : '<p class="muted">තාම save කරලා නෑ.</p>';
     } catch (e) { box.innerHTML = '<p class="ad-gate-msg">' + esc(errText(e)) + "</p>"; }
   }
 
-  VIEWS.security = () => {
-    const box = store.get(KEYS.token);
-    return card("PIN එක මාරු කරන්න",
+  VIEWS.security = () => card("PIN එක මාරු කරන්න",
       '<form id="pin-form" class="ad-grid">' +
         '<div class="ad-field"><label for="pin-new">අලුත් PIN (digits 6)</label><input class="input" id="pin-new" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>' +
         '<div class="ad-field"><label for="pin-new2">ආයෙත් ගහන්න</label><input class="input" id="pin-new2" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>' +
         '<div class="ad-field wide"><button class="btn btn-primary" type="submit">PIN එක save කරන්න</button></div></form>',
-      "අලුත් PIN එකේ hash එක admin-pin.js එකට save වෙනවා. Site එක update උනාට පස්සේ අලුත් PIN එක වැඩ කරයි. අනිත් devices වල token එක ආයෙත් දාන්න වෙනවා.") +
-    card("Branch",
-      '<div class="ad-add"><select class="input" id="branch-pick"><option>' + esc(S.branch) + '</option></select><button type="button" class="btn ad-small" data-act="set-branch">මේ branch එක use කරන්න</button></div>',
-      "Save වෙන්නේ මේ branch එකට. Repo එකේ default branch එක: <b>" + esc(S.defaultBranch) + "</b>. Site එක host කරලා තියෙන්නේ මේ branch එකෙන්ද කියලා බලන්න.") +
-    card("GitHub connection",
-      '<p class="ad-note">Token එක මේ device එකේ encrypt කරලා තියෙනවා' + (box && box.at ? " (" + esc(fmtDate(box.at)) + " ඉඳන්)" : "") + ". Device එක වෙන කෙනෙක්ට දෙනවා නම් disconnect කරන්න.</p>" +
-      '<button type="button" class="btn ad-small" data-act="disconnect">Disconnect කරන්න</button>',
+      "PIN එක Firebase එකේ admin account එකේ password එක. මාරු කළාම ඊළඟ පාර අලුත් PIN එකෙන් log වෙන්න.") +
+    card("Account",
+      '<p class="ad-note">Firebase project: <b>' + esc(F.projectId) + "</b><br>Admin account: <b>" + esc(F.adminEmail) + "</b></p>",
       "විනාඩි 30ක් use නොකළොත් admin panel එක auto-lock වෙනවා (save නොකරපු වෙනස් නැත්නම්).");
-  };
-  async function loadBranches() {
-    try {
-      const bs = await gh(repoPath() + "/branches?per_page=100");
-      const sel = $("#branch-pick"); if (!sel) return;
-      sel.innerHTML = bs.map(b => '<option' + (b.name === S.branch ? " selected" : "") + ">" + esc(b.name) + "</option>").join("");
-    } catch (e) { /* keep current */ }
-  }
 
   /* ---------- live bits (LKR previews, names, icon) ---------- */
   function refreshLive() {
@@ -549,7 +513,8 @@
     bar.hidden = !files.length;
     if (!files.length) return;
     const errs = problems();
-    $("#ad-save-info").innerHTML = "<b>Save නොකරපු වෙනස්:</b> " + files.map(f => "<code>" + f + ".js</code>").join(", ") +
+    const names = { config: "Site settings", services: "Services" };
+    $("#ad-save-info").innerHTML = "<b>Save නොකරපු වෙනස්:</b> " + files.map(f => names[f]).join(", ") +
       (errs.length ? '<span class="ad-bad">' + esc(errs[0]) + (errs.length > 1 ? " (+" + (errs.length - 1) + ")" : "") + "</span>" : "");
     $("#save-btn").disabled = !!errs.length;
   }
@@ -557,20 +522,27 @@
     const errs = problems();
     if (errs.length) return toast(errs[0], true);
     const note = ($("#commit-msg").value || "").trim();
-    const jobs = [["config", "update site settings"], ["services", "update services"]].filter(j => dirty(j[0]));
+    const files = ["config", "services"].filter(dirty), now = new Date();
+    const fields = { updatedAt: now, updatedBy: S.auth.email };
+    files.forEach(k => { fields[k] = JSON.stringify(S.data[k]); });
+    const pre = S.content.exists ? "currentDocument.updateTime=" + encodeURIComponent(S.content.updateTime) : "currentDocument.exists=false";
     btn.disabled = true; btn.textContent = "Save වෙනවා…";
     try {
-      for (const [k, def] of jobs) {
-        const r = await writeFile(PATHS[k], fileText[k](S.data[k]), S.files[k], "Admin: " + (note || def));
-        S.files[k] = r.content.sha; S.saved[k] = JSON.stringify(S.data[k]);
-      }
+      const doc = await fs("PATCH", "/site/content", { fields: toFields(fields) }, mask(Object.keys(fields)) + "&" + pre);
+      S.content = { exists: true, updateTime: doc.updateTime, updatedAt: now.toISOString() };
+      files.forEach(k => { S.saved[k] = fields[k]; });
+      // this browser's copy for boot.js, so the site shows the change here right away
+      store.set("hx_content_v1", { at: Date.now(), config: S.saved.config, services: S.saved.services });
       $("#commit-msg").value = "";
-      toast("GitHub එකට save උනා ✓ Site එක update වෙන්න විනාඩියක් දෙකක් යයි.");
+      toast("Save උනා ✓ Site එකට එන අයට අලුත් data පේනවා.");
+      // keep a copy for the History tab (a failure here does not undo the save)
+      Promise.all(files.map(k => fs("POST", "/history", { fields: toFields({ file: k, json: fields[k], note: note, at: now, by: S.auth.email }) }))).catch(() => {});
     } catch (e) {
       toast("Save වුණේ නෑ: " + errText(e), true);
     }
-    btn.textContent = "Save to GitHub";
+    btn.textContent = "Save කරන්න";
     updateSaveBar();
+    if (S.tab === "home") renderTab();
   }
 
   /* ---------- events ---------- */
@@ -590,7 +562,7 @@
     refreshLive();
     updateSaveBar();
   });
-  root.addEventListener("change", e => {
+  root.addEventListener("change", async e => {
     const t = e.target;
     if (t.dataset.refkind) {
       const old = get(t.dataset.refkind), k = t.value, pool = S.data.config[POOLS[k]] || {};
@@ -598,7 +570,16 @@
       set(t.dataset.refkind, fresh); renderTab(); updateSaveBar(); return;
     }
     if (t.dataset.refkey) { const r = get(t.dataset.refkey); r[refKind(r)] = t.value; updateSaveBar(); return; }
-    if (t.closest("[data-rerender]") || (t.dataset.path && /\.(cat|anim)$/.test(t.dataset.path))) renderTab();
+    if (t.dataset.req) {
+      const r = S.reqs.find(x => x.id === t.dataset.req); if (!r) return;
+      t.disabled = true;
+      try {
+        await fs("PATCH", "/requests/" + encodeURIComponent(r.id), { fields: toFields({ status: t.value }) }, mask(["status"]));
+        r.status = t.value; paintTabs(); renderTab(); toast("Status: " + t.value + " ✓");
+      } catch (err) { toast(errText(err), true); t.value = r.status; t.disabled = false; }
+      return;
+    }
+    if (t.dataset.path && /\.(cat|anim)$/.test(t.dataset.path)) renderTab();
   });
   root.addEventListener("submit", async e => {
     if (e.target.id !== "pin-form") return;
@@ -607,15 +588,8 @@
     if (!/^\d{6}$/.test(a)) return toast("PIN එක digits 6ක් වෙන්න ඕන.", true);
     if (a !== b) return toast("PIN දෙක සමාන නෑ.", true);
     btn.disabled = true;
-    try {
-      const admin = clone(S.data.pin), salt = randHex(16);
-      admin.pin = { salt: salt, iterations: PIN_ITER, hash: await pinHash(a, salt, PIN_ITER) };
-      const r = await writeFile(PATHS.pin, fileText.pin(admin), S.files.pin, "Admin: change admin PIN");
-      S.files.pin = r.content.sha; S.data.pin = admin; A.pin = admin.pin;
-      store.set(KEYS.token, await sealToken(S.token, a)); S.pin = a;
-      e.target.reset();
-      toast("PIN එක මාරු උනා ✓ Site එක update උනාට පස්සේ අලුත් PIN එකෙන් log වෙන්න.");
-    } catch (err) { toast("PIN එක save වුණේ නෑ: " + errText(err), true); }
+    try { await changePin(a); e.target.reset(); toast("PIN එක මාරු උනා ✓ ඊළඟ පාර අලුත් PIN එකෙන් log වෙන්න."); }
+    catch (err) { toast("PIN එක මාරු වුණේ නෑ: " + errText(err), true); }
     btn.disabled = false;
   });
   root.addEventListener("click", async e => {
@@ -626,9 +600,18 @@
       case "lock": if (anyDirty() && !armed(b, "Save නොකරපු වෙනස් නැති වෙනවා. ආයෙත් ඔබන්න")) return; lockScreen(); break;
       case "save": saveAll(b); break;
       case "discard":
+        if (S.saved.config === "") return toast("පළවෙනි පාර නිසා discard කරන්න දෙයක් නෑ. Save කරන්න.", true);
         if (!armed(b, "ඇත්තටම? ආයෙත් ඔබන්න")) return;
-        S.data.config = JSON.parse(S.saved.config); S.data.services = JSON.parse(S.saved.services);
+        S.data.config = JSON.parse(S.saved.config); S.data.services = JSON.parse(S.saved.services); normalize();
         S.svc = Math.min(S.svc, S.data.services.list.length - 1); renderTab(); updateSaveBar(); break;
+      case "reload-reqs": S.reqs = null; S.reqErr = ""; renderTab(); loadRequests(); break;
+      case "req-filter": S.reqFilter = d.f; renderTab(); break;
+      case "req-del": {
+        if (!armed(b, "මකන්නද?")) return;
+        try { await fs("DELETE", "/requests/" + encodeURIComponent(d.id)); S.reqs = S.reqs.filter(r => r.id !== d.id); paintTabs(); renderTab(); toast("Request එක මැකුවා."); }
+        catch (err) { toast(errText(err), true); }
+        break;
+      }
       case "add-key": {
         const inp = $("#newkey-" + d.group), key = (inp.value || "").trim(), g = GROUPS.find(x => x.key === d.group);
         if (!/^[a-z][a-z0-9]{1,19}$/.test(key)) return toast("Key එක a-z / 0-9 අකුරු 2–20ක් වෙන්න ඕන (ex: seo).", true);
@@ -654,7 +637,7 @@
       case "del-svc":
         if (!armed(b, "ඇත්තටම මකන්නද? ආයෙත් ඔබන්න")) return;
         S.data.services.list.splice(S.svc, 1); S.svc = 0; renderTab(); updateSaveBar(); break;
-      case "arr-add": get(d.path) ? get(d.path).push(JSON.parse(d.tpl)) : set(d.path, [JSON.parse(d.tpl)]); renderTab(); updateSaveBar(); break;
+      case "arr-add": if (get(d.path)) get(d.path).push(JSON.parse(d.tpl)); else set(d.path, [JSON.parse(d.tpl)]); renderTab(); updateSaveBar(); break;
       case "arr-del": if (!armed(b, "මකන්නද?")) return; get(d.path).splice(Number(d.i), 1); renderTab(); updateSaveBar(); break;
       case "arr-move": {
         const arr = get(d.path), i = Number(d.i), j = i + Number(d.dir);
@@ -662,34 +645,20 @@
         arr.splice(j, 0, arr.splice(i, 1)[0]); renderTab(); updateSaveBar(); break;
       }
       case "restore": {
-        if (anyDirty()) return toast("මුලින් save නොකරපු වෙනස් save හරි discard හරි කරන්න.", true);
-        if (!armed(b, "ඇත්තටම? ආයෙත් ඔබන්න")) return;
-        b.disabled = true;
-        try {
-          const k = d.path === PATHS.config ? "config" : "services";
-          const old = await readFile(d.path, d.sha);
-          await writeFile(d.path, old.text, S.files[k], "Admin: restore " + d.path.split("/").pop() + " to " + d.sha.slice(0, 7));
-          toast("කලින් version එකට ආපහු ගියා ✓");
-          loadAll();
-        } catch (err) { toast(errText(err), true); b.disabled = false; }
+        const h = S.hist && S.hist[Number(d.i)]; if (!h) return;
+        S.data[h.file] = JSON.parse(h.json); if (h.file === "config") normalize();
+        S.svc = Math.min(S.svc, S.data.services.list.length - 1);
+        updateSaveBar(); loadHistory();
+        toast("ඒ version එක load උනා. Save කළොත් site එක ඒ version එකට යනවා.");
         break;
       }
-      case "set-branch": {
-        const v = $("#branch-pick").value;
-        if (anyDirty()) return toast("මුලින් save නොකරපු වෙනස් save හරි discard හරි කරන්න.", true);
-        if (v === S.defaultBranch) store.del(KEYS.branch); else store.set(KEYS.branch, v);
-        loadAll(); break;
-      }
-      case "disconnect":
-        if (!armed(b, "ඇත්තටම? ආයෙත් ඔබන්න")) return;
-        store.del(KEYS.token); store.del(KEYS.branch); S.token = ""; connectScreen(); break;
     }
   });
 
   // unsaved-changes guard + idle auto-lock
-  window.addEventListener("beforeunload", e => { if (S.token && anyDirty()) { e.preventDefault(); e.returnValue = ""; } });
+  window.addEventListener("beforeunload", e => { if (S.auth && anyDirty()) { e.preventDefault(); e.returnValue = ""; } });
   ["pointerdown", "keydown"].forEach(ev => window.addEventListener(ev, () => { S.last = Date.now(); }, { passive: true }));
-  setInterval(() => { if (S.token && !anyDirty() && Date.now() - S.last > IDLE_MS) lockScreen("විනාඩි 30ක් use නොකළ නිසා lock උනා."); }, 30000);
+  setInterval(() => { if (S.auth && !anyDirty() && Date.now() - S.last > IDLE_MS) lockScreen("විනාඩි 30ක් use නොකළ නිසා lock උනා."); }, 30000);
 
   lockScreen();
 })();

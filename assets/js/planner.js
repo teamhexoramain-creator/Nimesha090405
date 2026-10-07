@@ -237,17 +237,18 @@
   }
 
   /* ---------- draft (per browser) ---------- */
+  function formData() {
+    const data = {};
+    $$("input, textarea, select", form).forEach(el => {
+      if (!el.name) return;
+      if (el.type === "radio") { if (el.checked) data[el.name] = el.value; }
+      else if (el.type === "checkbox") { (data[el.name] = data[el.name] || []); if (el.checked) data[el.name].push(el.value); }
+      else data[el.name] = el.value;
+    });
+    return data;
+  }
   function saveDraft() {
-    try {
-      const data = {};
-      $$("input, textarea, select", form).forEach(el => {
-        if (!el.name) return;
-        if (el.type === "radio") { if (el.checked) data[el.name] = el.value; }
-        else if (el.type === "checkbox") { (data[el.name] = data[el.name] || []); if (el.checked) data[el.name].push(el.value); }
-        else data[el.name] = el.value;
-      });
-      localStorage.setItem(DRAFT, JSON.stringify(data));
-    } catch (e) { /* ignore */ }
+    try { localStorage.setItem(DRAFT, JSON.stringify(formData())); } catch (e) { /* ignore */ }
   }
   function loadDraft() {
     try {
@@ -322,6 +323,40 @@
     if (est.kind === "dev") L.push("Maintenance: " + P.formatLKR(est.maintenance) + " / මාසයට (optional)");
     L.push("Rate: 1 USD = LKR " + rate.rate.toFixed(2) + " (" + rd + ")");
     return L.join("\n");
+  }
+
+  /* ---------- save the request for the admin panel (Firebase, see firebase-config.js) ---------- */
+  const FB = window.HX_FIREBASE || {};
+  let sent = null;   // the last request sent to Firebase: { sig, ref, id, ok }
+  function newId() {
+    const abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789", r = new Uint8Array(20);
+    if (window.crypto && crypto.getRandomValues) crypto.getRandomValues(r);
+    else for (let i = 0; i < r.length; i++) r[i] = Math.floor(Math.random() * 256);
+    return Array.from(r, n => abc[n % abc.length]).join("");
+  }
+  function saveRequest(job, plain, est) {
+    if (!FB.projectId || !window.fetch) return;
+    const v = id => ($("#" + id).value || "").trim();
+    const data = {
+      ref: job.ref, name: v("f-name").slice(0, 100), phone: v("f-phone").slice(0, 30), email: v("f-email").slice(0, 120),
+      business: v("f-business").slice(0, 120), contact: (val("contact") || "WhatsApp").slice(0, 20), track: track(),
+      estimate: est ? P.formatLKR(est.lo) + (est.hi ? " – " + P.formatLKR(est.hi) : "") : "",
+      message: plain.slice(0, 6000), status: "new"
+    };
+    const fields = {};
+    Object.keys(data).forEach(k => { fields[k] = { stringValue: data[k] }; });
+    const db = "projects/" + FB.projectId + "/databases/(default)";
+    // createdAt is set by the Firestore server; the same id is never written twice
+    const body = { writes: [{ update: { name: db + "/documents/requests/" + job.id, fields: fields }, currentDocument: { exists: false },
+      updateTransforms: [{ fieldPath: "createdAt", setToServerValue: "REQUEST_TIME" }] }] };
+    fetch("https://firestore.googleapis.com/v1/" + db + "/documents:commit" + (FB.apiKey ? "?key=" + encodeURIComponent(FB.apiKey) : ""),
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      .then(r => {
+        if (!r.ok && r.status !== 409) return;   // 409: already saved
+        job.ok = true;
+        if (sent === job) $("#saved-note").hidden = false;
+      })
+      .catch(() => { /* offline: WhatsApp / Email still work */ });
   }
 
   /* ---------- toast + copy ---------- */
@@ -402,7 +437,10 @@
       return;
     }
     alert.hidden = true;
-    const ref = makeRef();
+    // sent again without changes: keep the same Ref and do not save it twice
+    const sig = JSON.stringify(formData());
+    if (!sent || sent.sig !== sig) sent = { sig: sig, ref: makeRef(), id: newId(), ok: false };
+    const ref = sent.ref;
     const msg = buildMessage(ref);
     $("#ref-id").textContent = ref;
     $("#summary-text").textContent = msg;
@@ -410,6 +448,8 @@
     const plain = msg.replace(/\*/g, "");
     $("#send-email").href = "mailto:" + C.email + "?subject=" + encodeURIComponent("New project request – " + ref) + "&body=" + encodeURIComponent(plain);
     $("#copy-btn").onclick = () => copy(plain);
+    $("#saved-note").hidden = !sent.ok;
+    if (!sent.ok) saveRequest(sent, plain, currentEstimate());
     form.hidden = true;
     $("#summary").hidden = false;
     burst();
