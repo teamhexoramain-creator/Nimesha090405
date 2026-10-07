@@ -341,7 +341,7 @@ section { padding-block: clamp(70px, 9vw, 120px); }
 
 /* admin lock (footer corner) */
 .foot-end { display: inline-flex; align-items: center; gap: 12px; }
-.admin-lock { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; color: var(--faint); opacity: .5; transition: opacity .2s ease, color .2s ease, background-color .2s ease; }
+.admin-lock { display: inline-grid; place-items: center; width: 36px; height: 36px; margin: -4px 0; border-radius: 10px; color: var(--faint); opacity: .5; transition: opacity .2s ease, color .2s ease, background-color .2s ease; }
 .admin-lock:hover, .admin-lock:focus-visible { opacity: 1; color: var(--cyan); background: var(--surface); }
 .admin-lock svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
@@ -352,7 +352,9 @@ section { padding-block: clamp(70px, 9vw, 120px); }
 .notice-close:hover { background: rgba(5, 9, 24, .45); }
 
 /* floating WhatsApp button */
-.wa-float { position: fixed; right: 18px; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); z-index: 45; width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: var(--wa); box-shadow: 0 14px 34px -10px rgba(31, 168, 85, .9); transition: transform .25s var(--ease); }
+.wa-float { position: fixed; right: 18px; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); z-index: 45; width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: var(--wa); box-shadow: 0 14px 34px -10px rgba(31, 168, 85, .9); transition: transform .25s var(--ease), opacity .25s ease, visibility 0s; }
+/* off while the footer's last row is on screen, so it never covers the footer links or the admin lock */
+.wa-float.away { opacity: 0; visibility: hidden; transform: scale(.6); transition: transform .25s var(--ease), opacity .25s ease, visibility 0s .25s; }
 .wa-float:hover { transform: scale(1.08); }
 .wa-float svg { width: 28px; height: 28px; fill: #fff; }
 .wa-float::before { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--wa); animation: ring 2.4s ease-out infinite; }

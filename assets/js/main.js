@@ -307,5 +307,11 @@
     });
   }
 
+  /* ---------- floating WhatsApp button steps aside at the footer ---------- */
+  const waFloat = $(".wa-float"), footEnd = $(".foot-bottom");
+  if (waFloat && footEnd && "IntersectionObserver" in window) {
+    new IntersectionObserver(es => es.forEach(e => waFloat.classList.toggle("away", e.isIntersecting)), { threshold: 0 }).observe(footEnd);
+  }
+
   onScroll();
 })();
