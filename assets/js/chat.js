@@ -183,7 +183,7 @@
     function status(meta) {
       if (!meta) return;
       const at = me === "c" ? meta.presence && meta.presence.adminOnlineAt : meta.chat && meta.chat.custOnlineAt;
-      const age = ms(meta.now) - ms(at), on = !!at && age < ONLINE_MS;
+      const age = (ms(meta.now) || Date.now()) - ms(at), on = !!at && age < ONLINE_MS;
       statusEl.classList.toggle("online", on);
       statusEl.querySelector("em").textContent = on ? "Online" : at ? "Last seen " + rel(age) : "Offline";
     }

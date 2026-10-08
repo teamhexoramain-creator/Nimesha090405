@@ -11,7 +11,9 @@ Built with plain **HTML + CSS + JavaScript**. No installs, no build step, no ser
 | `start-project.html` | Project request form with a live LKR price estimate for apps/websites and for logo, design & video work. Customers send the request to WhatsApp or Email; it is also saved for the admin panel. |
 | `account.html` | **මගේ projects**: customers log in with their phone number and a 6-digit PIN and see each project's stage, % done, latest update and finish date. |
 | `admin.html` | PIN-locked admin panel (see below). |
+| `privacy.html` | What data the site keeps (form, account/PIN copy, chat), where, who sees it, how to ask for deletion. Linked from every footer. |
 | `404.html` | "Page එක හම්බුනේ නෑ" page (GitHub Pages shows it for a wrong link). |
+| `robots.txt`, `sitemap.xml` | For Google: the admin page is excluded and every page / service is listed. The addresses in them are the GitHub Pages address — change them if you get your own domain (also `og:url`, `og:image` and the JSON-LD block in `index.html`). |
 
 ## Folder structure
 ```
@@ -31,6 +33,8 @@ hexora-website/
    ├─ js/main.js           menu, animations, video, live prices
    ├─ js/services.js       service pages text, categories, FAQ (starting data)
    ├─ js/service.js        builds service.html from services.js
+   ├─ js/svcui.js          the service index (rows) shared by the home page and service.html
+   ├─ js/home.js           builds the home page's service list, process steps and FAQ from services.js / the admin panel
    ├─ js/planner.js        project form + estimate + WhatsApp/Email message (+ saves the request to Firebase)
    ├─ js/firebase-config.js  ← Firebase apiKey, projectId, admin email
    ├─ js/fb.js             Firebase login + database helper for the customer pages
@@ -74,12 +78,14 @@ hexora-website/
 Open it from the small lock icon in the bottom-right corner of any page's footer (or go to `/admin.html`).
 The panel saves to **Firebase** (free Spark plan is enough). No GitHub token is needed.
 
-- **Log in** with the 6-digit **PIN**. The PIN is the password of one Firebase user, so Firebase checks it; it is not written in the site code. 5 wrong tries lock the screen for 60 seconds, and Firebase also blocks repeated wrong tries.
+- **Log in** with the **PIN** (6 – 12 digits; a longer one such as 8 digits is safer, and the Security tab refuses easy ones like 123456 or 111111). The PIN is the password of one Firebase user, so Firebase checks it; it is not written in the site code. The login screen remembers only how *long* your PIN is (for the dots), never the PIN. A PIN longer than the usual length is sent with the **Login** button or Enter. 5 wrong tries lock the screen for 60 seconds, and Firebase also blocks repeated wrong tries. Locking the panel clears customers' names, PINs and chats from the page's memory.
 - **Save** writes prices, contact, services and the notice bar to Firestore (`site/content`). Every page loads them through `assets/js/boot.js`. New visitors see a change at once; people already on the site see it from their next page.
 - **Projects & requests**: every project form sent from `start-project.html` is saved to Firestore (`requests`), even if the customer never taps WhatsApp / Email. For each one set the **stage** (New → Contacted → Design → Building → Testing → Done), **% done**, **finish date**, the **project name** and an **update for the customer**, then press **Update**. **New project** adds one that came by WhatsApp or phone.
 - **Customer accounts**: link a project to a customer's account (an account with the same phone is picked for you). Linked projects show on that customer's **මගේ projects** page.
 - **Mobile app packages / add-ons** are edited in **Prices** (Mobile app packages, Package add-ons). On a service, the **Mobile app packages පෙන්නන්න** tick shows the 9 packages on that service's page (on for Mobile Apps).
-- Tabs: Dashboard, Projects & requests, Notice (a bar at the top of every page), Contact, Prices, Services (text, FAQ, prices, animation, new services), History (go back to an earlier version), Security (change the PIN).
+- Tabs, in three groups: **Dashboard** (what is waiting for you, the latest requests, counts) · **Inbox**: Requests, Live chats, Customers · **Site**: Home page (the process steps and FAQ on the home page), Notice (a bar at the top of every page), Contact, Prices (every group folds open / closed), Services (text, short line, FAQ, prices, animation, new services; the home page's service list is built from here, so a new service needs no `index.html` edit) · **System**: History (go back to an earlier version), Security (change the PIN).
+- **Requests tab**: search by name, phone (any way of typing it), ref or project; cards fold (a list of more than 3 starts folded; **සියල්ල open / close** opens or closes all); **⬇ CSV** downloads the shown list for Excel / Sheets (a name that starts with `=` cannot run as a formula). New requests, PIN requests and chat messages that arrive while the panel is open are picked up every 45 seconds (and when you come back to the tab): a toast, the red numbers, and the browser tab title `(3) Admin | Hexora`. Deleting a request also deletes its chat messages; unlinking a project from a customer removes its chat summary so the old customer can no longer see it.
+- **Prices checks**: Save is refused (with the reason) for a package base rate of 0, negative or empty prices, an advance % above 100, an item without a name, a non-https rate API and so on.
 - Until Firebase is set up, the site uses `assets/js/config.js` and `services.js` as before.
 
 ### One-time Firebase setup
@@ -97,7 +103,8 @@ Good to know:
 - `apiKey` and `projectId` are not secrets; Firebase web apps always show them. The rules decide who can change data. Never put the PIN in any file.
 - Change the PIN from the **Security** tab (or in Firebase → Authentication → Users → Reset password). If you forget it, set a new password there.
 - `config.js` / `services.js` are only the starting data and the backup. After the first Save, edit from the admin panel; editing those files will not change the live site.
-- A new service appears on the service pages; add a card for it in the Services section of `index.html` if you want it on the home page too.
+- A new service appears on the service pages **and** in the home page's service list (both are built from the same data). For a nice look give it a **Short line** and an icon.
+- Two admin windows: if one saves while the other still shows an older version, the second Save is refused ("මේ අතරේ වෙන තැනකින් data වෙනස් වෙලා"), so nothing is overwritten by accident. Reload and try again.
 
 ## Customer accounts (`account.html`, "මගේ projects")
 - A customer makes an account with their **name, phone number and a 6-digit PIN** they choose, then logs in with the phone number and PIN. Firebase keeps it as a login `c<phone>@hexora-admin-panel.firebaseapp.com` (for example `c94771234567@…`); no email is sent to it.
@@ -116,6 +123,11 @@ Good to know:
 - **Live chat for visitors (no login)**: the green chat button on the home page and service pages (and any "Chat කරන්න" button) opens a chat. A visitor first gives a **name and a phone number**, so you can tell who is writing; a logged-in customer skips the form and their account name and phone are used. It is the same chat box (text, photos, voice, Seen ticks, Online). The admin panel has a **Live chats** tab: every visitor with name, phone (with a WhatsApp / Call button), the page they were on, their device, an "Account: …" mark when the phone matches a customer account, and a red number for new messages. The phone number is typed by the visitor and is **not verified**; if in doubt, confirm with a WhatsApp message. The visitor's browser keeps a long random id, so closing the page and coming back continues the same chat, and a red 1 shows on the green button when the developer has replied. Delete a chat (and its messages) with the bin button. Anyone can start a chat, so an unwanted one can be deleted there.
 - **Account page tabs**: **මගේ projects** and **Settings** (name, PIN, logout).
 - After changing `firestore.rules`, paste it again in Firebase → Firestore Database → Rules → **Publish**.
+
+## Checks that were run (so you know it is solid)
+- 270 end-to-end checks against the Firebase emulators with the real `firestore.rules` (accounts, requests, chat, voice, security rules, slow / offline network), plus 80 admin-panel checks (every tab, validation, save / conflict / history, PIN change, search, CSV, polling) and 50 public-site checks (every page on phone, tablet and desktop, menu, footer, keyboard, SEO files, shared-computer privacy).
+- axe-core accessibility scan: no violations on any page (phone and desktop); every colour pair is at least 4.5:1.
+- Every link, image and `#anchor` on every page resolves.
 
 ## How to open it on your computer
 Double-click `index.html`. For the live exchange rate to work, open it through a local server:

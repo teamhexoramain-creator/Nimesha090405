@@ -48,6 +48,30 @@ window.HX_SERVICES = {
     { q: "ඉක්මනටම ඕන නම්?", a: "Project form එකේ Speed එක \"Urgent\" කළාම price එකට +{urgent} ක් එකතු වෙනවා, වැඩ ඉක්මනට ඉවර කරනවා." }
   ],
 
+  /* ---------------- Home page (index.html): process steps and FAQ ----------------
+     Edited from the admin panel -> Home page. In the text, {support} and {advance} become the
+     free-support period and the advance percent from the price settings. */
+  home: {
+    steps: [
+      { time: "විනාඩි 2", t: "Idea එක කියන්න", d: "Project form එක fill කරන්න. Estimate price එක සහ කල් යන වෙලාව එකපාර පෙන්නනවා." },
+      { time: "දවස් 1 – 2", t: "Free call & quote", d: "Details කතා කරලා fixed quote එකක් සහ timeline එකක් ඔයාට එවනවා." },
+      { time: "දවස් 1 – 7", t: "Design preview", d: "Code කරන්න, edit කරන්න කලින් draft එක පෙන්නනවා. වෙනස් කරන්න ඕන ඒවා එතකොට කියන්න පුළුවන්." },
+      { time: "Project එක අනුව", t: "Build + updates", d: "Apps කොටස් වලට හදලා test version එවනවා. Design සහ video වලට revisions දෙනවා." },
+      { time: "Delivery", t: "Launch & delivery", d: "App එක store එකට, site එක domain එකට. Logo, design, video files ඔක්කොම full quality වලින් ඔයාට." },
+      { time: "ඊට පස්සේ", t: "Support", d: "{support} එකක් free bug fixes. ඊට පස්සේ monthly maintenance plan එකක් ගන්න පුළුවන්." }
+    ],
+    faq: [
+      { q: "Project එකක් ඉවර කරන්න කොච්චර කල් යනවද?", a: "Logo එකකට දවස් 3ක් විතර, reel එකකට දවස් 1 – 2ක්. පොඩි app එකකට සති 4 – 6 ක්, ලොකු systems වලට මාස 2 – 4 ක් යන්න පුළුවන්. Project form එකේ ඔයාගේ project එකට ගැළපෙන time එක පෙන්නනවා." },
+      { q: "පටන් ගන්න මට මොකද ඕන?", a: "ඔයාගේ idea එක විතරයි. මොකද ඕන, කවුද use කරන්නේ කියලා කියන්න. ඔයාට කැමති apps, logos, videos තියෙනවා නම් ඒවත් එවන්න. Design සහ technical වැඩ ඔක්කොම අපි කරනවා." },
+      { q: "Play Store / App Store එකට දාන්න පුළුවන්ද?", a: "ඔව්. Listing එක, screenshots, builds ඔක්කොම හදලා ඔයාගේ developer account එකෙන් publish කරනවා. එතකොට app එක ඔයාගේ නමින් තියෙන්නේ. Google USD 25 එකපාරයි, Apple USD 99 අවුරුද්දට." },
+      { q: "Source code එක මට ලැබෙනවද?", a: "ඔව්. Final payment එක කළාම full source code එක සහ project එකේ logins ඔක්කොම ඔයාට දෙනවා." },
+      { q: "Launch කළාට පස්සේ මොකද වෙන්නේ?", a: "{support} එකක් bug fixes free. ඊට පස්සේ updates, අලුත් features, server checks වලට monthly maintenance plan එකක් ගන්න පුළුවන්." },
+      { q: "Logo එකකට revisions කීයක් දෙනවද?", a: "Concepts 3ක් පෙන්නනවා. ඔයාට කැමති එක revisions 3ක් වෙනකන් free. Final files PNG, JPG, SVG, PDF විදියට දෙනවා, print වලටයි online වලටයි දාන්න පුළුවන්." },
+      { q: "Video editing වලට footage එවන්නේ කොහොමද?", a: "Google Drive link එකක් හරි WhatsApp එකෙන් එවන්න පුළුවන්. Reel එකක් usually දවස් 1 – 2කින්, YouTube video එකක් දවස් 2 – 4කින් deliver කරනවා." },
+      { q: "Payment කරන්නේ කොහොමද?", a: "වැඩ පටන් ගන්න {advance} advance, ඉතුරු ටික deliver කරද්දී, bank transfer එකෙන්. ලොකු projects milestones වලට කඩලා ගෙවන්න පුළුවන්." }
+    ]
+  },
+
   list: [
     /* ---------------- Development ---------------- */
     {

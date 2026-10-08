@@ -8,14 +8,23 @@
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const finePointer = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
 
-  /* ---------- preloader ---------- */
+  /* ---------- preloader (only on the first page of a visit) ---------- */
   const loader = $(".loader");
   if (loader) {
     const start = performance.now();
-    const hide = () => setTimeout(() => loader.classList.add("done"), Math.max(0, 700 - (performance.now() - start)));
+    const hide = () => setTimeout(() => { loader.classList.add("done"); try { sessionStorage.setItem("hx_seen", "1"); } catch (e) { /* storage blocked */ } }, Math.max(0, 700 - (performance.now() - start)));
     if (document.readyState === "complete") hide(); else window.addEventListener("load", hide);
     setTimeout(() => loader.classList.add("done"), 2400);
   }
+
+  /* ---------- the menu link of the page you are on ---------- */
+  (function () {
+    const here = (location.pathname.split("/").pop() || "index.html");
+    $$(".nav-links a[href]").forEach(a => {
+      const h = a.getAttribute("href");
+      if (h.indexOf("#") === -1 && h.split("?")[0] === here && !a.classList.contains("nav-cta") && !a.classList.contains("nav-reg")) a.setAttribute("aria-current", "page");
+    });
+  })();
 
   /* ---------- logged-in customer? (account.js / fb.js keep the login in localStorage) ---------- */
   let cu = null;
@@ -301,8 +310,8 @@
   $$("[data-email]").forEach(el => { el.textContent = C.email; if (el.tagName === "A") el.href = "mailto:" + C.email; });
   $$("[data-phone]").forEach(el => { el.textContent = C.phoneDisplay; if (el.tagName === "A") el.href = "tel:+" + wa; });
   $$("[data-phone-label]").forEach(el => { el.textContent = C.phoneDisplay; });
-  $$("[data-facebook]").forEach(a => { if (C.facebook) a.href = C.facebook; else (a.closest("li") || a).hidden = true; });
-  $$("[data-youtube]").forEach(a => { if (C.youtube) a.href = C.youtube; else (a.closest("li") || a).hidden = true; });
+  $$("[data-facebook]").forEach(a => { if (C.facebook) { a.href = C.facebook; (a.closest("li") || a).hidden = false; } });
+  $$("[data-youtube]").forEach(a => { if (C.youtube) { a.href = C.youtube; (a.closest("li") || a).hidden = false; } });
   $$("[data-advance]").forEach(el => el.textContent = (C.advancePercent || 50) + "%");
   $$("[data-support]").forEach(el => { const m = C.freeSupportMonths || 1; el.textContent = m + (m === 1 ? " month" : " months"); });
   $$("[data-year]").forEach(el => el.textContent = new Date().getFullYear());

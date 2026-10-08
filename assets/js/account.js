@@ -130,6 +130,8 @@
     if (!list.length) return;
     const me = FB.user(), keep = [];
     for (const c of list) {
+      // a request typed with another phone number is not this customer's (shared computer): leave it for its own owner
+      if (c.phone && FB.phoneId(c.phone) !== me.phone) { keep.push(c); continue; }
       try { await FB.patch("/requests/" + encodeURIComponent(c.id), { uid: me.uid, proof: c.claim }, ["uid", "proof", "claim"], "currentDocument.exists=true"); }
       catch (e) { if (e.reason === "NETWORK") keep.push(c); }   // linked elsewhere or gone: forget it
     }
@@ -279,7 +281,7 @@
   root.addEventListener("click", e => {
     const t = e.target.closest("[data-mode], [data-act]"); if (!t) return;
     if (t.dataset.mode) { mode = t.dataset.mode; gate(); return; }
-    if (t.dataset.act === "logout") { stopChat(); clearInterval(chatPoll); FB.signOut(); profile = null; projects = null; chats = {}; tab = "projects"; mode = "login"; gate(); }
+    if (t.dataset.act === "logout") { try { localStorage.removeItem("hexora_project_draft_v2"); } catch (e) { /* storage blocked */ } stopChat(); clearInterval(chatPoll); FB.signOut(); profile = null; projects = null; chats = {}; tab = "projects"; mode = "login"; gate(); }
     if (t.dataset.act === "tab") { tab = t.dataset.tab; paint(); }
     if (t.dataset.act === "chat") toggleChat(t.dataset.id);
     if (t.dataset.act === "reload") portal();

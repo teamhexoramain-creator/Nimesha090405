@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /admin.html
+
+Sitemap: https://teamhexoramain-creator.github.io/Nimesha090405/sitemap.xml
