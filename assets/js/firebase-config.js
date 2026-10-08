@@ -7,7 +7,7 @@
    adminEmail: the Email/Password user made in Authentication (its password is the admin PIN).
    Leave them empty and the site uses assets/js/config.js and services.js. */
 window.HX_FIREBASE = {
-  apiKey: "",
-  projectId: "",
-  adminEmail: ""
+  apiKey: "AIzaSyAwn3DDg-zDPVuo3n9KhSUdhhemz4dmHLI",
+  projectId: "hexora-admin-panel",
+  adminEmail: "teamhexoramain@gmail.com"
 };

@@ -2,12 +2,12 @@ rules_version = '2';
 
 // HEXORA — Firestore security rules.
 // Paste this into Firebase console → Firestore Database → Rules → Publish.
-// Change ADMIN_EMAIL below to the admin user's email (the same as adminEmail in assets/js/firebase-config.js).
+// The email in isAdmin() must be the admin user's email (the same as adminEmail in assets/js/firebase-config.js).
 service cloud.firestore {
   match /databases/{database}/documents {
 
     function isAdmin() {
-      return request.auth != null && request.auth.token.email == 'ADMIN_EMAIL';
+      return request.auth != null && request.auth.token.email == 'teamhexoramain@gmail.com';
     }
     function text(field, max) {
       return request.resource.data[field] is string && request.resource.data[field].size() <= max;

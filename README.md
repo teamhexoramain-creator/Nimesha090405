@@ -69,7 +69,7 @@ The panel saves to **Firebase** (free Spark plan is enough). No GitHub token is 
    Then **Users → Add user**: your admin email, and the PIN (`090405`) as the password.
    Optional but good: **Settings → User actions →** turn off **Enable create (sign-up)**.
 3. **Build → Firestore Database → Create database** → location `asia-south1` (Mumbai) → **production mode**.
-   Open the **Rules** tab, paste everything from `firestore.rules`, change `ADMIN_EMAIL` to your admin email, **Publish**.
+   Open the **Rules** tab, paste everything from `firestore.rules` (the admin email is in `isAdmin()`; change it there if you use another one), **Publish**.
 4. **Project settings (gear) → General → Your apps → Web (`</>`)** → register an app (no hosting needed).
    Copy `apiKey` and `projectId` into `assets/js/firebase-config.js`, and put the admin email in `adminEmail`.
 5. Push to GitHub. Open `/admin.html`, type the PIN, and press **Save කරන්න** once: this copies the site's current data into Firebase.
