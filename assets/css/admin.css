@@ -23,7 +23,7 @@
 .pin-pad button:hover { border-color: var(--cyan); }
 .pin-pad button:active { transform: scale(.93); background: var(--surface-2); }
 .pin-pad .ad-ico { width: 20px; height: 20px; }
-.ad-back { display: inline-flex; align-items: center; gap: 8px; border: 0; background: none; color: var(--faint); font-size: .85rem; text-decoration: none; cursor: pointer; }
+.ad-back { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; border: 0; background: none; color: var(--faint); font-size: .85rem; text-decoration: none; cursor: pointer; }
 .ad-back:hover { color: var(--fg); }
 .ad-steps { text-align: left; display: grid; gap: 8px; margin: 0; padding-left: 20px; color: var(--muted); font-size: .9rem; justify-self: stretch; }
 .ad-steps a { color: var(--cyan); }

@@ -6,7 +6,7 @@ Built with plain **HTML + CSS + JavaScript**. No installs, no build step, no ser
 ## Pages
 | File | What it is |
 |---|---|
-| `index.html` | Home page: video hero, services, process, pricing, FAQ, contact |
+| `index.html` | Home page: video hero with a "මොකක්ද ඕන?" picker (App / Website / Logo / Video with their "from" prices), the service index, the 6-step process, tabbed pricing (Mobile Apps ladder · Websites · Design & Video), FAQ, contact |
 | `service.html` | One page per service (`service.html?s=mobile-apps`): animation, what's included, how we work, pricing, FAQ and the other services in the same category. With no `?s=` it lists every service by category. |
 | `start-project.html` | Project request form with a live LKR price estimate for apps/websites and for logo, design & video work. Customers send the request to WhatsApp or Email; it is also saved for the admin panel. |
 | `account.html` | **මගේ projects**: customers log in with their phone number and a 6-digit PIN and see each project's stage, % done, latest update and finish date. |
@@ -24,7 +24,7 @@ hexora-website/
 ├─ firestore.rules       Firebase security rules (paste into the Firebase console)
 ├─ README.md
 └─ assets/
-   ├─ css/style.css        all design + animations
+   ├─ css/style.css        all design + animations (the "LAYOUT v2" block at the end holds the numbered section heads, service index, package ladder, tabs and cut-corner panels)
    ├─ css/admin.css        admin panel design
    ├─ js/config.js         prices, WhatsApp, email, links (starting data; the admin panel edits the live copy)
    ├─ js/pricing.js        USD → LKR rate + price maths
@@ -37,7 +37,7 @@ hexora-website/
    ├─ js/account.js        customer page (account.html)
    ├─ js/chat.js           chat box: text, photos, voice, Seen, Online (customer page, admin panel, live chat)
    ├─ js/livechat.js       the green chat button: live chat for visitors
-   ├─ js/packages.js       mobile app package cards (home page, Mobile Apps page)
+   ├─ js/packages.js       the mobile app package "ladder" (home page, Mobile Apps page)
    ├─ js/boot.js           loads the admin panel's saved data, then the page scripts
    ├─ js/admin.js          admin panel (admin.html)
    ├─ brand/hexora-logo.png  your original logo (the site cuts the mark, name and tagline from it)
@@ -46,10 +46,10 @@ hexora-website/
 
 ## How to change things (`assets/js/config.js`, or the admin panel once Firebase is set up)
 - **Mobile app packages** (`packages`, 9 of them) and **add-ons** (`addons`) are written in **LKR for 1 USD = 369** (`packageBaseRate`). The site multiplies by (today's rate ÷ 369), so when the dollar goes up the price goes up and when it goes down the price goes down. At exactly 369 a package shows its own price (Basic App = LKR 10,000). `weeks` and the add-on prices are starting values: check them in the admin panel → Prices.
-- **Badges on packages**: each package has an optional `badge` (Firebase App: "ගොඩක් අය තෝරන්නේ", Complete App: "Business වලට හොඳයි"). Change or clear them in the admin panel → Prices → Mobile app packages. A package with a badge is shown as a highlighted card.
+- **Badges on packages**: each package has an optional `badge` (Firebase App: "ගොඩක් අය තෝරන්නේ", Complete App: "Business වලට හොඳයි"). Change or clear them in the admin panel → Prices → Mobile app packages. A package with a badge gets a ★ / pill in the package list and a clickable badge in its details (it opens the project form with that package chosen).
 - **Other prices** (websites, web systems, design & video): every price is in **USD**. Change the `usd:` numbers. The site converts to LKR automatically.
 - **Design & video prices**: the `creative` list (logo, branding kit, posts, photo editing, video editing, motion…). Each has `usd` per item, a `unit` name, and `days` / `extraDays` for the delivery time.
-- **Exchange rate**: loaded live from `open.er-api.com` and saved for 12 hours. If it fails, `fallbackRate` (331) is used.
+- **Exchange rate**: loaded live from `open.er-api.com` and saved for 12 hours. If it fails, `fallbackRate` (369) is used.
 - **Rounding**: LKR prices round to the nearest `roundTo` (500).
 - **Contact**: `whatsapp` (94766792617), `phoneDisplay`, `email`.
 - **Facebook / YouTube**: paste your page links into `facebook` and `youtube`. Empty = hidden.
@@ -57,11 +57,18 @@ hexora-website/
 - Add a new feature: copy one line inside `features` and give it a new key.
 
 ## How to change the service pages (`assets/js/services.js`)
-- Each service has a `slug` (its link: `service.html?s=<slug>`), a category `cat` (`dev` or `creative`), text (`summary`, `intro`, `includes`) and its own `faq`. `commonFaq` is added to every service.
+- Each service has a `slug` (its link: `service.html?s=<slug>`), a category `cat` (`dev` or `creative`), text (`short` = the one-line text in the service lists, `summary`, `intro`, `includes`) and its own `faq`. `commonFaq` is added to every service.
 - **Prices are not written here.** `prices` points to items in `config.js` (for example `{ type: "android" }` or `{ creative: "logo" }`), so a price changed in `config.js` changes on every page. `featured: true` highlights one card.
 - In text you can write `{support}`, `{advance}`, `{urgent}` or a price like `{creative:photo}`; the page fills in the current value.
 - `anim` picks the built-in animation (`phone`, `browser`, `dashboard`, `backend`, `chat`, `server`, `logo`, `social`, `photo`, `timeline`, `uiux`). To show your own video instead, set `video: "assets/video/your-file.mp4"`.
-- New service: copy one block in `list`, give it a new `slug`, and add a card linking to it in the Services section of `index.html`.
+- New service: copy one block in `list`, give it a new `slug`, and add a row linking to it in the Services list of `index.html` (`<li><a class="svx-row" …>`; the service.html pages build their lists automatically).
+
+## How the pages are put together (design notes)
+- **Cut-corner look**: buttons, cards, the package panel and the process steps share one chamfered corner (like a hexagon's edge) so every page reads as one system. It is `clip-path`, so a thin outline is drawn with an inset layer (`.btn::before`) and a button shows a normal focus ring when focused with the keyboard.
+- **Whole cards are clickable**: clicking anywhere on a price card (its badge, its price, empty space) follows the card's button. This is one handler in `main.js` (`.price-card`, `[data-card]`).
+- **Tabs** (`[data-tabs]`, `main.js`): pricing on the home page, and the service categories on a phone. Arrow keys / Home / End work.
+- **Package ladder** (`[data-ladder]`): the packages come from `config.js → packages`; click one to open its details.
+- Every page is checked on a 390 px phone and a 1280 px screen for horizontal overflow and tap targets of at least ~44 px.
 
 ## Admin panel (`admin.html`) — Firebase
 Open it from the small lock icon in the bottom-right corner of any page's footer (or go to `/admin.html`).

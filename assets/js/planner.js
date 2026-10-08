@@ -39,8 +39,8 @@
   function buildOptions() {
     $("#opt-type").innerHTML = Object.entries(C.types).filter(([, t]) => t.kind !== "app" && t.kind !== "both").map(([k, t]) => tile("radio", "type", k, t.label, t.note, "")).join("");
     $("#opt-pkg").innerHTML = Object.entries(C.packages || {}).map(([k, p]) =>
-      '<label class="opt pkg"><input type="radio" name="pkg" value="' + k + '">' + (p.badge ? '<span class="pkg-badge">' + esc(p.badge) + "</span>" : "") + '<span class="opt-box"><span class="tick"></span><span class="t">' + esc(p.label) + '</span>' +
-      '<span class="p" data-p="pkg:' + k + '"></span><ul class="pkg-inc">' + (p.includes || []).map(x => "<li>" + esc(x) + "</li>").join("") + "</ul></span></label>").join("");
+      '<label class="opt pkg"><input type="radio" name="pkg" value="' + k + '"><span class="opt-box"><span class="tick"></span><span class="t">' + esc(p.label) + '</span>' +
+      '<span class="p" data-p="pkg:' + k + '"></span><span class="s">' + (p.includes || []).length + ' features · select කළාම බලන්න</span><ul class="pkg-inc">' + (p.includes || []).map(x => "<li>" + esc(x) + "</li>").join("") + "</ul></span>" + (p.badge ? '<span class="pkg-badge">' + esc(p.badge) + "</span>" : "") + "</label>").join("");   // the badge comes after .opt-box so "input:checked + .opt-box" still matches
     const adds = Object.entries(C.addons || {});
     $("#opt-addons").innerHTML = adds.filter(([, a]) => !a.qty).map(([k, a]) => tile("checkbox", "addons", k, a.label, a.note, "+")).join("");
     $("#opt-addqty").innerHTML = adds.filter(([, a]) => a.qty).map(([k, a]) => crItem("pq:" + k, a, "addons:" + k)).join("");

@@ -25,6 +25,58 @@
   $$("[data-auth-in]").forEach(el => { el.hidden = !loggedIn; });
   $$("[data-user-name]").forEach(el => { el.textContent = (cu && cu.name) || ""; });
 
+  /* ---------- package ladder + "from" prices (built first so every later step sees them) ---------- */
+  const homePk = $("#home-packages");
+  if (homePk && window.HXPkg && P && C.packages) homePk.innerHTML = window.HXPkg.html(C, P);
+  // [data-from-pkg]: the cheapest package, as a "from" price
+  const pkgLkr = Object.keys(C.packages || {}).map(k => C.packages[k].lkr).filter(Boolean);
+  if (pkgLkr.length) $$("[data-from-pkg]").forEach(el => el.setAttribute("data-price-usd", (Math.min.apply(null, pkgLkr) / (C.packageBaseRate || 369)).toFixed(4)));
+
+  /* ---------- tabs: [data-tabs] (pricing) and [data-ladder] (packages) ---------- */
+  function tabset(tabs, panelOf, after) {
+    const pick = (t, focus) => {
+      tabs.forEach(x => {
+        const on = x === t, p = panelOf(x);
+        x.setAttribute("aria-selected", String(on)); x.tabIndex = on ? 0 : -1;
+        if (p) p.classList.toggle("on", on);
+      });
+      if (focus) t.focus();
+      if (after) after(t);
+    };
+    tabs.forEach((t, i) => {
+      t.addEventListener("click", () => pick(t, false));
+      t.addEventListener("keydown", e => {
+        const k = e.key, n = tabs.length;
+        const go = k === "ArrowRight" || k === "ArrowDown" ? (i + 1) % n : k === "ArrowLeft" || k === "ArrowUp" ? (i + n - 1) % n : k === "Home" ? 0 : k === "End" ? n - 1 : -1;
+        if (go < 0) return;
+        e.preventDefault(); pick(tabs[go], true);
+      });
+    });
+  }
+  $$("[data-tabs]").forEach(root => {
+    const tabs = $$(":scope > [role='tablist'] > [role='tab']", root);
+    tabset(tabs, t => document.getElementById(t.getAttribute("aria-controls")));
+  });
+  $$("[data-ladder]").forEach(root => {
+    const tabs = $$(".rung", root);
+    tabset(tabs, t => document.getElementById(t.getAttribute("aria-controls")), t => {
+      // on a phone the details sit under the list: make sure they come into view
+      if (window.matchMedia("(max-width: 899px)").matches) {
+        const p = document.getElementById(t.getAttribute("aria-controls")), r = p && p.getBoundingClientRect();
+        if (r && (r.top > window.innerHeight * 0.8 || r.bottom < 0)) p.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" });
+      }
+    });
+  });
+
+  /* ---------- a whole price card is a button: clicking its badge, price or empty space opens the card's link ---------- */
+  document.addEventListener("click", e => {
+    const card = e.target.closest(".price-card, [data-card]");
+    if (!card || e.target.closest("a, button, input, select, textarea, label, summary")) return;
+    if (window.getSelection && String(window.getSelection())) return;   // the visitor is selecting text
+    const go = card.querySelector("a[href]");
+    if (go) go.click();
+  });
+
   /* ---------- header state + scroll progress ---------- */
   const header = $(".site-header");
   const bar = $(".progress");
@@ -286,8 +338,6 @@
     };
     requestAnimationFrame(step);
   }
-  const homePk = $("#home-packages");
-  if (homePk && window.HXPkg && P && C.packages) homePk.innerHTML = window.HXPkg.html(C, P);
   // an element shows a price either by project type (data-price-type) or a plain USD amount (data-price-usd)
   const usdOf = el => {
     const t = C.types && C.types[el.getAttribute("data-price-type")];

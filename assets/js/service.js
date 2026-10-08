@@ -148,13 +148,22 @@
       "</div></nav>";
   }
 
-  function card(s, i) {
-    return '<article class="service spot rv' + (s.cat === "creative" ? " creative" : "") + '" style="--rd:' + (i % 3) + '">' +
-      '<div class="hex-icon">' + icon(s.icon) + "</div>" +
-      '<h3><a class="svc-link" href="' + link(s) + '">' + esc(s.name) + "</a></h3>" +
-      "<p>" + fill(s.summary) + "</p>" +
-      '<div class="tags">' + (s.tags || []).map(t => "<span>" + esc(t) + "</span>").join("") + "</div>" +
-      '<span class="svc-more" aria-hidden="true">විස්තර බලන්න →</span></article>';
+  function row(s) {
+    return '<li><a class="svx-row" href="' + link(s) + '"><span class="hex-icon">' + icon(s.icon) + "</span>" +
+      '<span class="svx-t"><b>' + esc(s.name) + "</b><small>" + fill(s.short || s.summary) + "</small></span>" +
+      '<span class="svx-go" aria-hidden="true">→</span></a></li>';
+  }
+  // the service index: both categories side by side on a computer, tabs on a phone (one category = no tabs)
+  function indexHtml(cats, items) {
+    const one = cats.length === 1;
+    return '<div class="svx rv' + (one ? " svx-one" : "") + '"' + (one ? "" : " data-tabs") + ">" +
+      (one ? "" : '<div class="svx-tabs" role="tablist" aria-label="Services categories">' + cats.map((k, i) =>
+        '<button type="button" class="svx-tab ' + k + '" role="tab" id="svt-' + k + '" aria-controls="svx-' + k + '" aria-selected="' + (i === 0) + '"' + (i ? ' tabindex="-1"' : "") + ">" +
+        esc(S.categories[k].label) + " <b>" + inCat(k).length + "</b></button>").join("") + "</div>") +
+      '<div class="svx-cols">' + cats.map((k, i) =>
+        '<div class="svx-panel ' + k + (i === 0 ? " on" : "") + '" id="svx-' + k + '"' + (one ? "" : ' role="tabpanel" aria-labelledby="svt-' + k + '"') + ">" +
+        '<div class="svx-head"><span class="svc-label ' + k + '">' + esc(S.categories[k].label) + '</span><p class="muted">' + esc(S.categories[k].note) + "</p></div>" +
+        '<ul class="svx-list">' + (items && one ? items : inCat(k)).map(row).join("") + "</ul></div>").join("") + "</div></div>";
   }
 
   function ctaBand(s) {
@@ -197,17 +206,19 @@
           '<p class="lead">මේක පටන් ගන්න ගණන්. අද dollar rate එකෙන් LKR වලට auto මාරු වෙනවා. Final price එක ඔයාට ඕන features, items ගණන අනුව වෙනස් වෙනවා.</p>' +
           '<span class="rate-pill" data-rate-pill><span class="live"></span><span data-rate-text>1 USD = LKR ' + Number(C.fallbackRate).toFixed(2) + " · approx.</span></span></div>" +
         (pricesOf(s).length ? '<div class="prices svc-prices">' + pricesOf(s).map(priceCard).join("") + "</div>" : "") +
-        (showPk(s) && window.HXPkg ? '<div class="prices pkg-prices svc-prices">' + window.HXPkg.html(C, P) + "</div>" : "") +
+        (showPk(s) && window.HXPkg ? '<div class="rv">' + window.HXPkg.html(C, P) + "</div>" : "") +
       "</div></section>" +
 
-      '<section id="svc-faq"><div class="wrap">' +
-        '<div class="section-head center rv"><span class="eyebrow">FAQ</span><h2 class="display">' + esc(s.name) + " ගැන ප්‍රශ්න</h2></div>" +
+      '<section id="svc-faq"><div class="wrap faq-wrap">' +
+        '<div class="faq-left"><div class="section-head rv"><span class="eyebrow">FAQ</span><h2 class="display">' + esc(s.name) + " ගැන ප්‍රශ්න</h2>" +
+          '<p class="lead">උත්තරයක් හම්බුනේ නැත්නම් කෙලින්ම අහන්න, Developer කෙනෙක් ඉක්මනට reply කරනවා.</p></div>' +
+          '<div class="faq-side"><button class="btn btn-primary" type="button" data-open-chat>Chat කරන්න</button><a class="btn" href="' + esc(ctaHref(s)) + '">Estimate ගන්න</a></div></div>' +
         '<div class="faq rv">' + faq.map((f, i) => "<details" + (i ? "" : " open") + "><summary>" + esc(f.q) + '</summary><div class="ans"><div><p>' + fill(f.a) + "</p></div></div></details>").join("") + "</div>" +
       "</div></section>" +
 
       (others.length ? '<section class="band"><div class="wrap">' +
         '<div class="section-head rv"><span class="eyebrow">' + esc(cat.label) + '</span><h2 class="display">මේ category එකේ අනිත් services</h2></div>' +
-        '<div class="services">' + others.map(card).join("") + "</div>" +
+        indexHtml([s.cat], others) +
       "</div></section>" : "") +
 
       ctaBand(s);
@@ -222,9 +233,7 @@
         '<h1 class="display" data-split style="--d:150ms">ඔක්කොම services</h1>' +
         '<p class="lead fade-up" style="--d:450ms">Service එකක් තෝරගන්න. හැම එකකම animation එක, මොකද ලැබෙන්නේ, pricing සහ FAQ තියෙනවා.</p>' +
       "</div>" +
-      Object.keys(S.categories).map(k =>
-        '<div class="svc-group rv"><span class="svc-label ' + k + '">' + esc(S.categories[k].label) + '</span><p class="muted">' + esc(S.categories[k].note) + "</p></div>" +
-        '<div class="services">' + inCat(k).map(card).join("") + "</div>").join("") +
+      indexHtml(Object.keys(S.categories)) +
       "</div></section>" + ctaBand(null);
   }
 
