@@ -325,38 +325,41 @@
     return L.join("\n");
   }
 
-  /* ---------- save the request for the admin panel (Firebase, see firebase-config.js) ---------- */
-  const FB = window.HX_FIREBASE || {};
+  /* ---------- save the request for the admin panel (Firebase, see fb.js) ---------- */
+  const FB = window.HXFB;
+  const CLAIMS = "hx_claims_v1";   // requests sent before logging in; account.js links them after login
   let sent = null;   // the last request sent to Firebase: { sig, ref, id, ok }
-  function newId() {
-    const abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789", r = new Uint8Array(20);
-    if (window.crypto && crypto.getRandomValues) crypto.getRandomValues(r);
-    else for (let i = 0; i < r.length; i++) r[i] = Math.floor(Math.random() * 256);
-    return Array.from(r, n => abc[n % abc.length]).join("");
-  }
   function saveRequest(job, plain, est) {
-    if (!FB.projectId || !window.fetch) return;
+    if (!FB || !FB.ready || !window.fetch) return;
     const v = id => ($("#" + id).value || "").trim();
+    const user = FB.user();
     const data = {
-      ref: job.ref, name: v("f-name").slice(0, 100), phone: v("f-phone").slice(0, 30), email: v("f-email").slice(0, 120),
-      business: v("f-business").slice(0, 120), contact: (val("contact") || "WhatsApp").slice(0, 20), track: track(),
+      ref: job.ref, title: v("f-appname").slice(0, 100), name: v("f-name").slice(0, 100), phone: v("f-phone").slice(0, 30),
+      email: v("f-email").slice(0, 120), business: v("f-business").slice(0, 120), contact: (val("contact") || "WhatsApp").slice(0, 20), track: track(),
       estimate: est ? P.formatLKR(est.lo) + (est.hi ? " – " + P.formatLKR(est.hi) : "") : "",
       message: plain.slice(0, 6000), status: "new"
     };
-    const fields = {};
-    Object.keys(data).forEach(k => { fields[k] = { stringValue: data[k] }; });
-    const db = "projects/" + FB.projectId + "/databases/(default)";
+    if (user) data.uid = user.uid;
+    else data.claim = job.claim || (job.claim = FB.newId() + FB.newId());
     // createdAt is set by the Firestore server; the same id is never written twice
-    const body = { writes: [{ update: { name: db + "/documents/requests/" + job.id, fields: fields }, currentDocument: { exists: false },
-      updateTransforms: [{ fieldPath: "createdAt", setToServerValue: "REQUEST_TIME" }] }] };
-    fetch("https://firestore.googleapis.com/v1/" + db + "/documents:commit" + (FB.apiKey ? "?key=" + encodeURIComponent(FB.apiKey) : ""),
-      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
-      .then(r => {
-        if (!r.ok && r.status !== 409) return;   // 409: already saved
+    FB.create("requests", job.id, data, ["createdAt"])
+      .catch(e => { if (e.status !== 409) throw e; })   // 409: already saved
+      .then(() => {
         job.ok = true;
-        if (sent === job) $("#saved-note").hidden = false;
+        if (!user) {
+          let list = [];
+          try { list = JSON.parse(localStorage.getItem(CLAIMS)) || []; } catch (e) { /* storage blocked */ }
+          list = list.filter(c => c.id !== job.id).concat({ id: job.id, claim: job.claim }).slice(-20);
+          try { localStorage.setItem(CLAIMS, JSON.stringify(list)); } catch (e) { /* storage blocked */ }
+        }
+        if (sent === job) showSaved();
       })
       .catch(() => { /* offline: WhatsApp / Email still work */ });
+  }
+  function showSaved() {
+    const note = $("#saved-note"), user = FB && FB.user();
+    $$("[data-when]", note).forEach(el => { el.hidden = el.getAttribute("data-when") !== (user ? "in" : "out"); });
+    note.hidden = false;
   }
 
   /* ---------- toast + copy ---------- */
@@ -439,7 +442,7 @@
     alert.hidden = true;
     // sent again without changes: keep the same Ref and do not save it twice
     const sig = JSON.stringify(formData());
-    if (!sent || sent.sig !== sig) sent = { sig: sig, ref: makeRef(), id: newId(), ok: false };
+    if (!sent || sent.sig !== sig) sent = { sig: sig, ref: makeRef(), id: FB && FB.ready ? FB.newId() : "", ok: false };
     const ref = sent.ref;
     const msg = buildMessage(ref);
     $("#ref-id").textContent = ref;
@@ -448,8 +451,8 @@
     const plain = msg.replace(/\*/g, "");
     $("#send-email").href = "mailto:" + C.email + "?subject=" + encodeURIComponent("New project request – " + ref) + "&body=" + encodeURIComponent(plain);
     $("#copy-btn").onclick = () => copy(plain);
-    $("#saved-note").hidden = !sent.ok;
-    if (!sent.ok) saveRequest(sent, plain, currentEstimate());
+    $("#saved-note").hidden = true;
+    if (sent.ok) showSaved(); else saveRequest(sent, plain, currentEstimate());
     form.hidden = true;
     $("#summary").hidden = false;
     burst();
@@ -467,6 +470,12 @@
   const today = new Date(); today.setHours(0, 0, 0, 0);
   $("#f-deadline").min = new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
   const hadDraft = loadDraft();
+  // logged-in customer: fill in the name and phone from the account
+  const me = FB && FB.user();
+  if (me) {
+    if (!$("#f-name").value && me.name) $("#f-name").value = me.name;
+    if (!$("#f-phone").value) $("#f-phone").value = FB.phoneLabel(me.phone);
+  }
   const q = new URLSearchParams(location.search);
   const pick = (name, v) => { const el = form.querySelector('input[name="' + name + '"][value="' + v + '"]'); if (el) el.checked = true; };
   const qTrack = q.get("track"), qType = q.get("type"), qItem = q.get("item");

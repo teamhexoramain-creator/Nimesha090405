@@ -32,6 +32,7 @@
       <li><a href="index.html#process">වැඩ කරන විදිය</a></li>
       <li><a href="index.html#pricing">Pricing</a></li>
       <li><a href="index.html#faq">FAQ</a></li>
+      <li><a href="account.html">මගේ projects</a></li>
       <li><a class="btn btn-primary nav-cta" href="start-project.html" aria-current="page">Project එක පටන් ගන්න</a></li>
     </ul>
   </nav>
@@ -94,7 +95,7 @@
             <div class="step-head"><span class="n">02</span><div><h2>Project idea එක</h2><p>Simple විදියට කියන්න, technical words ඕන නෑ.</p></div></div>
             <div class="fields">
               <div class="field">
-                <label for="f-appname">Project / Brand එකේ නම <span class="hint">(තියෙනවා නම්)</span></label>
+                <label for="f-appname">Project එකේ නම <span class="hint">(මේ නමින් ඔයාගේ account එකේ project එක පේනවා)</span></label>
                 <input class="input" id="f-appname" name="appname" type="text" placeholder="Ex: QuickFix, Perera Hardware">
               </div>
               <div class="field">
@@ -234,7 +235,7 @@
               Copy කරන්න
             </button>
           </div>
-          <p class="saved-note" id="saved-note" hidden>✓ Request එක Hexora වලට ලැබුණා. WhatsApp හරි Email එකෙන් එව්වොත් ඉක්මනට reply කරන්න පුළුවන්.</p>
+          <p class="saved-note" id="saved-note" hidden>✓ Request එක Hexora වලට ලැබුණා. <span data-when="in"><a href="account.html">මගේ projects</a> එකෙන් project එකේ status එක බලන්න පුළුවන්.</span><span data-when="out" hidden>Project එක කොච්චර දුරට ඉවරද කියලා online බලන්න, මේ phone එකෙන්ම <a href="account.html?new=1">account එකක් හදාගන්න</a>.</span></p>
           <p class="contact-line">Button එක වැඩ නැත්නම්, copy කරලා <b data-phone-label>076 679 2617</b> (WhatsApp) හරි <b data-email>teamhexoramain@gmail.com</b> ට එවන්න.</p>
           <pre id="summary-text"></pre>
           <button class="btn" id="edit-btn" type="button">← වෙනස් කරන්න</button>
@@ -288,6 +289,7 @@
         <h4>Links</h4>
         <ul>
           <li><a href="index.html">Home</a></li>
+          <li><a href="account.html">මගේ projects</a></li>
           <li><a href="index.html#pricing">Pricing</a></li>
           <li><a href="index.html#faq">FAQ</a></li>
           <li><a data-facebook href="#" target="_blank" rel="noopener">Facebook</a></li>
@@ -306,6 +308,7 @@
 
 <script src="assets/js/firebase-config.js"></script>
 <script src="assets/js/config.js"></script>
+<script src="assets/js/fb.js"></script>
 <script src="assets/js/boot.js" data-load="pricing.js main.js planner.js"></script>
 </body>
 </html>

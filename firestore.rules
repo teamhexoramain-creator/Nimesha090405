@@ -3,14 +3,24 @@ rules_version = '2';
 // HEXORA — Firestore security rules.
 // Paste this into Firebase console → Firestore Database → Rules → Publish.
 // The email in isAdmin() must be the admin user's email (the same as adminEmail in assets/js/firebase-config.js).
+// Customer logins are Firebase users c<phone>@hexora-admin-panel.firebaseapp.com (see assets/js/fb.js).
 service cloud.firestore {
   match /databases/{database}/documents {
 
     function isAdmin() {
       return request.auth != null && request.auth.token.email == 'teamhexoramain@gmail.com';
     }
+    function signedIn() {
+      return request.auth != null;
+    }
+    function data() {
+      return request.resource.data;
+    }
     function text(field, max) {
-      return request.resource.data[field] is string && request.resource.data[field].size() <= max;
+      return data()[field] is string && data()[field].size() <= max;
+    }
+    function optText(field, max) {
+      return !(field in data()) || text(field, max);
     }
 
     // Site content (prices, contact, services, notice): everyone can read, only the admin can change.
@@ -24,20 +34,46 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
-    // Project requests: anyone can send one from start-project.html; only the admin can see or change them.
+    // Customer profiles. A customer can make and read only their own; the phone must be the one they log in with.
+    match /customers/{uid} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow create: if signedIn() && request.auth.uid == uid
+        && data().keys().hasOnly(['name', 'phone', 'createdAt'])
+        && text('name', 100) && data().name.size() > 1
+        && data().phone is string && data().phone.matches('[0-9]{10,15}')
+        && request.auth.token.email == 'c' + data().phone + '@hexora-admin-panel.firebaseapp.com'
+        && data().createdAt == request.time;
+      allow update: if signedIn() && request.auth.uid == uid
+        && data().diff(resource.data).affectedKeys().hasOnly(['name'])
+        && text('name', 100) && data().name.size() > 1;
+      allow delete: if isAdmin();
+    }
+
+    // Project requests and projects.
+    // • Anyone can send one from start-project.html (a logged-in customer's carries their uid).
+    // • A customer can read only the ones linked to their account.
+    // • Only the admin can change them, except: a customer can link a request sent from their own
+    //   browser before they had an account, by showing its claim code (kept only in that browser).
     match /requests/{id} {
-      allow create: if request.resource.data.keys().hasOnly(['ref', 'name', 'phone', 'email', 'business', 'contact', 'track', 'estimate', 'message', 'status', 'createdAt'])
-        && request.resource.data.keys().hasAll(['ref', 'name', 'phone', 'message', 'status', 'createdAt'])
-        && text('ref', 20) && text('name', 100) && request.resource.data.name.size() > 1
+      allow create: if isAdmin() || (
+        data().keys().hasOnly(['ref', 'title', 'name', 'phone', 'email', 'business', 'contact', 'track', 'estimate', 'message', 'status', 'createdAt', 'uid', 'claim'])
+        && data().keys().hasAll(['ref', 'name', 'phone', 'message', 'status', 'createdAt'])
+        && text('ref', 20) && text('name', 100) && data().name.size() > 1
         && text('phone', 30) && text('message', 6000)
-        && (!('email' in request.resource.data) || text('email', 120))
-        && (!('business' in request.resource.data) || text('business', 120))
-        && (!('contact' in request.resource.data) || text('contact', 20))
-        && (!('track' in request.resource.data) || request.resource.data.track in ['dev', 'creative'])
-        && (!('estimate' in request.resource.data) || text('estimate', 60))
-        && request.resource.data.status == 'new'
-        && request.resource.data.createdAt == request.time;
-      allow read, update, delete: if isAdmin();
+        && optText('title', 100) && optText('email', 120) && optText('business', 120) && optText('contact', 20) && optText('estimate', 60)
+        && (!('track' in data()) || data().track in ['dev', 'creative'])
+        && (!('uid' in data()) || (signedIn() && data().uid == request.auth.uid))
+        && (!('claim' in data()) || (data().claim is string && data().claim.size() >= 20 && data().claim.size() <= 60))
+        && data().status == 'new'
+        && data().createdAt == request.time);
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow update: if isAdmin() || (signedIn()
+        && !('uid' in resource.data) && ('claim' in resource.data)
+        && data().diff(resource.data).affectedKeys().hasOnly(['uid', 'claim', 'proof'])
+        && data().get('uid', '') == request.auth.uid
+        && data().get('proof', '') == resource.data.claim
+        && !('claim' in data()));
+      allow delete: if isAdmin();
     }
   }
 }

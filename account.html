@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Services | Hexora</title>
-  <meta name="description" content="Hexora services — mobile apps, websites, business systems, logo design, photo editing සහ video editing. හැම service එකකම pricing සහ FAQ.">
+  <title>මගේ projects | Hexora</title>
+  <meta name="description" content="Hexora customer account: ඔයාගේ project එක කොච්චර දුරට ඉවරද, අලුත් updates සහ ඉවර වෙන දවස බලන්න.">
   <meta name="theme-color" content="#050918">
-  <meta property="og:title" content="Hexora | Services">
-  <meta property="og:description" content="Apps, websites, logo design, photo සහ video editing — Hexora, Sri Lanka.">
-  <meta property="og:type" content="website">
+  <meta name="robots" content="noindex">
+  <meta property="og:title" content="Hexora | මගේ projects">
+  <meta property="og:description" content="ඔයාගේ project එකේ status එක online බලන්න.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%2316D9FF'/%3E%3Cstop offset='.5' stop-color='%232563FF'/%3E%3Cstop offset='1' stop-color='%237B3BFF'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath fill='url(%23g)' d='M32 1l27 15.5v31L32 63 5 47.5v-31z'/%3E%3Cpath fill='%23fff' d='M21 18h7v11h8V18h7v28h-7V35h-8v11h-7z'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,7 +16,7 @@
   <link rel="stylesheet" href="assets/css/style.css">
   <script>document.documentElement.classList.add("js");</script>
 </head>
-<body class="service-page">
+<body class="account-page">
 
 <div class="progress" aria-hidden="true"></div>
 <canvas id="fx" aria-hidden="true"></canvas>
@@ -29,18 +29,22 @@
     </a>
     <button class="menu-btn" type="button" aria-label="Menu එක අරින්න" aria-expanded="false" aria-controls="nav-links"><span></span></button>
     <ul class="nav-links" id="nav-links">
-      <li><a href="service.html">Services</a></li>
+      <li><a href="index.html#services">Services</a></li>
       <li><a href="index.html#process">වැඩ කරන විදිය</a></li>
       <li><a href="index.html#pricing">Pricing</a></li>
       <li><a href="index.html#faq">FAQ</a></li>
-      <li><a href="account.html">මගේ projects</a></li>
+      <li><a href="account.html" aria-current="page">මගේ projects</a></li>
       <li><a class="btn btn-primary nav-cta" href="start-project.html">Project එක පටන් ගන්න</a></li>
     </ul>
   </nav>
 </header>
 
-<!-- Filled from assets/js/services.js by assets/js/service.js -->
-<main id="svc-root"></main>
+<main>
+  <!-- Login, sign up and the customer's projects are drawn by assets/js/account.js (data: Firebase) -->
+  <div class="wrap acc-main" id="acc-root">
+    <noscript><p class="muted">මේ page එකට JavaScript ඕන.</p></noscript>
+  </div>
+</main>
 
 <footer class="site-footer">
   <div class="wrap">
@@ -62,9 +66,9 @@
         <h4>Links</h4>
         <ul>
           <li><a href="index.html">Home</a></li>
-          <li><a href="service.html">ඔක්කොම services</a></li>
           <li><a href="start-project.html">Project එක පටන් ගන්න</a></li>
-          <li><a href="account.html">මගේ projects</a></li>
+          <li><a href="index.html#pricing">Pricing</a></li>
+          <li><a href="index.html#faq">FAQ</a></li>
           <li><a data-facebook href="#" target="_blank" rel="noopener">Facebook</a></li>
           <li><a data-youtube href="#" target="_blank" rel="noopener">YouTube</a></li>
         </ul>
@@ -77,13 +81,9 @@
   </div>
 </footer>
 
-<a class="wa-float" data-wa-link="Hi Hexora! මට project එකක් ගැන කතා කරන්න ඕන." href="https://wa.me/94766792617" target="_blank" rel="noopener" aria-label="WhatsApp එකෙන් message කරන්න">
-  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3C6.5 3 2 6.9 2 11.7c0 2.4 1.1 4.6 3 6.2L4 22l4.6-2.1c1.1.3 2.2.5 3.4.5 5.5 0 10-3.9 10-8.7S17.5 3 12 3zm-4 10a1.3 1.3 0 1 1 0-2.6A1.3 1.3 0 0 1 8 13zm4 0a1.3 1.3 0 1 1 0-2.6 1.3 1.3 0 0 1 0 2.6zm4 0a1.3 1.3 0 1 1 0-2.6 1.3 1.3 0 0 1 0 2.6z"/></svg>
-</a>
-
 <script src="assets/js/firebase-config.js"></script>
 <script src="assets/js/config.js"></script>
-<script src="assets/js/services.js"></script>
-<script src="assets/js/boot.js" data-load="pricing.js service.js main.js"></script>
+<script src="assets/js/fb.js"></script>
+<script src="assets/js/boot.js" data-load="pricing.js main.js account.js"></script>
 </body>
 </html>

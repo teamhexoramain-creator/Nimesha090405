@@ -9,6 +9,7 @@ Built with plain **HTML + CSS + JavaScript**. No installs, no build step, no ser
 | `index.html` | Home page: video hero, services, process, pricing, FAQ, contact |
 | `service.html` | One page per service (`service.html?s=mobile-apps`): animation, what's included, how we work, pricing, FAQ and the other services in the same category. With no `?s=` it lists every service by category. |
 | `start-project.html` | Project request form with a live LKR price estimate for apps/websites and for logo, design & video work. Customers send the request to WhatsApp or Email; it is also saved for the admin panel. |
+| `account.html` | **මගේ projects**: customers log in with their phone number and a 6-digit PIN and see each project's stage, % done, latest update and finish date. |
 | `admin.html` | PIN-locked admin panel (see below). |
 
 ## Folder structure
@@ -17,6 +18,7 @@ hexora-website/
 ├─ index.html
 ├─ service.html
 ├─ start-project.html
+├─ account.html
 ├─ admin.html
 ├─ firestore.rules       Firebase security rules (paste into the Firebase console)
 ├─ README.md
@@ -30,6 +32,8 @@ hexora-website/
    ├─ js/service.js        builds service.html from services.js
    ├─ js/planner.js        project form + estimate + WhatsApp/Email message (+ saves the request to Firebase)
    ├─ js/firebase-config.js  ← Firebase apiKey, projectId, admin email
+   ├─ js/fb.js             Firebase login + database helper for the customer pages
+   ├─ js/account.js        customer page (account.html)
    ├─ js/boot.js           loads the admin panel's saved data, then the page scripts
    ├─ js/admin.js          admin panel (admin.html)
    ├─ brand/hexora-logo.png  your original logo (the site cuts the mark, name and tagline from it)
@@ -59,15 +63,16 @@ The panel saves to **Firebase** (free Spark plan is enough). No GitHub token is 
 
 - **Log in** with the 6-digit **PIN**. The PIN is the password of one Firebase user, so Firebase checks it; it is not written in the site code. 5 wrong tries lock the screen for 60 seconds, and Firebase also blocks repeated wrong tries.
 - **Save** writes prices, contact, services and the notice bar to Firestore (`site/content`). Every page loads them through `assets/js/boot.js`. New visitors see a change at once; people already on the site see it from their next page.
-- **Requests**: every project form sent from `start-project.html` is saved to Firestore (`requests`), even if the customer never taps WhatsApp / Email. Mark them New / Contacted / Done, or delete them.
-- Tabs: Dashboard, Requests, Notice (a bar at the top of every page), Contact, Prices, Services (text, FAQ, prices, animation, new services), History (go back to an earlier version), Security (change the PIN).
+- **Projects & requests**: every project form sent from `start-project.html` is saved to Firestore (`requests`), even if the customer never taps WhatsApp / Email. For each one set the **stage** (New → Contacted → Design → Building → Testing → Done), **% done**, **finish date**, the **project name** and an **update for the customer**, then press **Update**. **New project** adds one that came by WhatsApp or phone.
+- **Customer accounts**: link a project to a customer's account (an account with the same phone is picked for you). Linked projects show on that customer's **මගේ projects** page.
+- Tabs: Dashboard, Projects & requests, Notice (a bar at the top of every page), Contact, Prices, Services (text, FAQ, prices, animation, new services), History (go back to an earlier version), Security (change the PIN).
 - Until Firebase is set up, the site uses `assets/js/config.js` and `services.js` as before.
 
 ### One-time Firebase setup
 1. https://console.firebase.google.com → **Create a project** (Google Analytics not needed).
 2. **Build → Authentication → Get started → Sign-in method → Email/Password → Enable.**
    Then **Users → Add user**: your admin email, and the PIN (`090405`) as the password.
-   Optional but good: **Settings → User actions →** turn off **Enable create (sign-up)**.
+   Keep **Settings → User actions → Enable create (sign-up)** turned **on**: customers make their accounts with it.
 3. **Build → Firestore Database → Create database** → location `asia-south1` (Mumbai) → **production mode**.
    Open the **Rules** tab, paste everything from `firestore.rules` (the admin email is in `isAdmin()`; change it there if you use another one), **Publish**.
 4. **Project settings (gear) → General → Your apps → Web (`</>`)** → register an app (no hosting needed).
@@ -79,6 +84,13 @@ Good to know:
 - Change the PIN from the **Security** tab (or in Firebase → Authentication → Users → Reset password). If you forget it, set a new password there.
 - `config.js` / `services.js` are only the starting data and the backup. After the first Save, edit from the admin panel; editing those files will not change the live site.
 - A new service appears on the service pages; add a card for it in the Services section of `index.html` if you want it on the home page too.
+
+## Customer accounts (`account.html`, "මගේ projects")
+- A customer makes an account with their **name, phone number and a 6-digit PIN** they choose, then logs in with the phone number and PIN. Firebase keeps it as a login `c<phone>@hexora-admin-panel.firebaseapp.com` (for example `c94771234567@…`); no email is sent to it.
+- A request sent from the same phone/browser before making the account is added to the account automatically. Anything else (another phone, a WhatsApp customer, a project you made with **New project**) you link from the admin panel.
+- A customer sees only the projects linked to their own account, and cannot change anything on them. `firestore.rules` enforces this.
+- **Forgot PIN**: Firebase console → Authentication → Users → find `c94…@hexora-admin-panel.firebaseapp.com` → ⋮ → **Delete account**. The customer makes a new account with the same phone, then link their projects again in the admin panel.
+- After changing `firestore.rules`, paste it again in Firebase → Firestore Database → Rules → **Publish**.
 
 ## How to open it on your computer
 Double-click `index.html`. For the live exchange rate to work, open it through a local server:

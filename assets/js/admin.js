@@ -18,8 +18,12 @@
   const KEYS = { tries: "hx_admin_tries_v1" };
   const PIN_LEN = 6, MAX_TRIES = 5, LOCK_MS = 60000, IDLE_MS = 30 * 60000;
   const ANIMS = ["phone", "browser", "dashboard", "backend", "chat", "server", "logo", "social", "photo", "timeline", "uiux"];
-  const STATUS = [["new", "New"], ["contacted", "Contacted"], ["done", "Done"]];
-  const S = { auth: null, content: { exists: false, updateTime: "" }, data: {}, saved: {}, reqs: null, reqFilter: "all", tab: "home", svc: 0, last: Date.now() };
+  // project stages (shared with the customer page through fb.js); admin labels in English
+  const STAGES = (window.HXFB && window.HXFB.stages) || [{ key: "new", pct: 5 }, { key: "contacted", pct: 15 }, { key: "design", pct: 35 }, { key: "building", pct: 60 }, { key: "testing", pct: 85 }, { key: "done", pct: 100 }];
+  const STAGE_EN = { new: "New", contacted: "Contacted", design: "Design", building: "Building", testing: "Testing", done: "Done" };
+  const FILTERS = [["all", "All"], ["new", "New"], ["active", "Active"], ["done", "Done"]];
+  const inFilter = (r, f) => f === "all" || (f === "active" ? r.status !== "new" && r.status !== "done" : r.status === f);
+  const S = { auth: null, content: { exists: false, updateTime: "" }, data: {}, saved: {}, reqs: null, customers: [], newOpen: false, reqFilter: "all", tab: "home", svc: 0, last: Date.now() };
   const ready = !!(F.apiKey && F.projectId && F.adminEmail);
 
   const store = {
@@ -73,7 +77,8 @@
     if (body) headers["Content-Type"] = "application/json";
     return http(DOCS() + path + (query ? "?" + query : ""), { method: method, headers: headers, body: body ? JSON.stringify(body) : undefined });
   }
-  const val = v => v instanceof Date ? { timestampValue: v.toISOString() } : typeof v === "boolean" ? { booleanValue: v } : { stringValue: String(v == null ? "" : v) };
+  const val = v => v instanceof Date ? { timestampValue: v.toISOString() } : typeof v === "boolean" ? { booleanValue: v } :
+    typeof v === "number" ? { integerValue: String(Math.round(v)) } : { stringValue: String(v == null ? "" : v) };
   const toFields = o => { const f = {}; Object.keys(o).forEach(k => { f[k] = val(o[k]); }); return f; };
   const unval = v => !v ? null : "stringValue" in v ? v.stringValue : "timestampValue" in v ? v.timestampValue : "booleanValue" in v ? v.booleanValue :
     "integerValue" in v ? Number(v.integerValue) : "doubleValue" in v ? v.doubleValue : null;
@@ -93,7 +98,8 @@
     up: '<path d="M12 19V5M6 11l6-6 6 6"/>', down: '<path d="M12 5v14M6 13l6 6 6-6"/>',
     del: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>', back: '<path d="M14 6l-6 6 6 6"/>',
     ext: '<path d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6"/>', plus: '<path d="M12 5v14M5 12h14"/>',
-    reload: '<path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/>'
+    reload: '<path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/>',
+    user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>', unlink: '<path d="M6 6l12 12M18 6L6 18"/>'
   };
   const lkr = usd => P.formatLKR(P.smartRound((Number(usd) || 0) * (Number(S.data.config.fallbackRate) || 0), S.data.config));
   const fmtDate = iso => { if (!iso) return "—"; const d = new Date(iso); return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) + " · " + d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }); };
@@ -211,7 +217,10 @@
     }
   }
   async function loadRequests() {
-    try { S.reqs = await query("requests", "createdAt", 200); }
+    try {
+      const both = await Promise.all([query("requests", "createdAt", 300), query("customers", "createdAt", 500).catch(() => [])]);
+      S.reqs = both[0]; S.customers = both[1];
+    }
     catch (e) { S.reqs = null; S.reqErr = errText(e); }
     paintTabs();
     if (S.tab === "requests" || S.tab === "home") renderTab();
@@ -286,7 +295,8 @@
     const stat = (n, t, tab) => '<button type="button" class="ad-stat" data-act="tab" data-tab="' + tab + '"><b>' + n + "</b><span>" + t + "</span></button>";
     const first = S.saved.config === "" ? card("පළවෙනි පාර", '<p class="ad-note">Firebase එකේ තාම site data නෑ. දැන් පේන්නේ site එකේ තියෙන data. පහළ <b>Save කරන්න</b> එබුවම මේ data Firebase එකට යනවා, ඊට පස්සේ මෙතනින් කරන වෙනස් site එකේ පේනවා.</p>') : "";
     return first + card("Hexora admin",
-      '<div class="ad-stats">' + stat(S.reqs ? newCount() : "…", "අලුත් requests", "requests") + stat(s.list.length, "Services", "services") +
+      '<div class="ad-stats">' + stat(S.reqs ? newCount() : "…", "අලුත් requests", "requests") + stat(S.reqs ? S.reqs.filter(r => inFilter(r, "active")).length : "…", "දැන් කරන projects", "requests") +
+        stat(s.list.length, "Services", "services") +
         stat(count, "Price items", "prices") + stat(c.notice && c.notice.show ? "On" : "Off", "Notice bar", "notice") + "</div>" +
       '<p class="ad-note">Save කළාම වෙනස් Firebase එකට යනවා. Site එකට අලුතෙන් එන අයට එකපාරම පේනවා. දැනටමත් site එකේ ඉන්න අයට ඊළඟ page එකේ ඉඳන් පේනවා.' +
         (S.content.updatedAt ? " අන්තිමට save කළේ: " + esc(fmtDate(S.content.updatedAt)) + "." : "") + "</p>",
@@ -294,29 +304,72 @@
   };
 
   VIEWS.requests = () => {
-    if (!S.reqs) return card("Project requests", S.reqErr ? '<p class="ad-gate-msg">' + esc(S.reqErr) + '</p><button type="button" class="btn ad-small" data-act="reload-reqs">' + icon(I.reload) + " ආයෙත් try කරන්න</button>" : '<p class="muted">Requests ගන්නවා…</p>');
-    const counts = { all: S.reqs.length }; STATUS.forEach(([k]) => { counts[k] = S.reqs.filter(r => r.status === k).length; });
-    const list = S.reqs.filter(r => S.reqFilter === "all" || r.status === S.reqFilter);
-    return card("Project requests",
-      '<div class="ad-add"><div class="ad-filters" role="group" aria-label="Filter">' + [["all", "All"]].concat(STATUS).map(([k, t]) =>
-        '<button type="button" data-act="req-filter" data-f="' + k + '" aria-pressed="' + (S.reqFilter === k) + '">' + t + " <span>" + (counts[k] || 0) + "</span></button>").join("") + "</div>" +
+    if (!S.reqs) return card("Projects & requests", S.reqErr ? '<p class="ad-gate-msg">' + esc(S.reqErr) + '</p><button type="button" class="btn ad-small" data-act="reload-reqs">' + icon(I.reload) + " ආයෙත් try කරන්න</button>" : '<p class="muted">Requests ගන්නවා…</p>');
+    const counts = {}; FILTERS.forEach(([k]) => { counts[k] = S.reqs.filter(r => inFilter(r, k)).length; });
+    const list = S.reqs.filter(r => inFilter(r, S.reqFilter));
+    return card("Projects & requests",
+      '<div class="ad-add"><div class="ad-filters" role="group" aria-label="Filter">' + FILTERS.map(([k, t]) =>
+        '<button type="button" data-act="req-filter" data-f="' + k + '" aria-pressed="' + (S.reqFilter === k) + '">' + t + " <span>" + counts[k] + "</span></button>").join("") + "</div>" +
+        '<button type="button" class="btn ad-small" data-act="req-new">' + icon(I.plus) + " New project</button>" +
         '<button type="button" class="btn ad-small" data-act="reload-reqs">' + icon(I.reload) + " Refresh</button></div>" +
-      (list.length ? '<div class="ad-reqs">' + list.map(reqCard).join("") + "</div>" : '<p class="muted">මෙතන requests නෑ.</p>'),
-      "Customersලා project form එක submit කරන හැම request එකක්ම මෙතන save වෙනවා (WhatsApp / Email එක එව්වෙ නැති උනත්).");
+      (S.newOpen ? newProjectForm() : "") +
+      (list.length ? '<div class="ad-reqs">' + list.map(reqCard).join("") + "</div>" : '<p class="muted">මෙතන projects නෑ.</p>'),
+      "Project form එකෙන් එන requests සහ ඔයා හදන projects. Stage එක, %, ඉවර වෙන දවස සහ update එක customer ට එයාගේ account එකේ (මගේ projects) පේනවා. " +
+      "Customer accounts: " + S.customers.length + ".");
   };
   const waNum = p => { let d = String(p || "").replace(/\D/g, ""); if (/^0\d{9}$/.test(d)) d = "94" + d.slice(1); return d.length >= 10 ? d : ""; };
+  const phoneLabel = id => window.HXFB ? window.HXFB.phoneLabel(id) : id;
+  const stageOf = k => STAGES.find(x => x.key === k) || STAGES[0];
+  const pctOf = r => r.status === "done" ? 100 : typeof r.progress === "number" ? r.progress : stageOf(r.status).pct;
+  const custOpt = (c, extra) => '<option value="' + esc(c.id) + '">' + esc((c.name || "—") + " · " + phoneLabel(c.phone) + (extra || "")) + "</option>";
+  function linkBox(r) {
+    if (r.uid) {
+      const c = S.customers.find(x => x.id === r.uid);
+      return '<div class="ad-req-link linked">' + icon(I.user) + "<span>Customer account: <b>" + esc(c ? c.name : "linked") + "</b>" + (c ? " · " + esc(phoneLabel(c.phone)) : "") + "</span>" +
+        mini("req-unlink", I.unlink, "Account එකෙන් අයින් කරන්න", ' data-id="' + esc(r.id) + '"') + "</div>";
+    }
+    if (!S.customers.length) return '<div class="ad-req-link"><span class="ad-hint">Customer account එකක් නෑ. Status එක online බලන්න customer ට "මගේ projects" page එකෙන් account එකක් හදාගන්න කියන්න.</span></div>';
+    const ph = waNum(r.phone), match = S.customers.filter(c => c.phone === ph), rest = S.customers.filter(c => c.phone !== ph);
+    return '<div class="ad-req-link">' + icon(I.user) + '<select class="input" data-link="' + esc(r.id) + '" aria-label="Customer account">' +
+      (match.length ? "" : '<option value="">Customer account එකකට link කරන්න…</option>') +
+      match.map(c => custOpt(c, " (phone එක match)")).join("") + rest.map(c => custOpt(c)).join("") + "</select>" +
+      '<button type="button" class="btn ad-small" data-act="req-link" data-id="' + esc(r.id) + '">Link</button></div>';
+  }
   function reqCard(r) {
-    const wa = waNum(r.phone);
-    return '<article class="ad-req s-' + esc(r.status) + '">' +
-      '<div class="ad-req-head"><div><b>' + esc(r.name || "—") + "</b><small>" + esc(fmtDate(r.createdAt)) + " · <code>" + esc(r.ref) + "</code></small></div>" +
-        '<select class="input ad-req-status" data-req="' + esc(r.id) + '" aria-label="Status">' + STATUS.map(([k, t]) => '<option value="' + k + '"' + (k === r.status ? " selected" : "") + ">" + t + "</option>").join("") + "</select></div>" +
-      '<div class="ad-req-meta">' + [r.track === "creative" ? "Logo, Design & Video" : "App / Website / System", r.estimate, r.business, "Contact: " + (r.contact || "WhatsApp")].filter(Boolean).map(x => "<span>" + esc(x) + "</span>").join("") + "</div>" +
+    const wa = waNum(r.phone), id = esc(r.id), pct = pctOf(r), fid = k => ' id="rq-' + k + "-" + id + '"';
+    return '<article class="ad-req s-' + esc(r.status) + '" data-id="' + id + '">' +
+      '<div class="ad-req-head"><div><b>' + esc(r.title || r.name || "—") + "</b><small>" + (r.title ? esc(r.name) + " · " : "") + esc(fmtDate(r.createdAt)) + " · <code>" + esc(r.ref) + "</code></small></div>" +
+        '<span class="ad-pill">' + esc(STAGE_EN[r.status] || r.status) + " · " + pct + "%</span></div>" +
+      '<div class="ad-req-meta">' + [r.track === "creative" ? "Logo, Design & Video" : "App / Website / System", r.estimate, r.business, r.contact ? "Contact: " + r.contact : ""].filter(Boolean).map(x => "<span>" + esc(x) + "</span>").join("") + "</div>" +
+      linkBox(r) +
+      '<div class="ad-grid tight ad-req-edit">' +
+        '<div class="ad-field"><label for="rq-status-' + id + '">Stage</label><select class="input"' + fid("status") + ' data-rf="status">' +
+          STAGES.map(x => '<option value="' + x.key + '"' + (x.key === r.status ? " selected" : "") + ">" + (STAGE_EN[x.key] || x.key) + "</option>").join("") + "</select></div>" +
+        '<div class="ad-field"><label for="rq-progress-' + id + '">ඉවර වෙලා <output data-pct>' + pct + '%</output></label><input class="ad-range" type="range" min="0" max="100" step="5"' + fid("progress") + ' data-rf="progress" value="' + pct + '"></div>' +
+        '<div class="ad-field"><label for="rq-due-' + id + '">ඉවර වෙන දවස</label><input class="input" type="date"' + fid("due") + ' data-rf="due" value="' + esc(r.due || "") + '"></div>' +
+        '<div class="ad-field"><label for="rq-title-' + id + '">Project එකේ නම</label><input class="input"' + fid("title") + ' data-rf="title" maxlength="100" value="' + esc(r.title || "") + '"></div>' +
+        '<div class="ad-field wide"><label for="rq-note-' + id + '">Customer ට update එක</label><textarea class="input" rows="2" maxlength="1000"' + fid("note") + ' data-rf="note" placeholder="Ex: Home screen design එක ඉවරයි. ඊළඟට login page එක.">' + esc(r.note || "") + "</textarea>" +
+          '<small class="ad-hint">Customer ට එයාගේ account එකේ පේනවා.' + (r.updatedAt ? " අන්තිම update එක: " + esc(fmtDate(r.updatedAt)) : "") + "</small></div></div>" +
       '<div class="ad-req-actions">' +
         (wa ? '<a class="btn btn-wa ad-small" href="https://wa.me/' + wa + '" target="_blank" rel="noopener">WhatsApp</a>' : "") +
-        (r.phone ? '<a class="btn ad-small" href="tel:' + esc(r.phone.replace(/[^\d+]/g, "")) + '">Call</a>' : "") +
+        (r.phone ? '<a class="btn ad-small" href="tel:' + esc(String(r.phone).replace(/[^\d+]/g, "")) + '">Call</a>' : "") +
         (r.email ? '<a class="btn ad-small" href="mailto:' + esc(r.email) + '">Email</a>' : "") +
-        mini("req-del", I.del, "මකන්න", ' data-id="' + esc(r.id) + '"') + "</div>" +
-      "<details><summary>සම්පූර්ණ request එක</summary><pre>" + esc(r.message) + "</pre></details></article>";
+        '<button type="button" class="btn btn-primary ad-small" data-act="req-save" data-id="' + id + '">Update</button>' +
+        mini("req-del", I.del, "මකන්න", ' data-id="' + id + '"') + "</div>" +
+      (r.message ? "<details><summary>සම්පූර්ණ request එක</summary><pre>" + esc(r.message) + "</pre></details>" : "") + "</article>";
+  }
+  function newProjectForm() {
+    return '<form class="ad-newproj" id="newproj-form"><b>New project</b><div class="ad-grid tight">' +
+      '<div class="ad-field"><label for="np-title">Project එකේ නම</label><input class="input" id="np-title" maxlength="100" required></div>' +
+      '<div class="ad-field"><label for="np-name">Customer ගේ නම</label><input class="input" id="np-name" maxlength="100" required></div>' +
+      '<div class="ad-field"><label for="np-phone">Phone</label><input class="input" id="np-phone" type="tel" maxlength="30" placeholder="07X XXX XXXX"></div>' +
+      '<div class="ad-field"><label for="np-track">Type</label><select class="input" id="np-track"><option value="dev">App / Website / System</option><option value="creative">Logo, Design & Video</option></select></div>' +
+      '<div class="ad-field"><label for="np-uid">Customer account</label><select class="input" id="np-uid"><option value="">— පස්සේ link කරන්නම් —</option>' + S.customers.map(c => custOpt(c)).join("") + "</select></div>" +
+      '</div><div class="ad-add"><button class="btn btn-primary ad-small" type="submit">Create</button><button class="btn ad-small" type="button" data-act="req-new">Cancel</button></div></form>';
+  }
+  async function patchReq(r, data, keys) {
+    await fs("PATCH", "/requests/" + encodeURIComponent(r.id), { fields: toFields(data) }, mask(keys));
+    keys.forEach(k => { if (k in data) r[k] = data[k] instanceof Date ? data[k].toISOString() : data[k]; else delete r[k]; });
   }
 
   VIEWS.notice = () => {
@@ -545,8 +598,24 @@
     if (S.tab === "home") renderTab();
   }
 
+  async function createProject(form) {
+    const v = id => $("#" + id).value.trim(), btn = form.querySelector("[type=submit]");
+    if (!v("np-title") || v("np-name").length < 2) return toast("Project එකේ නමයි customer ගේ නමයි ඕන.", true);
+    const d = new Date(), p = n => String(n).padStart(2, "0"), now = new Date();
+    const data = { ref: "HX-" + String(d.getFullYear()).slice(2) + p(d.getMonth() + 1) + p(d.getDate()) + "-" + Math.floor(1000 + Math.random() * 9000),
+      title: v("np-title").slice(0, 100), name: v("np-name").slice(0, 100), phone: v("np-phone").slice(0, 30), track: v("np-track"),
+      contact: "WhatsApp", status: "contacted", progress: stageOf("contacted").pct, createdAt: now, updatedAt: now };
+    if (v("np-uid")) data.uid = v("np-uid");
+    btn.disabled = true;
+    try {
+      const doc = await fs("POST", "/requests", { fields: toFields(data) });
+      S.reqs.unshift(fromDoc(doc)); S.newOpen = false; S.reqFilter = "all"; paintTabs(); renderTab(); toast("Project එක හැදුවා ✓");
+    } catch (err) { toast(errText(err), true); btn.disabled = false; }
+  }
+
   /* ---------- events ---------- */
   root.addEventListener("input", e => {
+    if (e.target.dataset.rf === "progress") { e.target.closest(".ad-field").querySelector("[data-pct]").textContent = e.target.value + "%"; return; }
     const el = e.target.closest("[data-path]"); if (!el) return;
     let v;
     switch (el.dataset.type) {
@@ -570,18 +639,17 @@
       set(t.dataset.refkind, fresh); renderTab(); updateSaveBar(); return;
     }
     if (t.dataset.refkey) { const r = get(t.dataset.refkey); r[refKind(r)] = t.value; updateSaveBar(); return; }
-    if (t.dataset.req) {
-      const r = S.reqs.find(x => x.id === t.dataset.req); if (!r) return;
-      t.disabled = true;
-      try {
-        await fs("PATCH", "/requests/" + encodeURIComponent(r.id), { fields: toFields({ status: t.value }) }, mask(["status"]));
-        r.status = t.value; paintTabs(); renderTab(); toast("Status: " + t.value + " ✓");
-      } catch (err) { toast(errText(err), true); t.value = r.status; t.disabled = false; }
+    if (t.dataset.rf === "status") {
+      // moving to a later stage pulls the % up to that stage's usual value
+      const range = t.closest(".ad-req").querySelector('[data-rf="progress"]'), st = stageOf(t.value);
+      range.value = st.key === "done" ? 100 : Math.max(Number(range.value) || 0, st.pct);
+      range.dispatchEvent(new Event("input", { bubbles: true }));
       return;
     }
     if (t.dataset.path && /\.(cat|anim)$/.test(t.dataset.path)) renderTab();
   });
   root.addEventListener("submit", async e => {
+    if (e.target.id === "newproj-form") { e.preventDefault(); createProject(e.target); return; }
     if (e.target.id !== "pin-form") return;
     e.preventDefault();
     const a = $("#pin-new").value, b = $("#pin-new2").value, btn = e.target.querySelector("button");
@@ -606,6 +674,30 @@
         S.svc = Math.min(S.svc, S.data.services.list.length - 1); renderTab(); updateSaveBar(); break;
       case "reload-reqs": S.reqs = null; S.reqErr = ""; renderTab(); loadRequests(); break;
       case "req-filter": S.reqFilter = d.f; renderTab(); break;
+      case "req-new": S.newOpen = !S.newOpen; renderTab(); if (S.newOpen) $("#np-title").focus(); break;
+      case "req-save": {
+        const r = S.reqs.find(x => x.id === d.id), box = b.closest(".ad-req"); if (!r) return;
+        const v = k => box.querySelector('[data-rf="' + k + '"]').value;
+        const data = { status: v("status"), progress: Number(v("progress")) || 0, due: v("due"), title: v("title").trim().slice(0, 100), note: v("note").trim().slice(0, 1000), updatedAt: new Date() };
+        b.disabled = true;
+        try { await patchReq(r, data, Object.keys(data)); paintTabs(); renderTab(); toast("Update උනා ✓ Customer ට පේනවා."); }
+        catch (err) { toast(errText(err), true); b.disabled = false; }
+        break;
+      }
+      case "req-link": {
+        const r = S.reqs.find(x => x.id === d.id), uid = $('[data-link="' + d.id + '"]').value; if (!r) return;
+        if (!uid) return toast("Customer account එකක් තෝරන්න.", true);
+        try { await patchReq(r, { uid: uid }, ["uid"]); renderTab(); toast("Account එකට link උනා ✓"); }
+        catch (err) { toast(errText(err), true); }
+        break;
+      }
+      case "req-unlink": {
+        const r = S.reqs.find(x => x.id === d.id); if (!r) return;
+        if (!armed(b, "Unlink?")) return;
+        try { await patchReq(r, {}, ["uid"]); renderTab(); toast("Account එකෙන් අයින් කළා."); }
+        catch (err) { toast(errText(err), true); }
+        break;
+      }
       case "req-del": {
         if (!armed(b, "මකන්නද?")) return;
         try { await fs("DELETE", "/requests/" + encodeURIComponent(d.id)); S.reqs = S.reqs.filter(r => r.id !== d.id); paintTabs(); renderTab(); toast("Request එක මැකුවා."); }

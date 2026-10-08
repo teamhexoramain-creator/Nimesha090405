@@ -136,6 +136,19 @@
 .ad-req details summary { cursor: pointer; color: var(--cyan); font-size: .84rem; font-weight: 700; }
 .ad-req pre { margin-top: 8px; padding: 12px; border-radius: 10px; background: var(--surface); color: var(--muted); font-family: var(--f-mono); font-size: .78rem; line-height: 1.55; white-space: pre-wrap; word-break: break-word; max-height: 360px; overflow: auto; }
 
+.ad-req-link { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; border: 1px dashed var(--line-strong); font-size: .86rem; color: var(--muted); }
+.ad-req-link.linked { border-style: solid; border-color: rgba(47, 211, 154, .4); }
+.ad-req-link.linked .ad-ico { stroke: var(--ok); }
+.ad-req-link b { color: var(--fg); }
+.ad-req-link > span { flex: 1 1 200px; min-width: 0; }
+.ad-req-link .input { flex: 1 1 200px; width: auto; min-height: 38px; padding: 6px 10px; font-size: .86rem; }
+.ad-req-link .ad-mini { margin-left: auto; }
+.ad-req-edit { padding-top: 4px; }
+.ad-req-edit output { font-family: var(--f-mono); color: var(--cyan); margin-left: 4px; }
+.ad-range { width: 100%; min-height: 44px; accent-color: var(--cyan); }
+.ad-newproj { display: grid; gap: 12px; padding: 14px; border-radius: 14px; border: 1px solid var(--cyan); background: rgba(22, 217, 255, .05); }
+.ad-req.s-design, .ad-req.s-building, .ad-req.s-testing { border-left-color: var(--blue); }
+
 /* notice preview */
 .ad-preview { display: grid; gap: 6px; }
 .notice-bar.static { position: static; border-radius: 12px; }
