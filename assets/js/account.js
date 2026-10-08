@@ -27,6 +27,7 @@
         '<a class="btn btn-wa" href="' + esc(wa("Hi Hexora! මගේ project එකේ status එක දැනගන්න ඕන.")) + '" target="_blank" rel="noopener">WhatsApp</a></section>';
       return;
     }
+    if (mode === "forgot") return forgotScreen();
     const up = mode === "signup";
     root.innerHTML =
       '<section class="acc-card acc-gate">' +
@@ -43,10 +44,31 @@
           '<p class="acc-msg" id="acc-msg" role="alert"></p>' +
           '<button class="btn btn-primary btn-block" type="submit">' + (up ? "Account එක හදන්න" : "Login") + "</button>" +
         "</form>" +
-        '<p class="acc-help">' + (up ? "Project request එක එව්වේ මේ phone එකෙන් නම්, account එක හැදුවම ඒක එකපාරම මෙතන පේනවා."
-          : 'PIN එක අමතක උනාද? <a href="' + esc(wa("Hi Hexora! මගේ account එකේ PIN එක අමතක උනා.")) + '" target="_blank" rel="noopener">WhatsApp එකෙන් අපිට කියන්න</a>.') + "</p>" +
+        '<p class="acc-help">' + (up ? "Project request එක එව්වේ මේ phone එකෙන් නම්, account එක හැදුවම ඒක එකපාරම මෙතන පේනවා.<br>⚠ මේ PIN එක බැංකු / phone PIN එකක් නෙවෙයි, මේ site එකට විතරක් අලුතෙන් හදපු එකක් වෙන්න ඕන."
+          : '<button type="button" class="acc-link" data-mode="forgot">PIN එක අමතක උනාද?</button>') + "</p>" +
       "</section>";
     $("#a-phone").focus({ preventScroll: true });
+  }
+
+  function forgotScreen(done) {
+    root.innerHTML = '<section class="acc-card acc-gate"><span class="eyebrow">PIN එක අමතක උනාද?</span><h1 class="display">PIN <span class="grad-text">request</span></h1>' +
+      (done ? '<p class="acc-msg ok">✓ ' + esc(done) + '</p><p class="muted">අපි ඔයාගේ account එකේ phone number එකට WhatsApp එකෙන් PIN එක එවනවා.</p>' :
+        '<p class="muted">ඔයාගේ නමයි phone number එකයි ගහන්න. අපි ඒ phone number එකටම WhatsApp එකෙන් PIN එක එවනවා.</p>' +
+        '<form id="forgot-form" class="acc-form" novalidate><div class="field"><label for="f-fname">ඔයාගේ නම</label><input class="input" id="f-fname" type="text" autocomplete="name" maxlength="100"></div>' +
+        '<div class="field"><label for="f-fphone">Phone number</label><input class="input" id="f-fphone" type="tel" inputmode="tel" autocomplete="tel" placeholder="07X XXX XXXX"></div>' +
+        '<p class="acc-msg" id="acc-msg" role="alert"></p><button class="btn btn-primary btn-block" type="submit">PIN එක request කරන්න</button></form>') +
+      '<p class="acc-help"><button type="button" class="acc-link" data-mode="login">← Login එකට</button></p></section>';
+  }
+  async function forgot(form) {
+    const name = $("#f-fname").value.trim(), phone = FB.phoneId($("#f-fphone").value), btn = form.querySelector("button[type=submit]");
+    if (name.length < 2) return msg("ඔයාගේ නම ගහන්න.");
+    if (!phone) return msg("Phone number එක හරියට ගහන්න (Ex: 077 123 4567).");
+    btn.disabled = true; msg("");
+    try { await FB.create("pinRequests", "p" + phone, { name: name, phone: phone }, ["createdAt"]); forgotScreen("Request එක ගියා."); }
+    catch (e) {
+      if (e.status === 409 || /ALREADY_EXISTS/.test(e.reason)) forgotScreen("ඔයාගේ request එක කලින්ම ගිහින් තියෙනවා.");
+      else { btn.disabled = false; msg(FB.errText(e)); }
+    }
   }
 
   async function submit(form) {
@@ -61,7 +83,7 @@
       if (up) {
         await FB.signUp(phone, pin, name);
         // the account works even if the profile is not saved now; the name can be saved again in settings
-        try { await FB.create("customers", FB.user().uid, { name: name, phone: phone }, ["createdAt"]); profile = { name: name, phone: phone }; }
+        try { await FB.create("customers", FB.user().uid, { name: name, phone: phone, pin: pin }, ["createdAt"]); profile = { name: name, phone: phone }; }
         catch (e) { profile = null; }
       } else {
         await FB.signIn(phone, pin);
@@ -160,7 +182,12 @@
     if (!/^\d{6}$/.test(a)) return msg("PIN එක digits 6ක් වෙන්න ඕන.");
     if (a !== b) return msg("PIN දෙක සමාන නෑ.");
     btn.disabled = true;
-    try { await FB.changePin(a); form.reset(); msg("PIN එක මාරු උනා ✓ ඊළඟ පාර අලුත් PIN එකෙන් login වෙන්න.", true); }
+    try {
+      await FB.changePin(a);
+      // the admin panel shows the PIN to help customers who forget it; keep that copy in step
+      try { await FB.patch("/customers/" + FB.user().uid, { pin: a }, ["pin"]); } catch (e) { /* profile missing: login still works */ }
+      form.reset(); msg("PIN එක මාරු උනා ✓ ඊළඟ පාර අලුත් PIN එකෙන් login වෙන්න.", true);
+    }
     catch (e) { msg(FB.errText(e)); }
     btn.disabled = false;
   }
@@ -175,6 +202,7 @@
   root.addEventListener("submit", e => {
     e.preventDefault();
     if (e.target.id === "acc-form") submit(e.target);
+    else if (e.target.id === "forgot-form") forgot(e.target);
     else if (e.target.id === "name-form") saveName(e.target);
     else if (e.target.id === "pin-form") savePin(e.target);
   });

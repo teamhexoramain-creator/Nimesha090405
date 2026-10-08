@@ -849,3 +849,4 @@ section[id], #summary, #project-form, #estimate, .field, .opt-group { scroll-mar
   .acc-actions .btn { flex: 1 1 auto; }
   .acc-wa { justify-self: stretch; }
 }
+.acc-link { padding: 0; border: 0; background: none; color: var(--cyan); font: inherit; font-weight: 700; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }

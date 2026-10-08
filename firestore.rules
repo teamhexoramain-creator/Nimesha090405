@@ -35,18 +35,32 @@ service cloud.firestore {
     }
 
     // Customer profiles. A customer can make and read only their own; the phone must be the one they log in with.
+    // `pin` is a copy of the login PIN so the admin can send it to a customer who forgot it (see pinRequests).
     match /customers/{uid} {
       allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
       allow create: if signedIn() && request.auth.uid == uid
-        && data().keys().hasOnly(['name', 'phone', 'createdAt'])
+        && data().keys().hasOnly(['name', 'phone', 'pin', 'createdAt'])
         && text('name', 100) && data().name.size() > 1
+        && (!('pin' in data()) || (data().pin is string && data().pin.matches('[0-9]{6}')))
         && data().phone is string && data().phone.matches('[0-9]{10,15}')
         && request.auth.token.email == 'c' + data().phone + '@hexora-admin-panel.firebaseapp.com'
         && data().createdAt == request.time;
       allow update: if signedIn() && request.auth.uid == uid
-        && data().diff(resource.data).affectedKeys().hasOnly(['name'])
-        && text('name', 100) && data().name.size() > 1;
+        && data().diff(resource.data).affectedKeys().hasOnly(['name', 'pin'])
+        && text('name', 100) && data().name.size() > 1
+        && (!('pin' in data()) || (data().pin is string && data().pin.matches('[0-9]{6}')));
       allow delete: if isAdmin();
+    }
+
+    // "PIN එක අමතක උනා" requests. Anyone can send one (one per phone number); only the admin can see them.
+    // The admin then sends the PIN stored in that customer's profile to the phone number by WhatsApp.
+    match /pinRequests/{id} {
+      allow create: if data().keys().hasOnly(['name', 'phone', 'createdAt'])
+        && text('name', 100) && data().name.size() > 1
+        && data().phone is string && data().phone.matches('[0-9]{10,15}')
+        && id == 'p' + data().phone
+        && data().createdAt == request.time;
+      allow read, update, delete: if isAdmin();
     }
 
     // Project requests and projects.

@@ -23,7 +23,7 @@
   const STAGE_EN = { new: "New", contacted: "Contacted", design: "Design", building: "Building", testing: "Testing", done: "Done" };
   const FILTERS = [["all", "All"], ["new", "New"], ["active", "Active"], ["done", "Done"]];
   const inFilter = (r, f) => f === "all" || (f === "active" ? r.status !== "new" && r.status !== "done" : r.status === f);
-  const S = { auth: null, content: { exists: false, updateTime: "" }, data: {}, saved: {}, reqs: null, customers: [], newOpen: false, reqFilter: "all", tab: "home", svc: 0, last: Date.now() };
+  const S = { auth: null, content: { exists: false, updateTime: "" }, data: {}, saved: {}, reqs: null, customers: [], pinReqs: [], show: {}, newOpen: false, reqFilter: "all", tab: "home", svc: 0, last: Date.now() };
   const ready = !!(F.apiKey && F.projectId && F.adminEmail);
 
   const store = {
@@ -218,8 +218,8 @@
   }
   async function loadRequests() {
     try {
-      const both = await Promise.all([query("requests", "createdAt", 300), query("customers", "createdAt", 500).catch(() => [])]);
-      S.reqs = both[0]; S.customers = both[1];
+      const both = await Promise.all([query("requests", "createdAt", 300), query("customers", "createdAt", 500).catch(() => []), query("pinRequests", "createdAt", 100).catch(() => [])]);
+      S.reqs = both[0]; S.customers = both[1]; S.pinReqs = both[2];
     }
     catch (e) { S.reqs = null; S.reqErr = errText(e); }
     paintTabs();
@@ -227,7 +227,7 @@
   }
 
   /* ==================== 3. the panel ==================== */
-  const TABS = [["home", "Dashboard"], ["requests", "Requests"], ["notice", "Notice"], ["contact", "Contact"], ["prices", "Prices"], ["services", "Services"], ["history", "History"], ["security", "Security"]];
+  const TABS = [["home", "Dashboard"], ["requests", "Requests"], ["customers", "Customers"], ["notice", "Notice"], ["contact", "Contact"], ["prices", "Prices"], ["services", "Services"], ["history", "History"], ["security", "Security"]];
   const newCount = () => (S.reqs || []).filter(r => r.status === "new").length;
   function panel() {
     root.innerHTML =
@@ -250,7 +250,8 @@
     const nav = $("#ad-tabs"); if (!nav) return;
     const n = newCount();
     nav.innerHTML = TABS.map(([k, t]) => '<button type="button" role="tab" data-act="tab" data-tab="' + k + '" aria-selected="' + (k === S.tab) + '">' + t +
-      (k === "requests" && n ? ' <span class="ad-badge">' + n + "</span>" : "") + "</button>").join("");
+      (k === "requests" && n ? ' <span class="ad-badge">' + n + "</span>" : "") +
+      (k === "customers" && S.pinReqs.length ? ' <span class="ad-badge">' + S.pinReqs.length + "</span>" : "") + "</button>").join("");
   }
   function renderTab() {
     const main = $("#ad-main"); if (!main) return;
@@ -371,6 +372,28 @@
     await fs("PATCH", "/requests/" + encodeURIComponent(r.id), { fields: toFields(data) }, mask(keys));
     keys.forEach(k => { if (k in data) r[k] = data[k] instanceof Date ? data[k].toISOString() : data[k]; else delete r[k]; });
   }
+
+  VIEWS.customers = () => {
+    const byPhone = p => S.customers.find(c => c.phone === p);
+    const norm = x => String(x || "").trim().toLowerCase().replace(/\s+/g, " ");
+    const reqs = S.pinReqs.map(r => {
+      const c = byPhone(r.phone), wa = "https://wa.me/" + encodeURIComponent(r.phone) + "?text=" +
+        encodeURIComponent("Hi " + (c ? c.name : r.name) + "! ඔයාගේ Hexora account එකේ PIN එක: " + (c && c.pin || "") + "\nමේක වෙන කාටවත් කියන්න එපා.");
+      return '<article class="ad-req s-new"><div class="ad-req-head"><div><b>' + esc(r.name) + "</b><small>" + esc(phoneLabel(r.phone)) + " · " + esc(fmtDate(r.createdAt)) + "</small></div></div>" +
+        (c ? '<div class="ad-req-meta"><span>Account: ' + esc(c.name) + "</span><span>" + (norm(c.name) === norm(r.name) ? "✓ නම ගැලපෙනවා" : "⚠ නම වෙනස්") + "</span></div>" +
+            (c.pin ? '<p class="ad-pinline">PIN: <code class="ad-pin">' + esc(c.pin) + "</code></p>" : '<p class="ad-hint">මේ account එකේ PIN එක save වෙලා නෑ (පරණ account එකක්). Firebase → Authentication එකෙන් ඒ user ව delete කරන්න, customer ට අලුත් account එකක් හදන්න කියන්න.</p>')
+          : '<p class="ad-hint">මේ phone number එකට account එකක් නෑ.</p>') +
+        '<div class="ad-req-actions">' + (c && c.pin ? '<a class="btn btn-wa ad-small" href="' + esc(wa) + '" target="_blank" rel="noopener">PIN එක WhatsApp කරන්න</a>' : "") +
+        '<button type="button" class="btn ad-small" data-act="pin-done" data-id="' + esc(r.id) + '">එව්වා ✓ (list එකෙන් අයින් කරන්න)</button></div></article>';
+    });
+    const list = S.customers.map(c => '<div class="ad-hist"><div><b>' + esc(c.name || "—") + "</b><small>" + esc(phoneLabel(c.phone)) + " · " + esc(fmtDate(c.createdAt)) + "</small></div>" +
+      '<div class="ad-hist-actions">' + (c.pin ? '<code class="ad-pin">' + (S.show[c.id] ? esc(c.pin) : "••••••") + "</code>" +
+        '<button type="button" class="btn ad-small" data-act="pin-show" data-id="' + esc(c.id) + '">' + (S.show[c.id] ? "හංගන්න" : "PIN බලන්න") + "</button>" : '<span class="ad-hint">PIN නෑ</span>') + "</div></div>").join("");
+    return card("PIN requests", reqs.length ? '<div class="ad-reqs">' + reqs.join("") + "</div>" : '<p class="muted">PIN requests නෑ.</p>',
+        "Customer ට PIN එක අමතක උනාම \"PIN එක අමතක උනාද?\" එබුවම මෙතන පේනවා. PIN එක යවන්න ඕන account එකේ phone number එකටමයි. Customer ටයිප් කරපු එකට නෙවෙයි.") +
+      card("Customer accounts (" + S.customers.length + ")", S.customers.length ? '<div class="ad-history">' + list + "</div>" : '<p class="muted">තාම accounts නෑ.</p>',
+        "PIN එක customer ගේ secret එකක්. WhatsApp එකෙන් ඒ customer ට විතරක් එවන්න.");
+  };
 
   VIEWS.notice = () => {
     const n = S.data.config.notice;
@@ -674,6 +697,11 @@
         S.svc = Math.min(S.svc, S.data.services.list.length - 1); renderTab(); updateSaveBar(); break;
       case "reload-reqs": S.reqs = null; S.reqErr = ""; renderTab(); loadRequests(); break;
       case "req-filter": S.reqFilter = d.f; renderTab(); break;
+      case "pin-show": S.show[d.id] = !S.show[d.id]; renderTab(); break;
+      case "pin-done":
+        try { await fs("DELETE", "/pinRequests/" + encodeURIComponent(d.id)); S.pinReqs = S.pinReqs.filter(r => r.id !== d.id); paintTabs(); renderTab(); toast("List එකෙන් අයින් කළා."); }
+        catch (err) { toast(errText(err), true); }
+        break;
       case "req-new": S.newOpen = !S.newOpen; renderTab(); if (S.newOpen) $("#np-title").focus(); break;
       case "req-save": {
         const r = S.reqs.find(x => x.id === d.id), box = b.closest(".ad-req"); if (!r) return;

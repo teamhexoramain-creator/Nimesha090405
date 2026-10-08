@@ -149,6 +149,9 @@
 .ad-newproj { display: grid; gap: 12px; padding: 14px; border-radius: 14px; border: 1px solid var(--cyan); background: rgba(22, 217, 255, .05); }
 .ad-req.s-design, .ad-req.s-building, .ad-req.s-testing { border-left-color: var(--blue); }
 
+.ad-pin { padding: 3px 10px; border-radius: 8px; background: var(--surface-2); color: var(--cyan); font-family: var(--f-mono); font-size: 1rem; letter-spacing: .25em; }
+.ad-pinline { margin: 0; }
+
 /* notice preview */
 .ad-preview { display: grid; gap: 6px; }
 .notice-bar.static { position: static; border-radius: 12px; }
