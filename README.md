@@ -34,6 +34,8 @@ hexora-website/
    ├─ js/firebase-config.js  ← Firebase apiKey, projectId, admin email
    ├─ js/fb.js             Firebase login + database helper for the customer pages
    ├─ js/account.js        customer page (account.html)
+   ├─ js/chat.js           project chat: text, photos, voice (customer page + admin panel)
+   ├─ js/packages.js       mobile app package cards (home page, Mobile Apps page)
    ├─ js/boot.js           loads the admin panel's saved data, then the page scripts
    ├─ js/admin.js          admin panel (admin.html)
    ├─ brand/hexora-logo.png  your original logo (the site cuts the mark, name and tagline from it)
@@ -41,7 +43,8 @@ hexora-website/
 ```
 
 ## How to change things (`assets/js/config.js`, or the admin panel once Firebase is set up)
-- **Prices**: every price is in **USD**. Change the `usd:` numbers. The site converts to LKR automatically.
+- **Mobile app packages** (`packages`, 9 of them) and **add-ons** (`addons`) are written in **LKR for 1 USD = 369** (`packageBaseRate`). The site multiplies by (today's rate ÷ 369), so when the dollar goes up the price goes up and when it goes down the price goes down. At exactly 369 a package shows its own price (Basic App = LKR 10,000). `weeks` and the add-on prices are starting values: check them in the admin panel → Prices.
+- **Other prices** (websites, web systems, design & video): every price is in **USD**. Change the `usd:` numbers. The site converts to LKR automatically.
 - **Design & video prices**: the `creative` list (logo, branding kit, posts, photo editing, video editing, motion…). Each has `usd` per item, a `unit` name, and `days` / `extraDays` for the delivery time.
 - **Exchange rate**: loaded live from `open.er-api.com` and saved for 12 hours. If it fails, `fallbackRate` (331) is used.
 - **Rounding**: LKR prices round to the nearest `roundTo` (500).
@@ -65,6 +68,7 @@ The panel saves to **Firebase** (free Spark plan is enough). No GitHub token is 
 - **Save** writes prices, contact, services and the notice bar to Firestore (`site/content`). Every page loads them through `assets/js/boot.js`. New visitors see a change at once; people already on the site see it from their next page.
 - **Projects & requests**: every project form sent from `start-project.html` is saved to Firestore (`requests`), even if the customer never taps WhatsApp / Email. For each one set the **stage** (New → Contacted → Design → Building → Testing → Done), **% done**, **finish date**, the **project name** and an **update for the customer**, then press **Update**. **New project** adds one that came by WhatsApp or phone.
 - **Customer accounts**: link a project to a customer's account (an account with the same phone is picked for you). Linked projects show on that customer's **මගේ projects** page.
+- **Mobile app packages / add-ons** are edited in **Prices** (Mobile app packages, Package add-ons). On a service, the **Mobile app packages පෙන්නන්න** tick shows the 9 packages on that service's page (on for Mobile Apps).
 - Tabs: Dashboard, Projects & requests, Notice (a bar at the top of every page), Contact, Prices, Services (text, FAQ, prices, animation, new services), History (go back to an earlier version), Security (change the PIN).
 - Until Firebase is set up, the site uses `assets/js/config.js` and `services.js` as before.
 
@@ -95,6 +99,8 @@ Good to know:
   Then press **එව්වා ✓** to clear it. Nothing is sent automatically: a PIN is never shown without you approving it, otherwise anyone who types someone's phone number would get that person's PIN. (Sending WhatsApp messages by itself needs the paid WhatsApp Business API and a server.)
 - Why the PIN is stored: Firebase cannot show a password again, so a copy of the PIN is kept in the customer's profile (`customers/<id>.pin`). Only you (the admin) and that customer can read it, and it is updated when they change their PIN. The sign-up box tells customers to use a PIN that is not a bank/phone PIN. Do not share these PINs with anyone but the customer.
 - An old account without a saved PIN: Firebase console → Authentication → Users → delete `c94…@hexora-admin-panel.firebaseapp.com`; the customer makes a new account with the same phone and you link their projects again.
+- **Chat on a project** (customer page and admin panel): text, photos and voice messages, per project. A project must be linked to a customer account to have a chat. A **අලුත්** badge shows on the project (customer side), on the tab, and in the admin panel's Requests tab. Photos are shrunk in the browser (about 1100 px, under 350 KB) and voice messages are limited to 90 seconds; both are stored inside the message in Firestore because Firebase Storage now needs a paid plan. There is no push notification: new messages show while the page is open (it checks every few seconds inside an open chat, every 45 seconds for the badges). If chats grow large, switch to Firebase Storage (Blaze plan) later.
+- **Account page tabs**: **මගේ projects** and **Settings** (name, PIN, logout).
 - After changing `firestore.rules`, paste it again in Firebase → Firestore Database → Rules → **Publish**.
 
 ## How to open it on your computer

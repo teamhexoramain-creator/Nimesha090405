@@ -129,6 +129,6 @@
     ready: ready, stages: stages, phoneId: phoneId, phoneLabel: phoneLabel,
     user: () => (S ? { uid: S.uid, phone: S.phone, name: S.name || "" } : null),
     signUp: signUp, signIn: signIn, signOut: signOut, changePin: changePin, setName: setName, token: token,
-    create: create, patch: patch, get: get, where: where, newId: newId, errText: errText
+    fs: fs, db: DB, create: create, patch: patch, get: get, where: where, newId: newId, errText: errText
   };
 })();

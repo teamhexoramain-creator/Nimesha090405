@@ -21,7 +21,7 @@
   const link = s => "service.html?s=" + s.slug;
 
   /* ---------- prices from config.js ---------- */
-  const POOLS = { type: "types", creative: "creative", feature: "features", extra: "extras", maint: "sizes", design: "design" };
+  const POOLS = { type: "types", creative: "creative", feature: "features", extra: "extras", maint: "sizes", design: "design", package: "packages" };
   function refOf(ref) {
     for (const kind in POOLS) {
       if (!ref[kind]) continue;
@@ -33,6 +33,7 @@
   function usdOf(ref) {
     const r = refOf(ref);
     if (!r) return null;
+    if (r.kind === "package") return r.item.lkr / (C.packageBaseRate || 369);
     return r.kind === "maint" ? r.item.maintenanceUsd : r.item.usd;
   }
   const weeksText = w => { const lo = Math.max(1, Math.round(w)); return "සති " + lo + " – " + Math.max(lo + 1, Math.round(w * 1.3)); };
@@ -52,7 +53,11 @@
     });
   }
 
+  // the Mobile Apps page shows the app packages (set "packages" in the admin panel; old saved data without it: slug mobile-apps)
+  const showPk = s => !!C.packages && (s.packages === true || (s.packages === undefined && s.slug === "mobile-apps"));
+  const pricesOf = s => (s.prices || []).filter(r => !(showPk(s) && r.type && C.types[r.type] && C.types[r.type].kind !== "web"));
   function ctaHref(s) {
+    if (showPk(s)) return "start-project.html?track=pkg";
     for (const ref of s.prices || []) {
       const r = refOf(ref);
       if (r && r.kind === "type") return "start-project.html?type=" + r.key;
@@ -75,6 +80,9 @@
       price = amt(it.usd); sub = "≈ USD " + it.usd + " · " + it.unit + " එකක්";
       points = [it.note, daysText(it.days) + " විතර"];
       href = "start-project.html?track=creative&item=" + r.key;
+    } else if (r.kind === "package") {
+      from = "Package"; price = amt(it.lkr / (C.packageBaseRate || 369)); sub = "≈ USD " + Math.round(it.lkr / (C.packageBaseRate || 369));
+      points = it.includes || []; href = "start-project.html?package=" + r.key;
     } else if (r.kind === "feature") {
       from = "Add-on feature"; price = amt(it.usd); sub = "≈ USD " + it.usd;
       points = ["App / website / system එකකට එකතු කරන්න", "කාලයට සති " + it.weeks + " ක් එකතු වෙනවා"];
@@ -188,7 +196,8 @@
         '<div class="section-head rv"><span class="eyebrow">Pricing</span><h2 class="display">' + esc(s.name) + " ගණන්</h2>" +
           '<p class="lead">මේක පටන් ගන්න ගණන්. අද dollar rate එකෙන් LKR වලට auto මාරු වෙනවා. Final price එක ඔයාට ඕන features, items ගණන අනුව වෙනස් වෙනවා.</p>' +
           '<span class="rate-pill" data-rate-pill><span class="live"></span><span data-rate-text>1 USD = LKR ' + Number(C.fallbackRate).toFixed(2) + " · approx.</span></span></div>" +
-        '<div class="prices svc-prices">' + (s.prices || []).map(priceCard).join("") + "</div>" +
+        (pricesOf(s).length ? '<div class="prices svc-prices">' + pricesOf(s).map(priceCard).join("") + "</div>" : "") +
+        (showPk(s) && window.HXPkg ? '<div class="prices pkg-prices svc-prices">' + window.HXPkg.html(C, P) + "</div>" : "") +
       "</div></section>" +
 
       '<section id="svc-faq"><div class="wrap">' +

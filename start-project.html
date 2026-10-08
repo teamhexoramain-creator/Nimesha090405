@@ -48,8 +48,8 @@
         <li data-stepper="1">1 · ඔයා ගැන</li>
         <li data-stepper="2">2 · Idea එක</li>
         <li data-stepper="3">3 · Service එක</li>
-        <li data-stepper="4" data-dev-only>4 · Features</li>
-        <li data-stepper="5" data-dev-only>5 · Design &amp; launch</li>
+        <li data-stepper="4" data-tracks="dev pkg">4 · Features</li>
+        <li data-stepper="5" data-tracks="dev">5 · Design &amp; launch</li>
         <li data-stepper="6">6 · Timeline</li>
       </ol>
     </div>
@@ -119,8 +119,15 @@
             <legend class="sr-only">Service එක</legend>
             <div class="step-head"><span class="n">03</span><div><h2>Service එක</h2><p>මොන වගේ දෙයක්ද ඕන?</p></div></div>
             <div class="options track-opts" role="radiogroup" aria-label="Service type">
-              <label class="opt"><input type="radio" name="track" value="dev"><span class="opt-box"><span class="tick"></span><span class="t">App / Website / System</span><span class="s">Mobile apps, websites, business systems</span></span></label>
+              <label class="opt"><input type="radio" name="track" value="pkg"><span class="opt-box"><span class="tick"></span><span class="t">Mobile App (Package)</span><span class="s">LKR 10,000 ඉඳන් packages 9ක්</span></span></label>
+              <label class="opt"><input type="radio" name="track" value="dev"><span class="opt-box"><span class="tick"></span><span class="t">Website / Web system</span><span class="s">Business sites, POS, booking systems</span></span></label>
               <label class="opt"><input type="radio" name="track" value="creative"><span class="opt-box"><span class="tick"></span><span class="t">Logo, Design &amp; Video</span><span class="s">Logo, branding, posts, photo &amp; video editing</span></span></label>
+            </div>
+            <div class="opt-group" data-field="pkg" data-track="pkg" hidden>
+              <span class="group-label">App package එක තෝරගන්න <span class="req">*</span></span>
+              <span class="group-hint">ඔයාගේ app එකට ළඟම package එක තෝරන්න. ඊළඟ step එකෙන් පොඩි වෙනස්කම් එකතු කරන්න පුළුවන්, price එක auto update වෙනවා.</span>
+              <div class="options pkg-list" id="opt-pkg" role="radiogroup" aria-label="App package"></div>
+              <span class="err">Package එකක් තෝරගන්න.</span>
             </div>
             <div class="opt-group" data-field="type" data-track="dev">
               <span class="group-label">Project type එක <span class="req">*</span></span>
@@ -142,10 +149,16 @@
           </fieldset>
 
           <!-- 4 -->
-          <fieldset class="form-step" data-step="4" data-track="dev">
+          <fieldset class="form-step" data-step="4" data-track="dev pkg">
             <legend class="sr-only">Features</legend>
             <div class="step-head"><span class="n">04</span><div><h2>Features</h2><p>ඔයාට ඕන features tick කරන්න. ඕන තරම් තෝරගන්න පුළුවන්.</p></div></div>
-            <div class="options" id="opt-features"></div>
+            <div data-track="dev"><div class="options" id="opt-features"></div></div>
+            <div class="opt-group" data-track="pkg" hidden>
+              <span class="group-label">Package එකට පොඩි වෙනස්කම්</span>
+              <span class="group-hint">Package එකේ නැති දෙයක් ඕන නම් tick කරන්න, නැත්නම් මේක මග හරින්න. Price එක ඉබේම එකතු වෙනවා.</span>
+              <div class="options" id="opt-addons"></div>
+              <div class="cr-list" id="opt-addqty"></div>
+            </div>
           </fieldset>
 
           <!-- 5 -->

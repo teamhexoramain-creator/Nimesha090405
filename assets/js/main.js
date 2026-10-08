@@ -278,6 +278,8 @@
     };
     requestAnimationFrame(step);
   }
+  const homePk = $("#home-packages");
+  if (homePk && window.HXPkg && P && C.packages) homePk.innerHTML = window.HXPkg.html(C, P);
   // an element shows a price either by project type (data-price-type) or a plain USD amount (data-price-usd)
   const usdOf = el => {
     const t = C.types && C.types[el.getAttribute("data-price-type")];

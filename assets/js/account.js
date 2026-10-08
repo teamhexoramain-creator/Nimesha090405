@@ -27,7 +27,8 @@
         '<a class="btn btn-wa" href="' + esc(wa("Hi Hexora! මගේ project එකේ status එක දැනගන්න ඕන.")) + '" target="_blank" rel="noopener">WhatsApp</a></section>';
       return;
     }
-    clearInterval(poll);
+    clearInterval(poll); clearInterval(chatPoll);
+    if (chatCtl) { chatCtl.destroy(); chatCtl = null; }
     if (mode === "forgot") return forgotScreen();
     const up = mode === "signup";
     root.innerHTML =
@@ -136,9 +137,46 @@
   }
 
   /* ---------- the customer's projects ---------- */
+  let tab = "projects", chats = {}, openChat = null, chatCtl = null, chatPoll = null;
+  const SEEN = "hx_chat_seen_v1";   // { projectId: time of the last message already seen }
+  const seen = () => { try { return JSON.parse(localStorage.getItem(SEEN)) || {}; } catch (e) { return {}; } };
+  const ms = iso => { const t = Date.parse(iso); return isNaN(t) ? 0 : t; };
+  const unread = rid => { const c = chats[rid]; return !!c && c.lastFrom === "a" && ms(c.lastAt) > (seen()[rid] || 0); };
+  function updateDots() {
+    let any = false;
+    (projects || []).forEach(r => { const u = unread(r.id); any = any || u; const d = root.querySelector('[data-dot="' + r.id + '"]'); if (d) d.hidden = !u; });
+    const t = root.querySelector("[data-tab-dot]"); if (t) t.hidden = !any;
+  }
+  function markSeen(rid, iso) {
+    const m = seen(); m[rid] = Math.max(m[rid] || 0, ms(iso));
+    try { localStorage.setItem(SEEN, JSON.stringify(m)); } catch (e) { /* storage blocked */ }
+    updateDots();
+  }
+  async function loadChats() {
+    try { const rows = await FB.where("chats", "uid", FB.user().uid); chats = {}; rows.forEach(c => { chats[c.id] = c; }); updateDots(); }
+    catch (e) { /* the dots just stay as they are */ }
+  }
+  function stopChat() {
+    if (chatCtl) { chatCtl.destroy(); chatCtl = null; }
+    openChat = null;
+  }
+  function toggleChat(rid) {
+    const was = openChat;
+    stopChat();
+    root.querySelectorAll(".acc-chat").forEach(b => { b.hidden = true; b.innerHTML = ""; b.classList.remove("chat"); });
+    root.querySelectorAll('[data-act="chat"]').forEach(b => b.setAttribute("aria-expanded", "false"));
+    if (was === rid) return;
+    const box = root.querySelector('[data-chat="' + rid + '"]'), btn = root.querySelector('[data-act="chat"][data-id="' + rid + '"]');
+    if (!box || !window.HXChat) return;
+    const me = FB.user(), A = window.HXChat.api(FB.fs, FB.db);
+    openChat = rid; box.hidden = false; if (btn) btn.setAttribute("aria-expanded", "true");
+    chatCtl = window.HXChat.mount(box, { me: "c", load: after => A.load(rid, after), send: m => A.send(rid, me.uid, "c", m), onSeen: last => markSeen(rid, last), errText: FB.errText });
+  }
+
   async function portal() {
     const me = FB.user();
     if (!me) { mode = "login"; return gate(); }
+    stopChat();
     root.innerHTML = '<section class="acc-card"><p class="muted">ඔයාගේ projects ගන්නවා…</p></section>';
     try {
       if (!profile) {
@@ -147,16 +185,20 @@
       }
       await claimPending();
       projects = (await FB.where("requests", "uid", me.uid)).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+      await loadChats();
       paint();
+      clearInterval(chatPoll);
+      chatPoll = setInterval(() => { if (document.visibilityState === "visible" && FB.user() && root.querySelector(".acc-tabs2")) loadChats(); }, 45000);
     } catch (e) {
       if (!FB.user()) { mode = "login"; gate(); msg(FB.errText(e)); return; }
       root.innerHTML = '<section class="acc-card"><p class="acc-msg">' + esc(FB.errText(e)) + '</p><button class="btn" type="button" data-act="reload">ආයෙත් try කරන්න</button> <button class="btn" type="button" data-act="logout">Logout</button></section>';
     }
   }
+  const chatIcon = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>';
   function card(r) {
     const st = stageOf(r.status), idx = STAGES.indexOf(st);
     const pct = st.key === "done" ? 100 : Math.max(0, Math.min(100, typeof r.progress === "number" ? r.progress : st.pct));
-    const title = r.title || (r.track === "creative" ? "Logo, Design & Video project" : "App / Website project");
+    const title = r.title || (r.track === "creative" ? "Logo, Design & Video project" : r.track === "pkg" ? "Mobile app project" : "App / Website project");
     return '<article class="acc-proj s-' + esc(st.key) + '">' +
       '<div class="acc-proj-top"><div><h2>' + esc(title) + "</h2><small>" + esc(r.ref || "") + (r.createdAt ? " · " + esc(fmtDay(r.createdAt)) : "") + "</small></div>" +
         '<span class="acc-stage">' + esc(st.label) + "</span></div>" +
@@ -167,30 +209,43 @@
       '<dl class="acc-facts">' +
         (r.due ? "<div><dt>" + (st.key === "done" ? "ඉවර කළ දවස" : "ඉවර වෙන්න බලාපොරොත්තු වෙන දවස") + "</dt><dd>" + esc(fmtDay(r.due)) + "</dd></div>" : "") +
         (r.estimate ? "<div><dt>Estimate</dt><dd>" + esc(r.estimate) + "</dd></div>" : "") + "</dl>" +
-      '<a class="btn btn-wa acc-wa" href="' + esc(wa("Hi Hexora! මගේ project එක ගැන (" + (r.ref || title) + ")")) + '" target="_blank" rel="noopener">මේ project එක ගැන WhatsApp කරන්න</a>' +
+      '<div class="acc-proj-actions"><button class="btn btn-primary acc-chat-btn" type="button" data-act="chat" data-id="' + esc(r.id) + '" aria-expanded="false">' + chatIcon + ' Hexora එක්ක chat කරන්න <i class="acc-dot" data-dot="' + esc(r.id) + '" hidden>අලුත්</i></button>' +
+        '<a class="btn btn-wa acc-wa" href="' + esc(wa("Hi Hexora! මගේ project එක ගැන (" + (r.ref || title) + ")")) + '" target="_blank" rel="noopener">WhatsApp</a></div>' +
+      '<div class="acc-chat" data-chat="' + esc(r.id) + '" hidden></div>' +
     "</article>";
   }
+  function projectsHtml(me) {
+    return projects.length ? '<div class="acc-list">' + projects.map(card).join("") + "</div>" :
+      '<section class="acc-card acc-empty"><h2>තාම projects නෑ</h2><p class="muted">Project request එකක් එව්වම ඒක මෙතන පේනවා. WhatsApp එකෙන් කතා කරපු project එකක් නම්, අපි ඒක ඔයාගේ account එකට දාන්නම්.</p>' +
+        '<div class="acc-actions"><a class="btn btn-primary" href="start-project.html">Project එක පටන් ගන්න</a>' +
+        '<a class="btn btn-wa" href="' + esc(wa("Hi Hexora! මගේ project එක මගේ account එකට (" + FB.phoneLabel(me.phone) + ") දාන්න පුළුවන්ද?")) + '" target="_blank" rel="noopener">WhatsApp</a></div></section>';
+  }
+  function settingsHtml(me, name) {
+    return '<section class="acc-card"><h2>Account</h2><p class="muted">Phone number එක: <b>' + esc(FB.phoneLabel(me.phone)) + "</b> (login වෙන්න use කරන්නේ මේක)</p>" +
+        '<form id="name-form" class="acc-form"><div class="field"><label for="s-name">නම</label><input class="input" id="s-name" type="text" maxlength="100" value="' + esc(name) + '"></div>' +
+        '<button class="btn" type="submit">නම save කරන්න</button></form></section>' +
+      '<section class="acc-card"><h2>PIN එක මාරු කරන්න</h2>' +
+        '<form id="pin-form" class="acc-form"><div class="field"><label for="s-pin">අලුත් PIN (digits 6)</label><input class="input acc-pin" id="s-pin" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>' +
+        '<div class="field"><label for="s-pin2">ආයෙත් ගහන්න</label><input class="input acc-pin" id="s-pin2" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>' +
+        '<button class="btn" type="submit">PIN එක මාරු කරන්න</button></form></section>' +
+      '<p class="acc-msg" id="acc-msg" role="status"></p>' +
+      '<section class="acc-card"><h2>Logout</h2><p class="muted">මේ phone / browser එකෙන් logout වෙන්න.</p><div><button class="btn" type="button" data-act="logout">Logout</button></div></section>';
+  }
   function paint() {
+    stopChat();
     const me = FB.user(), name = (profile && profile.name) || me.name || "";
     root.innerHTML =
       '<section class="acc-head">' +
         '<div><span class="eyebrow">මගේ projects</span><h1 class="display">ආයුබෝවන්' + (name ? ", " + esc(name) : "") + "</h1>" +
           '<p class="muted">' + esc(FB.phoneLabel(me.phone)) + "</p></div>" +
         '<div class="acc-actions"><a class="btn btn-primary" href="start-project.html">අලුත් project එකක්</a>' +
-          '<button class="btn" type="button" data-act="reload" aria-label="Refresh">↻</button>' +
-          '<button class="btn" type="button" data-act="logout">Logout</button></div>' +
+          '<button class="btn" type="button" data-act="reload" aria-label="Refresh">↻</button></div>' +
       "</section>" +
-      (projects.length ? '<div class="acc-list">' + projects.map(card).join("") + "</div>" :
-        '<section class="acc-card acc-empty"><h2>තාම projects නෑ</h2><p class="muted">Project request එකක් එව්වම ඒක මෙතන පේනවා. WhatsApp එකෙන් කතා කරපු project එකක් නම්, අපි ඒක ඔයාගේ account එකට දාන්නම්.</p>' +
-          '<div class="acc-actions"><a class="btn btn-primary" href="start-project.html">Project එක පටන් ගන්න</a>' +
-          '<a class="btn btn-wa" href="' + esc(wa("Hi Hexora! මගේ project එක මගේ account එකට (" + FB.phoneLabel(me.phone) + ") දාන්න පුළුවන්ද?")) + '" target="_blank" rel="noopener">WhatsApp</a></div></section>') +
-      '<details class="acc-card acc-settings"><summary>Account settings</summary>' +
-        '<form id="name-form" class="acc-form"><div class="field"><label for="s-name">නම</label><input class="input" id="s-name" type="text" maxlength="100" value="' + esc(name) + '"></div>' +
-          '<button class="btn" type="submit">නම save කරන්න</button></form>' +
-        '<form id="pin-form" class="acc-form"><div class="field"><label for="s-pin">අලුත් PIN (digits 6)</label><input class="input acc-pin" id="s-pin" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>' +
-          '<div class="field"><label for="s-pin2">ආයෙත් ගහන්න</label><input class="input acc-pin" id="s-pin2" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>' +
-          '<button class="btn" type="submit">PIN එක මාරු කරන්න</button></form>' +
-        '<p class="acc-msg" id="acc-msg" role="status"></p></details>';
+      '<nav class="acc-tabs2" role="tablist" aria-label="Account menu">' +
+        '<button type="button" role="tab" data-act="tab" data-tab="projects" aria-selected="' + (tab === "projects") + '">මගේ projects <i class="acc-dot" data-tab-dot hidden>අලුත්</i></button>' +
+        '<button type="button" role="tab" data-act="tab" data-tab="settings" aria-selected="' + (tab === "settings") + '">Settings</button></nav>' +
+      (tab === "settings" ? settingsHtml(me, name) : projectsHtml(me));
+    updateDots();
   }
 
   async function saveName(form) {
@@ -201,7 +256,7 @@
       if (profile) await FB.patch("/customers/" + me.uid, { name: name }, ["name"]);
       else await FB.create("customers", me.uid, { name: name, phone: me.phone }, ["createdAt"]);
       profile = Object.assign({ phone: me.phone }, profile, { name: name }); FB.setName(name);
-      paint(); $(".acc-settings").open = true; msg("නම save උනා ✓", true);
+      paint(); msg("නම save උනා ✓", true);
     } catch (e) { msg(FB.errText(e)); btn.disabled = false; }
   }
   async function savePin(form) {
@@ -223,7 +278,9 @@
   root.addEventListener("click", e => {
     const t = e.target.closest("[data-mode], [data-act]"); if (!t) return;
     if (t.dataset.mode) { mode = t.dataset.mode; gate(); return; }
-    if (t.dataset.act === "logout") { FB.signOut(); profile = null; projects = null; mode = "login"; gate(); }
+    if (t.dataset.act === "logout") { stopChat(); clearInterval(chatPoll); FB.signOut(); profile = null; projects = null; chats = {}; tab = "projects"; mode = "login"; gate(); }
+    if (t.dataset.act === "tab") { tab = t.dataset.tab; paint(); }
+    if (t.dataset.act === "chat") toggleChat(t.dataset.id);
     if (t.dataset.act === "reload") portal();
     if (t.dataset.act === "pin-check") checkPin();
     if (t.dataset.act === "pin-new") { clearPR(); forgotScreen(); }

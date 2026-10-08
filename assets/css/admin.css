@@ -172,3 +172,11 @@
 .ad-savebar .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
 .toast.bad { border-color: var(--danger); color: #ffd3dc; }
 .admin-page .toast { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+
+/* chat inside a project card */
+.ad-chat-btn { position: relative; }
+.ad-chat-btn .ad-badge { margin-left: 2px; }
+.ad-chat[hidden] { display: none; }
+.ad-chat.chat { margin-top: 4px; }
+.ad-req .ad-chat-note { color: var(--faint); font-size: .8rem; }
+.ad-badge.dotnew { background: var(--danger); }

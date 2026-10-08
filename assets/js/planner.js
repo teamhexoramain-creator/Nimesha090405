@@ -25,16 +25,25 @@
       (priceHtml ? '<span class="p" data-p="' + name + ':' + value + '">' + priceHtml + "</span>" : "") +
       (sub ? '<span class="s">' + esc(sub) + "</span>" : "") + "</span></label>";
   }
-  function crItem(k, it) {
+  // a row with a − 0 + stepper. key "logo" → input cr-logo (design & video); key "pq:screens" → input pq-screens (package add-on)
+  const qName = k => k.indexOf("pq:") === 0 ? "pq-" + k.slice(3) : "cr-" + k;
+  const qKey = name => name.indexOf("pq-") === 0 ? "pq:" + name.slice(3) : name.slice(3);
+  function crItem(k, it, tag) {
     return '<div class="cr-item" data-key="' + k + '">' +
       '<button type="button" class="cr-info" data-toggle="' + k + '"><span class="t">' + esc(it.label) + '</span>' +
-      '<span class="s">' + esc(it.note) + '</span><span class="p" data-p="creative:' + k + '"></span></button>' +
+      '<span class="s">' + esc(it.note) + '</span><span class="p" data-p="' + (tag || "creative:" + k) + '"></span></button>' +
       '<div class="qty"><button type="button" data-d="-1" aria-label="' + esc(it.label) + ' අඩු කරන්න">−</button>' +
-      '<input type="number" inputmode="numeric" min="0" max="' + MAXQ + '" value="0" name="cr-' + k + '" aria-label="' + esc(it.label) + ' ගණන">' +
+      '<input type="number" inputmode="numeric" min="0" max="' + MAXQ + '" value="0" name="' + qName(k) + '" aria-label="' + esc(it.label) + ' ගණන">' +
       '<button type="button" data-d="1" aria-label="' + esc(it.label) + ' වැඩි කරන්න">+</button></div></div>';
   }
   function buildOptions() {
-    $("#opt-type").innerHTML = Object.entries(C.types).map(([k, t]) => tile("radio", "type", k, t.label, t.note, "")).join("");
+    $("#opt-type").innerHTML = Object.entries(C.types).filter(([, t]) => t.kind !== "app" && t.kind !== "both").map(([k, t]) => tile("radio", "type", k, t.label, t.note, "")).join("");
+    $("#opt-pkg").innerHTML = Object.entries(C.packages || {}).map(([k, p]) =>
+      '<label class="opt pkg"><input type="radio" name="pkg" value="' + k + '"><span class="opt-box"><span class="tick"></span><span class="t">' + esc(p.label) + '</span>' +
+      '<span class="p" data-p="pkg:' + k + '"></span><ul class="pkg-inc">' + (p.includes || []).map(x => "<li>" + esc(x) + "</li>").join("") + "</ul></span></label>").join("");
+    const adds = Object.entries(C.addons || {});
+    $("#opt-addons").innerHTML = adds.filter(([, a]) => !a.qty).map(([k, a]) => tile("checkbox", "addons", k, a.label, a.note, "+")).join("");
+    $("#opt-addqty").innerHTML = adds.filter(([, a]) => a.qty).map(([k, a]) => crItem("pq:" + k, a, "addons:" + k)).join("");
     $("#opt-size").innerHTML = Object.entries(C.sizes).map(([k, s]) => tile("radio", "size", k, s.label, s.note, s.priceX === 1 ? "" : "×" + s.priceX)).join("");
     $("#opt-features").innerHTML = Object.entries(C.features).map(([k, f]) => tile("checkbox", "features", k, f.label, "", "+")).join("");
     $("#opt-design").innerHTML = Object.entries(C.design).map(([k, d]) => tile("radio", "design", k, d.label, d.note, "+")).join("");
@@ -42,7 +51,10 @@
     $("#opt-urgency").innerHTML = Object.entries(C.urgency).map(([k, u]) => tile("radio", "urgency", k, u.label, u.note, u.percent ? "+" + u.percent + "%" : "")).join("");
     $("#opt-creative").innerHTML = Object.entries(C.creative || {}).map(([k, it]) => crItem(k, it)).join("");
   }
+  const pk = baseLkr => P.formatLKR(P.packageLKR(C, baseLkr, rate.rate));
   function refreshPriceTags() {
+    Object.entries(C.packages || {}).forEach(([k, p]) => { const el = $('[data-p="pkg:' + k + '"]'); if (el) el.textContent = pk(p.lkr); });
+    Object.entries(C.addons || {}).forEach(([k, a]) => { const el = $('[data-p="addons:' + k + '"]'); if (el) el.textContent = "+" + pk(a.lkr) + (a.qty ? " / එකක්" : ""); });
     Object.entries(C.features).forEach(([k, f]) => { const el = $('[data-p="features:' + k + '"]'); if (el) el.textContent = "+" + lkr(f.usd); });
     Object.entries(C.extras).forEach(([k, x]) => { const el = $('[data-p="extras:' + k + '"]'); if (el) el.textContent = "+" + lkr(x.usd); });
     Object.entries(C.design).forEach(([k, d]) => {
@@ -59,7 +71,7 @@
   const vals = name => $$('input[name="' + name + '"]:checked', form).map(i => i.value);
   const track = () => val("track") || "dev";
   function qtyOf(k) {
-    const el = form.querySelector('input[name="cr-' + k + '"]');
+    const el = form.querySelector('input[name="' + qName(k) + '"]');
     const n = el ? parseInt(el.value, 10) : 0;
     return isNaN(n) ? 0 : Math.min(MAXQ, Math.max(0, n));
   }
@@ -68,6 +80,11 @@
     Object.keys(C.creative || {}).forEach(k => { const q = qtyOf(k); if (q) out[k] = q; });
     return out;
   }
+  function pkgSel() {
+    const qty = {};
+    Object.entries(C.addons || {}).forEach(([k, a]) => { if (a.qty) { const n = qtyOf("pq:" + k); if (n) qty[k] = n; } });
+    return { pkg: val("pkg"), addons: vals("addons"), qty: qty, urgency: val("urgency") || "normal" };
+  }
   function selection() {
     return { type: val("type"), size: val("size"), features: vals("features"), design: val("design"), extras: vals("extras"), urgency: val("urgency") || "normal" };
   }
@@ -75,13 +92,15 @@
   /* ---------- show the parts that belong to the chosen track ---------- */
   function applyTrack() {
     const t = track();
-    $$("[data-track]", form).forEach(el => { el.hidden = el.getAttribute("data-track") !== t; });
-    $$("[data-dev-only]").forEach(el => { el.hidden = t !== "dev"; });
+    $$("[data-track]", form).forEach(el => { el.hidden = el.getAttribute("data-track").split(/\s+/).indexOf(t) === -1; });
+    $$("[data-tracks]").forEach(el => { el.hidden = el.getAttribute("data-tracks").split(/\s+/).indexOf(t) === -1; });
     const mb = $("#est-maint-box"); if (mb) mb.hidden = t !== "dev";
     const note = $(".estimate .est-note");
     if (note) note.textContent = t === "dev"
       ? "මේක estimate එකක්. Final price එක free call එකෙන් පස්සේ fixed quote එකක් විදියට දෙනවා. Google / Apple / domain fees වෙනම."
-      : "මේක estimate එකක්. Revisions include. Final price එක chat එකෙන් confirm කරලා වැඩ පටන් ගන්නවා.";
+      : t === "pkg"
+        ? "Package එකයි තෝරපු වෙනස්කම් ටිකයි එකතු කරපු price එක. අද dollar rate එකට අනුව වෙනස් වෙනවා. Final price එක call එකෙන් පස්සේ confirm කරනවා. Google / Apple fees වෙනම."
+        : "මේක estimate එකක්. Revisions include. Final price එක chat එකෙන් confirm කරලා වැඩ පටන් ගන්නවා.";
   }
 
   /* ---------- enable / disable dev options that don't fit the type ---------- */
@@ -129,6 +148,12 @@
       return { kind: "creative", lo: e.totalLKR, hi: null, usdText: "≈ USD " + e.usd, time: "දවස් " + e.daysLow + " – " + e.daysHigh,
         advance: e.advanceLKR, lines: e.lines, raw: e };
     }
+    if (track() === "pkg") {
+      const e = P.estimatePackage(C, pkgSel(), rate.rate);
+      if (!e) return null;
+      return { kind: "pkg", lo: e.totalLKR, hi: null, usdText: "≈ USD " + e.usd.toLocaleString("en-US"), time: "සති " + e.weeksLow + " – " + e.weeksHigh,
+        advance: e.advanceLKR, lines: e.lines, raw: e };
+    }
     const e = P.estimate(C, selection(), rate.rate);
     if (!e) return null;
     return { kind: "dev", lo: e.lowLKR, hi: e.highLKR, usdText: "≈ USD " + e.usd.toLocaleString("en-US") + " – " + e.usdHigh.toLocaleString("en-US"),
@@ -141,8 +166,8 @@
     const e = currentEstimate();
     const total = $("#est-total"), bar = $("#bar-total");
     if (!e) {
-      total.textContent = track() === "creative" ? "Items තෝරගන්න" : "Type & size තෝරගන්න";
-      bar.textContent = track() === "creative" ? "Items තෝරගන්න" : "Type එක තෝරගන්න";
+      total.textContent = track() === "creative" ? "Items තෝරගන්න" : track() === "pkg" ? "Package එක තෝරගන්න" : "Type & size තෝරගන්න";
+      bar.textContent = track() === "creative" ? "Items තෝරගන්න" : track() === "pkg" ? "Package එක තෝරගන්න" : "Type එක තෝරගන්න";
       $("#est-usd").textContent = "";
       ["#est-weeks", "#est-adv", "#est-maint"].forEach(s => $(s).textContent = "—");
       $("#est-lines").innerHTML = "";
@@ -185,12 +210,12 @@
   /* ---------- stepper / completed sections ---------- */
   function stepDone(n) {
     const v = id => ($("#" + id).value || "").trim();
-    const dev = track() === "dev";
+    const dev = track() === "dev", pkg = track() === "pkg";
     switch (n) {
       case 1: return v("f-name").length > 1 && phoneOk(v("f-phone"));
       case 2: return v("f-desc").length >= 15;
-      case 3: return dev ? (!!val("type") && !!val("size")) : Object.keys(creativeItems()).length > 0;
-      case 4: return dev && vals("features").length > 0;
+      case 3: return pkg ? !!val("pkg") : dev ? (!!val("type") && !!val("size")) : Object.keys(creativeItems()).length > 0;
+      case 4: return (dev && vals("features").length > 0) || (pkg && (vals("addons").length > 0 || Object.keys(pkgSel().qty).length > 0));
       case 5: return dev && !!val("design");
       case 6: return !!val("urgency") && (!!v("f-budget") || !!v("f-deadline"));
     }
@@ -211,7 +236,7 @@
   }
   const emailBad = em => !!em && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em);
   function checks() {
-    const dev = track() === "dev";
+    const dev = track() === "dev", pkg = track() === "pkg";
     return {
       name: $("#f-name").value.trim().length < 2,
       phone: !phoneOk($("#f-phone").value),
@@ -219,7 +244,8 @@
       desc: $("#f-desc").value.trim().length < 15,
       type: dev && !val("type"),
       size: dev && !val("size"),
-      creative: !dev && Object.keys(creativeItems()).length === 0
+      pkg: pkg && !val("pkg"),
+      creative: !dev && !pkg && Object.keys(creativeItems()).length === 0
     };
   }
   function validate() {
@@ -305,6 +331,12 @@
       L.push("Features: " + (feats.length ? feats.join(", ") : "-"));
       L.push("Design: " + (C.design[sel.design] ? C.design[sel.design].label : "-"));
       L.push("Extras: " + (extras.length ? extras.join(", ") : "-"));
+    } else if (est.kind === "pkg") {
+      const ps = pkgSel(), p = C.packages[ps.pkg];
+      const ad = ps.addons.map(k => C.addons[k].label).concat(Object.keys(ps.qty).map(k => C.addons[k].label + " × " + ps.qty[k]));
+      L.push("*Project — Mobile App Package*");
+      L.push("Package: " + p.label + " (" + pk(p.lkr) + ")");
+      L.push("Changes / add-ons: " + (ad.length ? ad.join(", ") : "-"));
     } else {
       L.push("*Project — Logo, Design & Video*");
       est.raw.lines.filter(l => l.key).forEach(l => {
@@ -402,7 +434,7 @@
   let draftT;
   const queueDraft = () => { clearTimeout(draftT); draftT = setTimeout(saveDraft, 300); };
   function setQty(k, q) {
-    const el = form.querySelector('input[name="cr-' + k + '"]'); if (!el) return;
+    const el = form.querySelector('input[name="' + qName(k) + '"]'); if (!el) return;
     el.value = Math.min(MAXQ, Math.max(0, q));
     el.dispatchEvent(new Event("input", { bubbles: true }));
   }
@@ -423,7 +455,7 @@
     if (e.target.matches('input[type="radio"], input[type="checkbox"], input[type="number"]')) render(); else updateStepper();
   });
   form.addEventListener("change", e => {
-    if (e.target.matches('input[type="number"]')) { const k = e.target.name.slice(3); setQty(k, qtyOf(k)); }
+    if (e.target.matches('input[type="number"]')) { const k = qKey(e.target.name); setQty(k, qtyOf(k)); }
     if (e.target.matches("select, input[type=date]")) updateStepper();
   });
 
@@ -479,13 +511,19 @@
   const q = new URLSearchParams(location.search);
   const pick = (name, v) => { const el = form.querySelector('input[name="' + name + '"][value="' + v + '"]'); if (el) el.checked = true; };
   const qTrack = q.get("track"), qType = q.get("type"), qItem = q.get("item");
-  if (qType && C.types[qType]) { pick("track", "dev"); pick("type", qType); }
+  const qPkg = q.get("package");
+  if (qPkg && C.packages && C.packages[qPkg]) { pick("track", "pkg"); pick("pkg", qPkg); }
+  else if (qTrack === "pkg") pick("track", "pkg");
+  if (qType && C.types[qType]) {
+    if (C.types[qType].kind === "app" || C.types[qType].kind === "both") pick("track", "pkg");
+    else { pick("track", "dev"); pick("type", qType); }
+  }
   if (qTrack === "creative" || (qItem && C.creative && C.creative[qItem])) {
     pick("track", "creative");
     if (qItem && C.creative[qItem] && !qtyOf(qItem)) form.querySelector('input[name="cr-' + qItem + '"]').value = 1;
   }
-  if (!val("track")) pick("track", "dev");
-  if (!val("type") && !hadDraft) pick("type", "cross");
+  if (!val("track")) pick("track", "pkg");
+  if (!val("type") && !hadDraft) pick("type", "website");
   if (!val("size")) pick("size", "small");
   if (!val("design")) pick("design", "ready");
   if (!val("urgency")) pick("urgency", "normal");

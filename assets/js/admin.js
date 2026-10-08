@@ -23,7 +23,7 @@
   const STAGE_EN = { new: "New", contacted: "Contacted", design: "Design", building: "Building", testing: "Testing", done: "Done" };
   const FILTERS = [["all", "All"], ["new", "New"], ["active", "Active"], ["done", "Done"]];
   const inFilter = (r, f) => f === "all" || (f === "active" ? r.status !== "new" && r.status !== "done" : r.status === f);
-  const S = { auth: null, content: { exists: false, updateTime: "" }, data: {}, saved: {}, reqs: null, customers: [], pinReqs: [], show: {}, newOpen: false, reqFilter: "all", tab: "home", svc: 0, last: Date.now() };
+  const S = { auth: null, content: { exists: false, updateTime: "" }, data: {}, saved: {}, reqs: null, customers: [], pinReqs: [], chats: {}, chatMax: "", chatOpen: null, show: {}, newOpen: false, reqFilter: "all", tab: "home", svc: 0, last: Date.now() };
   const ready = !!(F.apiKey && F.projectId && F.adminEmail);
 
   const store = {
@@ -135,7 +135,7 @@
 
   /* ==================== 1. PIN screen ==================== */
   function lockScreen(msg) {
-    S.auth = null;
+    S.auth = null; stopChat(); clearInterval(chatTimer);
     if (!ready) {
       root.innerHTML = gate("<h1>Firebase setup</h1>" +
         '<p class="muted">Admin panel එක වැඩ කරන්න Firebase project එකක් ඕන. <code>assets/js/firebase-config.js</code> එකේ apiKey, projectId, adminEmail තාම දාලා නෑ.</p>' +
@@ -187,7 +187,13 @@
   }
 
   /* ==================== 2. load content ==================== */
-  function normalize() { if (!S.data.config.notice) S.data.config.notice = { show: false, text: "", linkText: "", link: "" }; }
+  // keys added to config.js after the data was saved (packages, add-ons…) are filled in from the built-in file
+  function normalize() {
+    const c = S.data.config, d = window.HEXORA || {};
+    if (!c.notice) c.notice = { show: false, text: "", linkText: "", link: "" };
+    ["packages", "addons", "packageBaseRate"].forEach(k => { if (c[k] == null && d[k] != null) c[k] = clone(d[k]); });
+    if (S.data.services && S.data.services.list) S.data.services.list.forEach(x => { if (x.packages === undefined && x.slug === "mobile-apps") x.packages = true; });
+  }
   async function loadAll() {
     root.innerHTML = gate('<p class="muted">Firebase එකෙන් data ගන්නවා…</p>');
     try {
@@ -208,6 +214,7 @@
       S.svc = Math.min(S.svc, S.data.services.list.length - 1);
       panel();
       loadRequests();
+      clearInterval(chatTimer); chatTimer = setInterval(pollChats, 45000);
     } catch (e) {
       root.innerHTML = gate("<h1>Data ගන්න බැරි උනා</h1><p class=\"ad-gate-msg\">" + esc(errText(e)) + "</p>" +
         '<div class="ad-connect"><button class="btn btn-primary" type="button" id="retry">ආයෙත් try කරන්න</button></div>' +
@@ -218,8 +225,9 @@
   }
   async function loadRequests() {
     try {
-      const both = await Promise.all([query("requests", "createdAt", 300), query("customers", "createdAt", 500).catch(() => []), query("pinRequests", "createdAt", 100).catch(() => [])]);
+      const both = await Promise.all([query("requests", "createdAt", 300), query("customers", "createdAt", 500).catch(() => []), query("pinRequests", "createdAt", 100).catch(() => []), query("chats", "lastAt", 300).catch(() => [])]);
       S.reqs = both[0]; S.customers = both[1]; S.pinReqs = both[2];
+      S.chats = {}; both[3].forEach(c => { S.chats[c.id] = c; if (!S.chatMax || ms(c.lastAt) > ms(S.chatMax)) S.chatMax = c.lastAt; });
     }
     catch (e) { S.reqs = null; S.reqErr = errText(e); }
     paintTabs();
@@ -227,6 +235,42 @@
   }
 
   /* ==================== 3. the panel ==================== */
+  /* ---------- chats: unread dots, polling, the chat box inside a project card ---------- */
+  const SEEN = "hx_admin_seen_v1";   // { projectId: time of the last customer message already read }
+  const seenMap = () => store.get(SEEN) || {};
+  const ms = iso => { const t = Date.parse(iso); return isNaN(t) ? 0 : t; };
+  const isUnread = rid => { const c = S.chats[rid]; return !!c && c.lastFrom === "c" && ms(c.lastAt) > (seenMap()[rid] || 0); };
+  const unreadCount = () => Object.keys(S.chats).filter(isUnread).length;
+  function markSeen(rid, iso) { const m = seenMap(); m[rid] = Math.max(m[rid] || 0, ms(iso)); store.set(SEEN, m); chatDots(); }
+  function chatDots() {
+    $$("[data-adot]").forEach(el => { el.hidden = !isUnread(el.dataset.adot); });
+    paintTabs();
+  }
+  let chatTimer = null, chatCtl = null;
+  async function pollChats() {
+    if (!S.auth || document.visibilityState !== "visible") return;
+    try {
+      const rows = S.chatMax ? await fs("POST", ":runQuery", { structuredQuery: { from: [{ collectionId: "chats" }], where: { fieldFilter: { field: { fieldPath: "lastAt" }, op: "GREATER_THAN", value: { timestampValue: S.chatMax } } }, orderBy: [{ field: { fieldPath: "lastAt" }, direction: "ASCENDING" }], limit: 100 } })
+        : await fs("POST", ":runQuery", { structuredQuery: { from: [{ collectionId: "chats" }], orderBy: [{ field: { fieldPath: "lastAt" }, direction: "ASCENDING" }], limit: 100 } });
+      const fresh = (rows || []).filter(r => r.document).map(r => fromDoc(r.document));
+      if (!fresh.length) return;
+      fresh.forEach(c => { S.chats[c.id] = c; if (!S.chatMax || ms(c.lastAt) > ms(S.chatMax)) S.chatMax = c.lastAt; });
+      chatDots();
+      fresh.filter(c => c.lastFrom === "c" && isUnread(c.id)).forEach(c => { const el = $('[data-chatnote="' + c.id + '"]'); if (el) el.textContent = "💬 " + (c.lastText || ""); });
+    } catch (e) { /* try again next time */ }
+  }
+  function stopChat() { if (chatCtl) { chatCtl.destroy(); chatCtl = null; } }
+  function openChatBox(rid) {
+    stopChat();
+    const r = (S.reqs || []).find(x => x.id === rid), box = $('[data-chat="' + rid + '"]');
+    $$(".ad-chat").forEach(b => { if (b !== box) { b.hidden = true; b.innerHTML = ""; b.classList.remove("chat"); } });
+    $$('[data-act="chat"]').forEach(b => b.setAttribute("aria-expanded", String(b.dataset.id === rid)));
+    if (!r || !r.uid || !box || !window.HXChat) return;
+    box.hidden = false;
+    const A = window.HXChat.api(fs, "projects/" + F.projectId + "/databases/(default)");
+    chatCtl = window.HXChat.mount(box, { me: "a", load: after => A.load(rid, after), send: m => A.send(rid, r.uid, "a", m), onSeen: last => markSeen(rid, last), errText: errText });
+  }
+
   const TABS = [["home", "Dashboard"], ["requests", "Requests"], ["customers", "Customers"], ["notice", "Notice"], ["contact", "Contact"], ["prices", "Prices"], ["services", "Services"], ["history", "History"], ["security", "Security"]];
   const newCount = () => (S.reqs || []).filter(r => r.status === "new").length;
   function panel() {
@@ -250,7 +294,7 @@
     const nav = $("#ad-tabs"); if (!nav) return;
     const n = newCount();
     nav.innerHTML = TABS.map(([k, t]) => '<button type="button" role="tab" data-act="tab" data-tab="' + k + '" aria-selected="' + (k === S.tab) + '">' + t +
-      (k === "requests" && n ? ' <span class="ad-badge">' + n + "</span>" : "") +
+      (k === "requests" && (n + unreadCount()) ? ' <span class="ad-badge">' + (n + unreadCount()) + "</span>" : "") +
       (k === "customers" && S.pinReqs.length ? ' <span class="ad-badge">' + S.pinReqs.length + "</span>" : "") + "</button>").join("");
   }
   function renderTab() {
@@ -259,6 +303,8 @@
     main.innerHTML = VIEWS[S.tab]();
     $$("#ad-tabs [data-tab]").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === S.tab)));
     if (S.tab === "history") loadHistory();
+    stopChat();
+    if (S.tab === "requests" && S.chatOpen && $('[data-chat="' + S.chatOpen + '"]')) openChatBox(S.chatOpen);
     window.scrollTo(0, y);
     refreshLive();
   }
@@ -281,7 +327,7 @@
         ' value="' + esc(t === "list" ? (v || []).join(", ") : (v == null ? "" : v)) + '"' + (o.ph ? ' placeholder="' + esc(o.ph) + '"' : "") + ">";
     }
     return '<div class="ad-field' + (o.wide ? " wide" : "") + '"><label for="' + id + '">' + esc(label) + "</label>" + control +
-      (o.lkr ? '<small class="ad-lkr" data-lkr="' + path + '"></small>' : "") + (o.hint ? '<small class="ad-hint">' + esc(o.hint) + "</small>" : "") + "</div>";
+      (o.lkr ? '<small class="ad-lkr" data-lkr="' + path + '"></small>' : "") + (o.lkrNow ? '<small class="ad-lkr" data-lkrnow="' + path + '"></small>' : "") + (o.hint ? '<small class="ad-hint">' + esc(o.hint) + "</small>" : "") + "</div>";
   }
   const card = (title, body, note) => '<section class="ad-card"><div class="ad-card-head"><h2>' + title + "</h2>" + (note ? "<p>" + note + "</p>" : "") + "</div>" + body + "</section>";
   const grid = inner => '<div class="ad-grid">' + inner + "</div>";
@@ -341,7 +387,7 @@
     return '<article class="ad-req s-' + esc(r.status) + '" data-id="' + id + '">' +
       '<div class="ad-req-head"><div><b>' + esc(r.title || r.name || "—") + "</b><small>" + (r.title ? esc(r.name) + " · " : "") + esc(fmtDate(r.createdAt)) + " · <code>" + esc(r.ref) + "</code></small></div>" +
         '<span class="ad-pill">' + esc(STAGE_EN[r.status] || r.status) + " · " + pct + "%</span></div>" +
-      '<div class="ad-req-meta">' + [r.track === "creative" ? "Logo, Design & Video" : "App / Website / System", r.estimate, r.business, r.contact ? "Contact: " + r.contact : ""].filter(Boolean).map(x => "<span>" + esc(x) + "</span>").join("") + "</div>" +
+      '<div class="ad-req-meta">' + [r.track === "creative" ? "Logo, Design & Video" : r.track === "pkg" ? "Mobile App package" : "App / Website / System", r.estimate, r.business, r.contact ? "Contact: " + r.contact : ""].filter(Boolean).map(x => "<span>" + esc(x) + "</span>").join("") + "</div>" +
       linkBox(r) +
       '<div class="ad-grid tight ad-req-edit">' +
         '<div class="ad-field"><label for="rq-status-' + id + '">Stage</label><select class="input"' + fid("status") + ' data-rf="status">' +
@@ -356,7 +402,10 @@
         (r.phone ? '<a class="btn ad-small" href="tel:' + esc(String(r.phone).replace(/[^\d+]/g, "")) + '">Call</a>' : "") +
         (r.email ? '<a class="btn ad-small" href="mailto:' + esc(r.email) + '">Email</a>' : "") +
         '<button type="button" class="btn btn-primary ad-small" data-act="req-save" data-id="' + id + '">Update</button>' +
+        (r.uid ? '<button type="button" class="btn ad-small ad-chat-btn" data-act="chat" data-id="' + id + '" aria-expanded="false">💬 Chat <span class="ad-badge" data-adot="' + id + '"' + (isUnread(r.id) ? "" : " hidden") + ">අලුත්</span></button>" : "") +
         mini("req-del", I.del, "මකන්න", ' data-id="' + id + '"') + "</div>" +
+      (r.uid ? '<p class="ad-chat-note" data-chatnote="' + id + '">' + (S.chats[r.id] ? "💬 " + esc(S.chats[r.id].lastText || "") : "") + '</p><div class="ad-chat" data-chat="' + id + '" hidden></div>'
+        : '<p class="ad-chat-note">Chat කරන්න මේ project එක customer ගේ account එකකට link කරන්න.</p>') +
       (r.message ? "<details><summary>සම්පූර්ණ request එක</summary><pre>" + esc(r.message) + "</pre></details>" : "") + "</article>";
   }
   function newProjectForm() {
@@ -421,6 +470,10 @@
       fields: [["label", "Name"], ["note", "Note"], ["usd", "USD", "num", 1], ["weeks", "Weeks", "num"], ["kind", "Kind", "kind"], ["includesAdmin", "Admin panel include", "bool"]] },
     { key: "sizes", title: "Size", note: "Small = ×1. Medium / Large price එකයි කාලයයි ගුණ වෙනවා.", fixed: true,
       fields: [["label", "Name"], ["note", "Note"], ["priceX", "Price ×", "num"], ["weeksX", "Time ×", "num"], ["maintenanceUsd", "Maintenance USD / මාසයට", "num", 1]] },
+    { key: "packages", title: "Mobile app packages", note: "LKR prices (Package price list rate එකට). Customer ට site එකේ අද rate එකට වෙනස් වෙලා පේනවා. Includes: line එකකට එකක්.", base: true,
+      fields: [["label", "Name"], ["lkr", "Price (LKR)", "num", 0, "lkr"], ["weeks", "Weeks", "num"], ["includes", "Includes (line එකකට එකක්)", "lines"]], tpl: { label: "New package", lkr: 10000, weeks: 1, includes: [] } },
+    { key: "addons", title: "Package add-ons", note: "Package එකකට customer ට එකතු කරන්න පුළුවන් පොඩි වෙනස්කම්. \"Qty\" = customer ට කීයක් ඕනද කියලා තෝරන්න පුළුවන්.", base: true,
+      fields: [["label", "Name"], ["note", "Note"], ["lkr", "Price (LKR)", "num", 0, "lkr"], ["weeks", "Weeks", "num"], ["qty", "Qty (ගණනක් තෝරන්න)", "bool"]], tpl: { label: "New add-on", note: "", lkr: 2000, weeks: 0.3 } },
     { key: "features", title: "Features", note: "Project එකට එකතු වෙන add-ons.",
       fields: [["label", "Name"], ["usd", "USD", "num", 1], ["weeks", "Weeks", "num"]], tpl: { label: "New feature", usd: 30, weeks: 0.5 } },
     { key: "design", title: "Design", note: "Percent = project price එකේ %. USD = ඊට අමතරව.", fixed: true,
@@ -434,8 +487,9 @@
   ];
   function itemFields(g, key) {
     const base = "config." + g.key + "." + key;
-    return g.fields.map(([f, label, type, money]) => {
+    return g.fields.map(([f, label, type, money, lkrMode]) => {
       const p = base + "." + f;
+      if (type === "lines") return field(p, label, { type: "lines", rows: 5, wide: true });
       if (type === "kind") return field(p, label, { type: "select", options: [["web", "Web"], ["app", "App"], ["both", "App + Web"]] });
       if (type === "bool") return field(p, label, { type: "bool" });
       if (type === "for") {
@@ -443,13 +497,14 @@
         return '<div class="ad-field"><span class="ad-label">' + label + '</span><div class="ad-flags">' + [["app", "App"], ["web", "Web"], ["both", "Both"]].map(([k, t]) =>
           '<label class="ad-check"><input type="checkbox" data-path="' + p + '" data-type="flag" data-flag="' + k + '"' + (cur.indexOf(k) !== -1 ? " checked" : "") + "><span>" + t + "</span></label>").join("") + "</div></div>";
       }
-      return field(p, label, { type: type === "num" ? "num" : "text", lkr: !!money });
+      return field(p, label, { type: type === "num" ? "num" : "text", lkr: !!money, lkrNow: lkrMode === "lkr" });
     }).join("");
   }
   VIEWS.prices = () => {
     const c = S.data.config;
     return card("General", grid(
         field("config.fallbackRate", "Fallback rate (LKR for 1 USD)", { type: "num", hint: "Live rate එක load නොවුණොත් use කරනවා." }) +
+        field("config.packageBaseRate", "Package price list rate", { type: "num", hint: "Packages / add-ons වල LKR prices ලියලා තියෙන්නේ 1 USD = මේ rate එකට. අද rate එක මේකට වඩා වැඩි නම් prices වැඩි වෙනවා, අඩු නම් අඩු වෙනවා." }) +
         field("config.roundTo", "LKR round to", { type: "num", hint: "LKR 20,000 ට වැඩි prices මේකට round වෙනවා." }) +
         field("config.advancePercent", "Advance %", { type: "num" }) +
         field("config.freeSupportMonths", "Free support (months)", { type: "num" }) +
@@ -467,7 +522,7 @@
   };
 
   /* services */
-  const POOLS = { type: "types", creative: "creative", feature: "features", extra: "extras", maint: "sizes", design: "design" };
+  const POOLS = { type: "types", creative: "creative", feature: "features", extra: "extras", maint: "sizes", design: "design", package: "packages" };
   const refKind = r => Object.keys(POOLS).find(k => r[k] != null);
   const refOk = r => { const k = refKind(r); return !!(k && (S.data.config[POOLS[k]] || {})[r[k]]); };
   function refsTo(group, key) {
@@ -487,7 +542,7 @@
     const kind = refKind(r) || "type", pool = S.data.config[POOLS[kind]] || {};
     return '<div class="ad-grid tight">' +
       '<div class="ad-field"><label>Kind</label><select class="input" data-refkind="' + p + '">' +
-        [["type", "Project type"], ["creative", "Design & Video item"], ["feature", "Feature"], ["extra", "Launch extra"], ["maint", "Maintenance"], ["design", "Design"]].map(([k, t]) =>
+        [["type", "Project type"], ["package", "App package"], ["creative", "Design & Video item"], ["feature", "Feature"], ["extra", "Launch extra"], ["maint", "Maintenance"], ["design", "Design"]].map(([k, t]) =>
           '<option value="' + k + '"' + (k === kind ? " selected" : "") + ">" + t + "</option>").join("") + "</select></div>" +
       '<div class="ad-field"><label>Item</label><select class="input" data-refkey="' + p + '">' +
         Object.keys(pool).map(k => '<option value="' + esc(k) + '"' + (k === r[kind] ? " selected" : "") + ">" + esc(pool[k].label || k) + "</option>").join("") + "</select></div>" +
@@ -511,6 +566,7 @@
             field(base + ".anim", "Animation", { type: "select", options: [["", "— (video එක use කරනවා)"]].concat(ANIMS.map(a => [a, a])) }) +
             field(base + ".video", "Video (optional)", { ph: "assets/video/file.mp4", hint: "දැම්මොත් animation එක වෙනුවට video එක පේනවා." }) +
             field(base + ".tags", "Tags (comma වලින්)", { type: "list" }) +
+            field(base + ".packages", "Mobile app packages පෙන්නන්න", { type: "bool", hint: "ටික් කළොත් මේ service page එකේ App packages ටික (Pricing කොටසේ) පේනවා. Mobile Apps page එකට on." }) +
             field(base + ".summary", "Summary (card එකේ)", { type: "area", rows: 2, wide: true }) +
             field(base + ".intro", "Intro (page එකේ උඩ)", { type: "area", rows: 3, wide: true }) +
             field(base + ".includes", "මොකද ලැබෙන්නේ (line එකකට එකක්)", { type: "lines", rows: 5, wide: true }) +
@@ -559,6 +615,7 @@
   /* ---------- live bits (LKR previews, names, icon) ---------- */
   function refreshLive() {
     $$("[data-lkr]").forEach(el => { el.textContent = "≈ " + lkr(get(el.dataset.lkr)); });
+    $$("[data-lkrnow]").forEach(el => { const c = S.data.config; el.textContent = "අද rate එකට (" + (Number(c.fallbackRate) || 0) + "): ≈ " + P.formatLKR(P.packageLKR(c, Number(get(el.dataset.lkrnow)) || 0, Number(c.fallbackRate) || 0)); });
     $$("[data-live]").forEach(el => { const v = get(el.dataset.live); el.textContent = v || (el.dataset.live.endsWith("linkText") ? "බලන්න →" : el.dataset.live.endsWith(".name") ? "(නමක් නෑ)" : ""); });
     $$("[data-live-svg]").forEach(el => { el.innerHTML = get(el.dataset.liveSvg) || ""; });
   }
@@ -698,6 +755,7 @@
         S.svc = Math.min(S.svc, S.data.services.list.length - 1); renderTab(); updateSaveBar(); break;
       case "reload-reqs": S.reqs = null; S.reqErr = ""; renderTab(); loadRequests(); break;
       case "req-filter": S.reqFilter = d.f; renderTab(); break;
+      case "chat": S.chatOpen = S.chatOpen === d.id ? null : d.id; if (S.chatOpen) openChatBox(S.chatOpen); else openChatBox(null); break;
       case "pin-show": S.show[d.id] = !S.show[d.id]; renderTab(); break;
       case "pin-send": {
         const r = S.pinReqs.find(x => x.id === d.id), c = r && S.customers.find(x => x.phone === r.phone);
@@ -776,7 +834,7 @@
       }
       case "restore": {
         const h = S.hist && S.hist[Number(d.i)]; if (!h) return;
-        S.data[h.file] = JSON.parse(h.json); if (h.file === "config") normalize();
+        S.data[h.file] = JSON.parse(h.json); normalize();
         S.svc = Math.min(S.svc, S.data.services.list.length - 1);
         updateSaveBar(); loadHistory();
         toast("ඒ version එක load උනා. Save කළොත් site එක ඒ version එකට යනවා.");

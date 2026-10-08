@@ -77,7 +77,7 @@ service cloud.firestore {
         && text('ref', 20) && text('name', 100) && data().name.size() > 1
         && text('phone', 30) && text('message', 6000)
         && optText('title', 100) && optText('email', 120) && optText('business', 120) && optText('contact', 20) && optText('estimate', 60)
-        && (!('track' in data()) || data().track in ['dev', 'creative'])
+        && (!('track' in data()) || data().track in ['dev', 'creative', 'pkg'])
         && (!('uid' in data()) || (signedIn() && data().uid == request.auth.uid))
         && (!('claim' in data()) || (data().claim is string && data().claim.size() >= 20 && data().claim.size() <= 60))
         && data().status == 'new'
@@ -89,6 +89,37 @@ service cloud.firestore {
         && data().get('uid', '') == request.auth.uid
         && data().get('proof', '') == resource.data.claim
         && !('claim' in data()));
+      allow delete: if isAdmin();
+
+      // Chat on a project: the customer it is linked to and the admin. Photos and voice notes are base64 inside `data`.
+      match /messages/{mid} {
+        allow read: if isAdmin() || (signedIn() && get(/databases/$(database)/documents/requests/$(id)).data.get('uid', '') == request.auth.uid);
+        allow create: if isAdmin() || (signedIn()
+          && get(/databases/$(database)/documents/requests/$(id)).data.get('uid', '') == request.auth.uid
+          && data().keys().hasOnly(['from', 'kind', 'text', 'data', 'mime', 'dur', 'createdAt'])
+          && data().keys().hasAll(['from', 'kind', 'text', 'createdAt'])
+          && data().from == 'c'
+          && data().kind in ['text', 'image', 'audio']
+          && text('text', 1000)
+          && ((data().kind == 'text' && data().text.size() > 0 && !('data' in data()))
+              || (data().kind != 'text' && data().data is string && data().data.size() > 100 && data().data.size() <= 700000
+                  && data().mime is string && data().mime.size() <= 40))
+          && (!('dur' in data()) || data().dur is int)
+          && data().createdAt == request.time);
+        allow delete: if isAdmin();
+      }
+    }
+
+    // One summary per project chat, for the "new message" dots. The customer writes lastFrom 'c', the admin 'a'.
+    match /chats/{rid} {
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create, update: if isAdmin() || (signedIn()
+        && data().keys().hasOnly(['uid', 'lastAt', 'lastFrom', 'lastText'])
+        && data().uid == request.auth.uid
+        && data().lastFrom == 'c'
+        && text('lastText', 120)
+        && data().lastAt == request.time
+        && get(/databases/$(database)/documents/requests/$(rid)).data.get('uid', '') == request.auth.uid);
       allow delete: if isAdmin();
     }
   }

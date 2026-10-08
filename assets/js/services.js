@@ -55,6 +55,7 @@ window.HX_SERVICES = {
       summary: "Flutter වලින් හදන එක app එකක් Android සහ iPhone දෙකටම. Fast, smooth, Play Store සහ App Store වලට ready.",
       intro: "Order, booking, delivery, class වගේ ඔයාගේ business එකට ඕන app එක Flutter වලින් හදනවා. එක code එකෙන් Android සහ iPhone දෙකටම app එක ලැබෙනවා.",
       tags: ["Flutter", "Android", "iOS"],
+      packages: true,
       includes: [
         "Android සහ iOS දෙකටම එක app එකක්",
         "Login, OTP, payments (PayHere), push notifications වගේ features ඕන විදියට",
@@ -65,8 +66,8 @@ window.HX_SERVICES = {
       ],
       prices: [{ type: "android" }, { type: "cross", featured: true }, { type: "appadmin" }],
       faq: [
-        { q: "App එකක් හදන්න කොච්චර කල් යනවද?", a: "පොඩි app එකකට (screens 5 ට වෙනකන්) සති 4 – 6 ක් විතර. Screens සහ features වැඩි වෙන්න වෙන්න කාලය වැඩි වෙනවා. Project form එකේ ඔයාගේ app එකට ගැළපෙන time එක පෙන්නනවා." },
-        { q: "Screen එකක් කියන්නේ මොකක්ද?", a: "App එකේ වෙන වෙනම page එකක් (Ex: Login, Home, Cart, Profile). Small app එකක screens 5 ට වෙනකන්, medium 6 – 15, large 16+." },
+        { q: "App එකක් හදන්න කොච්චර කල් යනවද?", a: "තෝරන package එක අනුව සති 1 ඉඳන් 8 ක් විතර. Screens සහ features වැඩි වෙන්න වෙන්න කාලය වැඩි වෙනවා. Project form එකේ package එකයි වෙනස්කම් ටිකයි තෝරද්දී ඔයාගේ app එකට ගැළපෙන time එක පෙන්නනවා." },
+        { q: "Screen එකක් කියන්නේ මොකක්ද?", a: "App එකේ වෙන වෙනම page එකක් (Ex: Login, Home, Cart, Profile). හැම package එකකම screens ගණන වෙනස්. Package එකේ නැති screens ඕන නම් project form එකේ extra screens විදියට එකතු කරන්න පුළුවන්." },
         { q: "Play Store / App Store එකට දාන්න පුළුවන්ද?", a: "ඔව්. Listing එක, screenshots, builds ඔක්කොම හදලා ඔයාගේ developer account එකෙන් publish කරනවා. එතකොට app එක ඔයාගේ නමින් තියෙන්නේ. Google USD 25 එකපාරයි, Apple USD 99 අවුරුද්දට." }
       ]
     },

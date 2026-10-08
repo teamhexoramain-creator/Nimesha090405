@@ -111,6 +111,52 @@
     };
   }
 
+  /* LKR price written for 1 USD = packageBaseRate (369) → LKR at today's rate */
+  function packageLKR(cfg, baseLkr, rate) {
+    return smartRound(baseLkr * rate / (cfg.packageBaseRate || 369), cfg);
+  }
+
+  /*
+   * Mobile app package + add-ons. sel = { pkg, addons: [keys], qty: { key: n }, urgency }
+   * The package and add-ons are priced in LKR at cfg.packageBaseRate, then scaled by today's rate.
+   */
+  function estimatePackage(cfg, sel, rate) {
+    const p = (cfg.packages || {})[sel.pkg];
+    if (!p) return null;
+    const urg = cfg.urgency[sel.urgency] || cfg.urgency.normal;
+    const adds = cfg.addons || {};
+    const lines = [{ label: p.label, base: p.lkr }];
+    let base = p.lkr, weeks = p.weeks || 1;
+    (sel.addons || []).forEach(k => {
+      const a = adds[k];
+      if (!a || a.qty) return;
+      base += a.lkr; weeks += a.weeks || 0;
+      lines.push({ label: a.label, base: a.lkr });
+    });
+    Object.keys(sel.qty || {}).forEach(k => {
+      const a = adds[k], n = Math.max(0, Math.min(50, Math.floor(sel.qty[k] || 0)));
+      if (!a || !a.qty || !n) return;
+      base += a.lkr * n; weeks += (a.weeks || 0) * n;
+      lines.push({ label: a.label + " × " + n, base: a.lkr * n });
+    });
+    if (urg.percent) {
+      const u = base * urg.percent / 100;
+      base += u;
+      lines.push({ label: "Urgent delivery (+" + urg.percent + "%)", base: u });
+    }
+    weeks = weeks * (urg.weeksX || 1);
+    const total = packageLKR(cfg, base, rate);
+    const wLow = Math.max(1, Math.round(weeks));
+    return {
+      usd: Math.round(base / (cfg.packageBaseRate || 369)),
+      totalLKR: total,
+      advanceLKR: smartRound(total * (cfg.advancePercent || 50) / 100, cfg),
+      weeksLow: wLow,
+      weeksHigh: Math.max(wLow + 1, Math.round(weeks * 1.3)),
+      lines: lines.map(l => ({ label: l.label, lkr: packageLKR(cfg, l.base, rate) }))
+    };
+  }
+
   /* Small amounts round to 100, bigger ones to cfg.roundTo (500) */
   function smartRound(lkr, cfg) {
     return roundLKR(lkr, lkr < 20000 ? 100 : (cfg.roundTo || 500));
@@ -151,6 +197,6 @@
     };
   }
 
-  root.HXPrice = { getRate: getRate, estimate: estimate, estimateCreative: estimateCreative, roundLKR: roundLKR, smartRound: smartRound, formatLKR: formatLKR };
+  root.HXPrice = { getRate: getRate, estimate: estimate, estimateCreative: estimateCreative, estimatePackage: estimatePackage, packageLKR: packageLKR, roundLKR: roundLKR, smartRound: smartRound, formatLKR: formatLKR };
   if (typeof module !== "undefined") module.exports = root.HXPrice;
 })(typeof window !== "undefined" ? window : globalThis);
