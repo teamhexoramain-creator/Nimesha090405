@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="si-LK">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Privacy | Hexora</title>
+  <meta name="description" content="Hexora website එක ඔයාගෙන් ගන්නේ මොන data ද, ඒවා තියෙන්නේ කොහෙද, කවුද බලන්නේ කියලා.">
+  <meta name="theme-color" content="#050918">
+  <meta property="og:title" content="Hexora | Privacy">
+  <meta property="og:description" content="මේ site එක ඔයාගෙන් ගන්නේ මොන data ද කියලා.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%2316D9FF'/%3E%3Cstop offset='.5' stop-color='%232563FF'/%3E%3Cstop offset='1' stop-color='%237B3BFF'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath fill='url(%23g)' d='M32 1l27 15.5v31L32 63 5 47.5v-31z'/%3E%3Cpath fill='%23fff' d='M21 18h7v11h8V18h7v28h-7V35h-8v11h-7z'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@400;500;600;700;800&family=Michroma&family=Noto+Sans+Sinhala:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <script>document.documentElement.classList.add("js");</script>
+</head>
+<body class="account-page legal-page">
+
+<a class="skip-link" href="#main">ප්‍රධාන content එකට යන්න</a>
+
+<div class="progress" aria-hidden="true"></div>
+<canvas id="fx" aria-hidden="true"></canvas>
+
+<header class="site-header">
+  <nav class="wrap nav" aria-label="Main menu">
+    <a class="brand" href="index.html" aria-label="Hexora home">
+      <span class="logo-part lp-mark brand-mark" aria-hidden="true"></span>
+      <span class="logo-part lp-word brand-word" role="img" aria-label="Hexora"></span>
+    </a>
+    <button class="menu-btn" type="button" aria-label="Menu එක අරින්න" aria-expanded="false" aria-controls="nav-links"><span></span></button>
+    <ul class="nav-links" id="nav-links">
+      <li><a href="index.html#services">Services</a></li>
+      <li><a href="index.html#process">වැඩ කරන විදිය</a></li>
+      <li><a href="index.html#pricing">Pricing</a></li>
+      <li><a href="index.html#faq">FAQ</a></li>
+      <li data-auth-out><a href="account.html" aria-current="page">Login</a></li>
+      <li data-auth-out><a class="btn nav-reg" href="account.html?new=1">Register</a></li>
+      <li data-auth-in hidden><a href="account.html" aria-current="page">මගේ projects</a></li>
+      <li><a class="btn btn-primary nav-cta" href="start-project.html">Project එක පටන් ගන්න</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main id="main" tabindex="-1">
+  <div class="wrap legal">
+    <nav aria-label="Breadcrumb"><ol class="crumbs"><li><a href="index.html">Home</a></li><li>Privacy</li></ol></nav>
+    <h1 class="display">Privacy</h1>
+    <p class="lead">මේ site එක ඔයාගෙන් ගන්නේ මොන data ද, ඒවා තියෙන්නේ කොහෙද, කවුද බලන්නේ කියලා සරලව කියනවා.</p>
+
+    <section class="legal-sec">
+      <h2>අපි ගන්න data</h2>
+      <ul>
+        <li><b>Project request form එක:</b> ඔයාගේ නම, WhatsApp number එක, email (optional), business නම (optional), project එකේ විස්තර සහ estimate එක.</li>
+        <li><b>Account එකක් හදනවා නම්:</b> නම, phone number එක සහ ඔයා තෝරගත්ත PIN එක. PIN එක login password එක විදියට Google Firebase Authentication එකේ තියෙනවා. PIN එක අමතක උනොත් ආයෙත් පෙන්නන්න පුළුවන් වෙන්න PIN එකේ copy එකකුත් අපේ database එකේ තියෙනවා (Hexora admin ට විතරයි පේන්නේ).</li>
+        <li><b>Chat:</b> Project chat එකේ සහ site එකේ green chat button එකේ ඔයා යවන messages, photos, voice messages. Login නැතුව chat කරනවා නම් නම සහ phone number එකත්, ඔයා chat කරපු page එකේ නමයි device එකේ වර්ගයයි (Ex: Android · Chrome) සේව් වෙනවා.</li>
+        <li><b>ඔයාගේ browser එකේ:</b> login එක, project form එකේ draft එක, chat එකේ "කියවලා" තත්වය, dollar rate එකේ copy එකක්. මේවා තියෙන්නේ ඔයාගේ phone / computer එකේ විතරයි. Logout වුණාම හරි browser data clear කළාම හරි මැකෙනවා.</li>
+      </ul>
+    </section>
+
+    <section class="legal-sec">
+      <h2>Data තියෙන්නේ කොහෙද</h2>
+      <p>Google Firebase (Firestore database සහ Authentication) එකේ. ඒක Google ගේ servers වල. Site එකේ analytics හරි ads හරි tracking cookies හරි නෑ. Fonts Google Fonts වලින් load වෙනවා, dollar rate එක open.er-api.com එකෙන් ගන්නවා (මේ දෙකටම ඔයාගේ personal data යන්නේ නෑ, සාමාන්‍ය browser request එක විතරයි).</p>
+    </section>
+
+    <section class="legal-sec">
+      <h2>කවුද බලන්නේ</h2>
+      <ul>
+        <li>ඔයාගේ project එකේ details සහ chat එක බලන්න පුළුවන් Hexora admin ට සහ (account එකට link කරලා නම්) ඔයාට විතරයි.</li>
+        <li>වෙන customers ලාට ඔයාගේ data පේන්නේ නෑ. Chat link එක (login නැති chat) දන්නේ ඒක පටන් ගත්ත browser එක විතරයි.</li>
+        <li>අපි ඔයාගේ data විකුණන්නේ නෑ, තුන්වෙනි අයට දෙන්නෙත් නෑ. WhatsApp / Email button එකෙන් ඔයා එවන request එක ඒ apps වලටත් යනවා.</li>
+      </ul>
+    </section>
+
+    <section class="legal-sec">
+      <h2>ඇයි මේවා ගන්නේ</h2>
+      <p>ඔයා එක්ක සම්බන්ධ වෙලා, project එක ගැන quote එකක් දීලා, වැඩේ කරලා, ඊට පස්සේ support දෙන්න. වෙන කිසිම දේකට නෙවෙයි.</p>
+    </section>
+
+    <section class="legal-sec">
+      <h2>ඔයාගේ අයිතිය</h2>
+      <p>ඔයාගේ data බලන්න, හදන්න, මකන්න ඕන නම් WhatsApp එකෙන් හරි email එකෙන් හරි කියන්න (<a data-wa-link="Hi Hexora! මගේ data ගැන ඉල්ලීමක්." data-phone-label href="https://wa.me/94766792617" target="_blank" rel="noopener">076 679 2617</a> · <a data-email href="mailto:teamhexoramain@gmail.com">teamhexoramain@gmail.com</a>). Project එකක් ඉවර වෙලා කාලයක් ගියාම chat එකයි request එකයි මකන්නත් අපිට කියන්න පුළුවන්.</p>
+      <p class="muted">⚠ Account PIN එක බැංකු / phone PIN එකක් වෙන්න එපා. මේ site එකට විතරක් අලුතෙන් හදපු එකක් use කරන්න.</p>
+    </section>
+
+    <p class="muted legal-date">අන්තිමට update කළේ: 2026 ඔක්තෝබර්.</p>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <span class="logo-part lp-word word" role="img" aria-label="Hexora"></span>
+        <span class="logo-part lp-tag tag" role="img" aria-label="Build · Code · Innovate"></span>
+        <p class="muted">ශ්‍රී ලංකාවේ හදන apps, websites, logo designs සහ videos.</p>
+      </div>
+      <div>
+        <h2 class="foot-h">Contact</h2>
+        <ul>
+          <li>WhatsApp: <a data-wa-link="" data-phone-label href="https://wa.me/94766792617" target="_blank" rel="noopener">076 679 2617</a></li>
+          <li>Call: <a data-phone href="tel:+94766792617">076 679 2617</a></li>
+          <li>Email: <a data-email href="mailto:teamhexoramain@gmail.com">teamhexoramain@gmail.com</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2 class="foot-h">Links</h2>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="service.html">Services</a></li>
+          <li><a href="index.html#pricing">Pricing</a></li>
+          <li><a href="index.html#faq">FAQ</a></li>
+          <li><a href="start-project.html">Project එක පටන් ගන්න</a></li>
+          <li data-auth-out><a href="account.html">Login</a></li>
+          <li data-auth-out><a href="account.html?new=1">Register</a></li>
+          <li data-auth-in hidden><a href="account.html">මගේ projects</a></li>
+          <li hidden><a data-facebook href="#" target="_blank" rel="noopener">Facebook</a></li>
+          <li hidden><a data-youtube href="#" target="_blank" rel="noopener">YouTube</a></li>
+          <li><a href="privacy.html">Privacy</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© <span data-year>2026</span> Hexora. All rights reserved.</span>
+      <span class="foot-end"><span class="mono">Build · Code · Innovate</span><a class="admin-lock" href="admin.html" aria-label="Admin login" title="Admin"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></a></span>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/js/firebase-config.js"></script>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/boot.js" data-load="pricing.js main.js"></script>
+</body>
+</html>

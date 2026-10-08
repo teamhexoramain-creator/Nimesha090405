@@ -5,11 +5,11 @@
   <script>(function(){var g=/github\.io$/.test(location.hostname),p=location.pathname.split("/")[1];document.write('<base href="'+(g&&p?"/"+p+"/":"/")+'">');})();</script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Page එක හම්බුනේ නෑ | Hexora</title>
-  <meta name="description" content="Hexora customer account: ඔයාගේ project එක කොච්චර දුරට ඉවරද, අලුත් updates සහ ඉවර වෙන දවස බලන්න.">
+  <meta name="description" content="Hexora — ඔයා හොයපු page එක හම්බුනේ නෑ.">
   <meta name="theme-color" content="#050918">
   <meta name="robots" content="noindex">
-  <meta property="og:title" content="Hexora | මගේ projects">
-  <meta property="og:description" content="ඔයාගේ project එකේ status එක online බලන්න.">
+  <meta property="og:title" content="Hexora | Page එක හම්බුනේ නෑ">
+  <meta property="og:description" content="Hexora — apps, websites, logo design සහ video editing.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%2316D9FF'/%3E%3Cstop offset='.5' stop-color='%232563FF'/%3E%3Cstop offset='1' stop-color='%237B3BFF'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath fill='url(%23g)' d='M32 1l27 15.5v31L32 63 5 47.5v-31z'/%3E%3Cpath fill='%23fff' d='M21 18h7v11h8V18h7v28h-7V35h-8v11h-7z'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,6 +18,8 @@
   <script>document.documentElement.classList.add("js");</script>
 </head>
 <body class="account-page">
+
+<a class="skip-link" href="#main">ප්‍රධාන content එකට යන්න</a>
 
 <div class="progress" aria-hidden="true"></div>
 <canvas id="fx" aria-hidden="true"></canvas>
@@ -42,7 +44,7 @@
   </nav>
 </header>
 
-<main>
+<main id="main" tabindex="-1">
   <div class="wrap acc-main">
     <section class="acc-card acc-gate">
       <span class="eyebrow">404</span>
@@ -67,7 +69,7 @@
         <p class="muted">ශ්‍රී ලංකාවේ හදන apps, websites, logo designs සහ videos.</p>
       </div>
       <div>
-        <h4>Contact</h4>
+        <h2 class="foot-h">Contact</h2>
         <ul>
           <li>WhatsApp: <a data-wa-link="" data-phone-label href="https://wa.me/94766792617" target="_blank" rel="noopener">076 679 2617</a></li>
           <li>Call: <a data-phone href="tel:+94766792617">076 679 2617</a></li>
@@ -75,16 +77,19 @@
         </ul>
       </div>
       <div>
-        <h4>Links</h4>
+        <h2 class="foot-h">Links</h2>
         <ul>
           <li><a href="index.html">Home</a></li>
+          <li><a href="service.html">Services</a></li>
+          <li><a href="index.html#pricing">Pricing</a></li>
+          <li><a href="index.html#faq">FAQ</a></li>
           <li><a href="start-project.html">Project එක පටන් ගන්න</a></li>
           <li data-auth-out><a href="account.html">Login</a></li>
           <li data-auth-out><a href="account.html?new=1">Register</a></li>
-          <li><a href="index.html#pricing">Pricing</a></li>
-          <li><a href="index.html#faq">FAQ</a></li>
-          <li><a data-facebook href="#" target="_blank" rel="noopener">Facebook</a></li>
-          <li><a data-youtube href="#" target="_blank" rel="noopener">YouTube</a></li>
+          <li data-auth-in hidden><a href="account.html">මගේ projects</a></li>
+          <li hidden><a data-facebook href="#" target="_blank" rel="noopener">Facebook</a></li>
+          <li hidden><a data-youtube href="#" target="_blank" rel="noopener">YouTube</a></li>
+          <li><a href="privacy.html">Privacy</a></li>
         </ul>
       </div>
     </div>

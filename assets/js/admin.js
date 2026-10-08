@@ -16,14 +16,26 @@
   const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const clone = o => JSON.parse(JSON.stringify(o));
   const KEYS = { tries: "hx_admin_tries_v1" };
-  const PIN_LEN = 6, MAX_TRIES = 5, LOCK_MS = 60000, IDLE_MS = 30 * 60000;
+  const PIN_MIN = 6, PIN_MAX = 12, MAX_TRIES = 5, LOCK_MS = 60000, IDLE_MS = 30 * 60000;
+  KEYS.len = "hx_admin_len_v1";   // how long this admin's PIN is (only a hint for the dots; the PIN itself is never stored)
+  const pinLen = () => { const n = Number(store.get(KEYS.len)); return n >= PIN_MIN && n <= PIN_MAX ? n : PIN_MIN; };
+  // a PIN that is easy to guess is refused: repeated digits, runs like 123456 / 654321, and a few famous ones
+  const WEAK = ["123123", "112233", "121212", "100000", "696969", "159753", "147258", "123321", "010203", "202020"];
+  function pinProblem(p) {
+    if (!new RegExp("^\\d{" + PIN_MIN + "," + PIN_MAX + "}$").test(p)) return "PIN එක digits " + PIN_MIN + " – " + PIN_MAX + " අතර වෙන්න ඕන.";
+    if (/^(\d)\1+$/.test(p)) return "PIN එකේ digits ඔක්කොම එකම වෙන්න බෑ.";
+    const d = p.split("").map(Number);
+    if (d.every((x, i) => i === 0 || x === d[i - 1] + 1) || d.every((x, i) => i === 0 || x === d[i - 1] - 1)) return "123456 වගේ පිළිවෙළට යන PIN එකක් බෑ.";
+    if (WEAK.some(w => p.indexOf(w) === 0 && p.length === w.length)) return "මේ PIN එක ඉතා පහසුවෙන් අනුමාන කරන්න පුළුවන්. වෙන එකක් තෝරන්න.";
+    return "";
+  }
   const ANIMS = ["phone", "browser", "dashboard", "backend", "chat", "server", "logo", "social", "photo", "timeline", "uiux"];
   // project stages (shared with the customer page through fb.js); admin labels in English
   const STAGES = (window.HXFB && window.HXFB.stages) || [{ key: "new", pct: 5 }, { key: "contacted", pct: 15 }, { key: "design", pct: 35 }, { key: "building", pct: 60 }, { key: "testing", pct: 85 }, { key: "done", pct: 100 }];
   const STAGE_EN = { new: "New", contacted: "Contacted", design: "Design", building: "Building", testing: "Testing", done: "Done" };
   const FILTERS = [["all", "All"], ["new", "New"], ["active", "Active"], ["done", "Done"]];
   const inFilter = (r, f) => f === "all" || (f === "active" ? r.status !== "new" && r.status !== "done" : r.status === f);
-  const S = { auth: null, content: { exists: false, updateTime: "" }, data: {}, saved: {}, reqs: null, customers: [], pinReqs: [], chats: {}, chatMax: "", chatOpen: null, guests: {}, guestMax: "", guestOpen: null, show: {}, newOpen: false, reqFilter: "all", tab: "home", svc: 0, last: Date.now() };
+  const S = { auth: null, content: { exists: false, updateTime: "" }, data: {}, saved: {}, reqs: null, customers: [], pinReqs: [], chats: {}, chatMax: "", chatOpen: null, guests: {}, guestMax: "", guestOpen: null, show: {}, newOpen: false, reqFilter: "all", reqQuery: "", reqOpen: {}, reqMax: "", fold: {}, tab: "home", svc: 0, last: Date.now() };
   const ready = !!(F.apiKey && F.projectId && F.adminEmail);
 
   const store = {
@@ -136,6 +148,9 @@
   /* ==================== 1. PIN screen ==================== */
   function lockScreen(msg) {
     S.auth = null; stopChat(); clearInterval(chatTimer); clearInterval(presenceTimer);
+    // nothing from the panel (customers' PINs, chats, requests) stays in memory behind the PIN screen
+    Object.assign(S, { reqs: null, customers: [], pinReqs: [], chats: {}, chatMax: "", chatOpen: null, guests: {}, guestMax: "", guestOpen: null, show: {}, newOpen: false, reqMax: "", reqQuery: "", data: {}, saved: {}, content: { exists: false, updateTime: "" } });
+    document.title = "Admin | Hexora";
     if (!ready) {
       root.innerHTML = gate("<h1>Firebase setup</h1>" +
         '<p class="muted">Admin panel එක වැඩ කරන්න Firebase project එකක් ඕන. <code>assets/js/firebase-config.js</code> එකේ apiKey, projectId, adminEmail තාම දාලා නෑ.</p>' +
@@ -145,24 +160,31 @@
     root.innerHTML = gate(
       '<span class="logo-part lp-mark ad-gate-mark" aria-hidden="true"></span>' +
       '<h1>Admin</h1><p class="muted">PIN එක ගහන්න</p>' +
-      '<div class="pin-dots" id="pin-dots" aria-hidden="true">' + "<i></i>".repeat(PIN_LEN) + "</div>" +
-      '<input class="pin-input" id="pin-input" type="password" inputmode="numeric" autocomplete="off" maxlength="' + PIN_LEN + '" aria-label="PIN">' +
+      '<div class="pin-dots" id="pin-dots" aria-hidden="true"></div>' +
+      '<input class="pin-input" id="pin-input" type="password" inputmode="numeric" autocomplete="off" maxlength="' + PIN_MAX + '" aria-label="PIN">' +
       '<p class="ad-gate-msg" id="pin-msg" role="alert">' + esc(msg || "") + "</p>" +
       '<div class="pin-pad">' + [1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => '<button type="button" data-key="' + n + '">' + n + "</button>").join("") +
       '<span></span><button type="button" data-key="0">0</button><button type="button" data-key="back" aria-label="මකන්න">' + icon(I.back) + "</button></div>" +
+      '<button class="btn btn-primary btn-block" type="button" id="pin-go" disabled>Login</button>' +
       '<a class="ad-back" href="index.html">← Site එකට</a>');
     let entry = "", busy = false;
-    const input = $("#pin-input"), dots = $$("#pin-dots i"), msgEl = $("#pin-msg");
-    const paint = () => dots.forEach((d, i) => d.classList.toggle("on", i < entry.length));
+    const input = $("#pin-input"), dotBox = $("#pin-dots"), msgEl = $("#pin-msg"), go = $("#pin-go"), hint = pinLen();
+    const paint = () => {
+      const n = Math.max(hint, entry.length);
+      if (dotBox.children.length !== n) dotBox.innerHTML = "<i></i>".repeat(n);
+      Array.from(dotBox.children).forEach((d, i) => d.classList.toggle("on", i < entry.length));
+      go.disabled = busy || entry.length < PIN_MIN;
+    };
+    paint();
     async function check() {
       const tries = store.get(KEYS.tries) || { n: 0, until: 0 };
       if (Date.now() < tries.until) { msgEl.textContent = "Lock එක ඇරෙන්න තත්පර " + Math.ceil((tries.until - Date.now()) / 1000) + "ක් ඉන්න."; entry = ""; input.value = ""; paint(); return; }
-      busy = true; msgEl.textContent = "Check කරනවා…";
+      busy = true; paint(); msgEl.textContent = "Check කරනවා…";
       try {
         await signIn(entry);
-        store.del(KEYS.tries); busy = false; loadAll(); return;
+        store.set(KEYS.len, entry.length); store.del(KEYS.tries); busy = false; loadAll(); return;
       } catch (e) {
-        busy = false;
+        busy = false; paint();
         const wrong = /INVALID_LOGIN_CREDENTIALS|INVALID_PASSWORD|EMAIL_NOT_FOUND/.test((e.msg || "") + e.message);
         if (wrong) {
           tries.n += 1;
@@ -170,19 +192,21 @@
           store.set(KEYS.tries, tries);
           msgEl.textContent = tries.until > Date.now() ? "වැරදි PIN " + MAX_TRIES + "ක්. තත්පර " + LOCK_MS / 1000 + "ක් ඉන්න." : "PIN එක වැරදියි. (" + (MAX_TRIES - tries.n) + " පාරක් ඉතුරුයි)";
         } else msgEl.textContent = errText(e);
-        $("#pin-dots").classList.remove("shake"); void $("#pin-dots").offsetWidth; $("#pin-dots").classList.add("shake");
+        dotBox.classList.remove("shake"); void dotBox.offsetWidth; dotBox.classList.add("shake");
         entry = ""; input.value = ""; paint();
       }
     }
     function press(k) {
       if (busy) return;
       if (k === "back") entry = entry.slice(0, -1);
-      else if (entry.length < PIN_LEN) entry += k;
+      else if (entry.length < PIN_MAX) entry += k;
       input.value = entry; paint();
-      if (entry.length === PIN_LEN) check();
+      if (entry.length === hint) check();   // the usual length: no extra tap
     }
     root.querySelector(".pin-pad").addEventListener("click", e => { const b = e.target.closest("[data-key]"); if (b) press(b.dataset.key); input.focus({ preventScroll: true }); });
-    input.addEventListener("input", () => { if (busy) { input.value = entry; return; } entry = input.value.replace(/\D/g, "").slice(0, PIN_LEN); input.value = entry; paint(); if (entry.length === PIN_LEN) check(); });
+    input.addEventListener("input", () => { if (busy) { input.value = entry; return; } entry = input.value.replace(/\D/g, "").slice(0, PIN_MAX); input.value = entry; paint(); if (entry.length === hint) check(); });
+    input.addEventListener("keydown", e => { if (e.key === "Enter" && entry.length >= PIN_MIN && !busy) { e.preventDefault(); check(); } });
+    go.addEventListener("click", () => { if (entry.length >= PIN_MIN && !busy) check(); });
     input.focus({ preventScroll: true });
   }
 
@@ -194,6 +218,7 @@
     ["packages", "addons", "packageBaseRate"].forEach(k => { if (c[k] == null && d[k] != null) c[k] = clone(d[k]); });
     ["packages", "addons"].forEach(g => Object.keys(c[g] || {}).forEach(k => Object.keys((d[g] || {})[k] || {}).forEach(f => { if (c[g][k][f] === undefined) c[g][k][f] = clone(d[g][k][f]); })));
     if (S.data.services && S.data.services.list) S.data.services.list.forEach(x => { if (x.packages === undefined && x.slug === "mobile-apps") x.packages = true; });
+    if (S.data.services && !S.data.services.home && window.HX_SERVICES && window.HX_SERVICES.home) S.data.services.home = clone(window.HX_SERVICES.home);
   }
   async function loadAll() {
     root.innerHTML = gate('<p class="muted">Firebase එකෙන් data ගන්නවා…</p>');
@@ -215,7 +240,7 @@
       S.svc = Math.min(S.svc, S.data.services.list.length - 1);
       panel();
       loadRequests();
-      clearInterval(chatTimer); chatTimer = setInterval(pollChats, 45000);
+      clearInterval(chatTimer); chatTimer = setInterval(() => { pollChats(); pollInbox(); }, 45000);
       clearInterval(presenceTimer); beatPresence(); presenceTimer = setInterval(beatPresence, 25000);
     } catch (e) {
       root.innerHTML = gate("<h1>Data ගන්න බැරි උනා</h1><p class=\"ad-gate-msg\">" + esc(errText(e)) + "</p>" +
@@ -229,6 +254,7 @@
     try {
       const both = await Promise.all([query("requests", "createdAt", 300), query("customers", "createdAt", 500).catch(() => []), query("pinRequests", "createdAt", 100).catch(() => []), query("chats", "lastAt", 300).catch(() => []), query("guests", "lastAt", 150).catch(() => [])]);
       S.reqs = both[0]; S.customers = both[1]; S.pinReqs = both[2];
+      S.reqMax = S.reqs.reduce((m, r) => (!m || ms(r.createdAt) > ms(m) ? r.createdAt : m), "");
       S.chats = {}; both[3].forEach(c => { S.chats[c.id] = c; if (!S.chatMax || ms(c.lastAt) > ms(S.chatMax)) S.chatMax = c.lastAt; });
       S.guests = {}; both[4].forEach(g => { S.guests[g.id] = g; if (!S.guestMax || ms(g.lastAt) > ms(S.guestMax)) S.guestMax = g.lastAt; });
     }
@@ -280,6 +306,22 @@
       if (fresh.length || gfresh.length) chatDots();
     } catch (e) { /* try again next time */ }
   }
+  // new project requests and "PIN අමතක උනා" requests arrive while the panel is open: pick them up without pressing Refresh
+  async function pollInbox() {
+    if (!S.auth || document.visibilityState !== "visible" || !S.reqs) return;
+    try {
+      const rows = await fs("POST", ":runQuery", { structuredQuery: { from: [{ collectionId: "requests" }], ...(S.reqMax ? { where: { fieldFilter: { field: { fieldPath: "createdAt" }, op: "GREATER_THAN", value: { timestampValue: S.reqMax } } } } : {}), orderBy: [{ field: { fieldPath: "createdAt" }, direction: "ASCENDING" }], limit: 50 } });
+      const fresh = (rows || []).filter(r => r.document).map(r => fromDoc(r.document)).filter(r => !S.reqs.some(x => x.id === r.id));
+      fresh.forEach(r => { S.reqs.unshift(r); if (!S.reqMax || ms(r.createdAt) > ms(S.reqMax)) S.reqMax = r.createdAt; });
+      let pins = 0;
+      try { const pr = await query("pinRequests", "createdAt", 100); pins = pr.filter(x => !S.pinReqs.some(y => y.id === x.id)).length; S.pinReqs = pr; } catch (e) { /* the next poll tries again */ }
+      if (!fresh.length && !pins) return;
+      paintTabs();
+      toast(fresh.length ? "අලුත් request එකක් ආවා: " + (fresh[fresh.length - 1].title || fresh[fresh.length - 1].name) + (fresh.length > 1 ? " (+" + (fresh.length - 1) + ")" : "") : "අලුත් PIN request එකක් ආවා.");
+      const ae = document.activeElement, editing = !!(ae && root.contains(ae) && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName));
+      if (!editing && !S.chatOpen && (S.tab === "home" || S.tab === "requests" || S.tab === "customers")) renderTab();
+    } catch (e) { /* the next poll tries again */ }
+  }
   function stopChat() { if (chatCtl) { chatCtl.destroy(); chatCtl = null; } }
   function openChatBox(rid) {
     stopChat();
@@ -303,17 +345,39 @@
     const A = window.HXChat.api(fs, "projects/" + F.projectId + "/databases/(default)", "guest");
     chatCtl = window.HXChat.mount(box, { me: "a", peer: g.name || "Visitor", load: after => A.load(gid, after), send: m => A.send(gid, null, "a", m), peek: () => A.peek(gid), touch: seen => A.touch(gid, null, "a", seen), onSeen: last => markSeen(gid, last), errText: errText });
   }
-  async function deleteGuest(gid) {
-    for (let i = 0; i < 10; i++) {   // the messages are separate documents: remove them first
-      const rows = await fs("POST", "/guests/" + encodeURIComponent(gid) + ":runQuery", { structuredQuery: { from: [{ collectionId: "messages" }], limit: 100 } });
+  // the messages of a chat are separate documents (photos and voice are big): remove them before the parent
+  async function wipeMessages(parent) {
+    for (let i = 0; i < 30; i++) {
+      const rows = await fs("POST", parent + ":runQuery", { structuredQuery: { from: [{ collectionId: "messages" }], limit: 100 } });
       const docs = (rows || []).filter(r => r.document);
-      if (!docs.length) break;
-      await Promise.all(docs.map(r => fs("DELETE", "/guests/" + encodeURIComponent(gid) + "/messages/" + r.document.name.split("/").pop())));
+      if (!docs.length) return;
+      await Promise.all(docs.map(r => fs("DELETE", parent + "/messages/" + r.document.name.split("/").pop())));
     }
+  }
+  const gone = e => e && e.status === 404;   // already deleted
+  async function deleteGuest(gid) {
+    await wipeMessages("/guests/" + encodeURIComponent(gid));
     await fs("DELETE", "/guests/" + encodeURIComponent(gid));
   }
+  // a deleted project takes its chat with it (otherwise the photos stay in the database for ever)
+  async function deleteRequest(rid) {
+    const id = encodeURIComponent(rid);
+    await wipeMessages("/requests/" + id);
+    await fs("DELETE", "/chats/" + id).catch(e => { if (!gone(e)) throw e; });
+    await fs("DELETE", "/requests/" + id);
+  }
+  // the chat summary carries the customer's uid, so it follows the project when it is linked or unlinked
+  async function syncChatOwner(rid, uid) {
+    const id = encodeURIComponent(rid);
+    if (uid) await fs("PATCH", "/chats/" + id, { fields: { uid: { stringValue: uid } } }, mask(["uid"]));
+    else await fs("DELETE", "/chats/" + id).catch(e => { if (!gone(e)) throw e; });
+    if (S.chats[rid]) { if (uid) S.chats[rid].uid = uid; else delete S.chats[rid]; }
+  }
 
-  const TABS = [["home", "Dashboard"], ["requests", "Requests"], ["live", "Live chats"], ["customers", "Customers"], ["notice", "Notice"], ["contact", "Contact"], ["prices", "Prices"], ["services", "Services"], ["history", "History"], ["security", "Security"]];
+  // grouped so the ten tabs are easy to find: the inbox (people writing to you), the site (what visitors read), the system
+  const TAB_GROUPS = [["", [["home", "Dashboard"]]], ["Inbox", [["requests", "Requests"], ["live", "Live chats"], ["customers", "Customers"]]],
+    ["Site", [["content", "Home page"], ["notice", "Notice"], ["contact", "Contact"], ["prices", "Prices"], ["services", "Services"]]], ["System", [["history", "History"], ["security", "Security"]]]];
+  const TABS = TAB_GROUPS.reduce((a, g) => a.concat(g[1]), []);
   const newCount = () => (S.reqs || []).filter(r => r.status === "new").length;
   function panel() {
     root.innerHTML =
@@ -335,10 +399,13 @@
   function paintTabs() {
     const nav = $("#ad-tabs"); if (!nav) return;
     const n = newCount();
-    nav.innerHTML = TABS.map(([k, t]) => '<button type="button" role="tab" data-act="tab" data-tab="' + k + '" aria-selected="' + (k === S.tab) + '">' + t +
+    nav.innerHTML = TAB_GROUPS.map(([label, tabs]) => '<div class="ad-tabgroup"' + (label ? ' role="group" aria-label="' + label + '"' : "") + ">" + (label ? '<span class="ad-tabgroup-l" aria-hidden="true">' + label + "</span>" : "") +
+      tabs.map(([k, t]) => '<button type="button" role="tab" data-act="tab" data-tab="' + k + '" aria-selected="' + (k === S.tab) + '">' + t +
       (k === "requests" && (n + unreadCount()) ? ' <span class="ad-badge">' + (n + unreadCount()) + "</span>" : "") +
       (k === "live" && unreadGuests() ? ' <span class="ad-badge">' + unreadGuests() + "</span>" : "") +
-      (k === "customers" && S.pinReqs.length ? ' <span class="ad-badge">' + S.pinReqs.length + "</span>" : "") + "</button>").join("");
+      (k === "customers" && S.pinReqs.length ? ' <span class="ad-badge">' + S.pinReqs.length + "</span>" : "") + "</button>").join("") + "</div>").join("");
+    const total = n + unreadCount() + unreadGuests() + S.pinReqs.length;   // the browser tab says how much is waiting
+    document.title = (total ? "(" + total + ") " : "") + "Admin | Hexora";
   }
   function renderTab() {
     const main = $("#ad-main"); if (!main) return;
@@ -385,7 +452,15 @@
     const count = ["types", "sizes", "features", "design", "extras", "creative", "urgency"].reduce((n, g) => n + Object.keys(c[g] || {}).length, 0);
     const stat = (n, t, tab) => '<button type="button" class="ad-stat" data-act="tab" data-tab="' + tab + '"><b>' + n + "</b><span>" + t + "</span></button>";
     const first = S.saved.config === "" ? card("පළවෙනි පාර", '<p class="ad-note">Firebase එකේ තාම site data නෑ. දැන් පේන්නේ site එකේ තියෙන data. පහළ <b>Save කරන්න</b> එබුවම මේ data Firebase එකට යනවා, ඊට පස්සේ මෙතනින් කරන වෙනස් site එකේ පේනවා.</p>') : "";
-    return first + card("Hexora admin",
+    // what is waiting for the admin right now
+    const todo = S.reqs ? [[newCount(), "අලුත් requests", "requests"], [unreadCount(), "Project chats (නොකියවපු)", "requests"], [unreadGuests(), "Live chat (අලුත්)", "live"], [S.pinReqs.length, "PIN requests", "customers"]].filter(x => x[0]) : null;
+    const todoCard = card("දැන් බලන්න ඕන දේවල්", todo === null ? '<p class="muted">ගන්නවා…</p>' : todo.length
+      ? '<div class="ad-todo">' + todo.map(([n, t, tab]) => '<button type="button" class="ad-todo-i" data-act="tab" data-tab="' + tab + '"><b>' + n + "</b><span>" + t + "</span></button>").join("") + "</div>"
+      : '<p class="ad-note">✓ දැන් බලන්න ඕන දෙයක් නෑ.</p>');
+    const latest = (S.reqs || []).slice(0, 5);
+    const latestCard = card("අලුත්ම requests", latest.length ? '<div class="ad-history">' + latest.map(r => '<button type="button" class="ad-hist ad-hist-btn" data-act="goto-req" data-id="' + esc(r.id) + '"><div><b>' + esc(r.title || r.name || "—") + "</b><small>" + (r.title ? esc(r.name) + " · " : "") + esc(fmtDate(r.createdAt)) + '</small></div><span class="ad-pill">' + esc(STAGE_EN[r.status] || r.status) + " · " + pctOf(r) + "%</span></button>").join("") + "</div>"
+      : '<p class="muted">' + (S.reqs ? "තාම requests නෑ." : "Requests ගන්නවා…") + "</p>");
+    return first + todoCard + latestCard + card("Hexora admin",
       '<div class="ad-stats">' + stat(S.reqs ? newCount() : "…", "අලුත් requests", "requests") + stat(S.reqs ? S.reqs.filter(r => inFilter(r, "active")).length : "…", "දැන් කරන projects", "requests") +
         stat(S.reqs ? unreadGuests() : "…", "Live chat (අලුත්)", "live") +
         stat(s.list.length, "Services", "services") +
@@ -397,18 +472,41 @@
 
   VIEWS.requests = () => {
     if (!S.reqs) return card("Projects & requests", S.reqErr ? '<p class="ad-gate-msg">' + esc(S.reqErr) + '</p><button type="button" class="btn ad-small" data-act="reload-reqs">' + icon(I.reload) + " ආයෙත් try කරන්න</button>" : '<p class="muted">Requests ගන්නවා…</p>');
-    const counts = {}; FILTERS.forEach(([k]) => { counts[k] = S.reqs.filter(r => inFilter(r, k)).length; });
-    const list = S.reqs.filter(r => inFilter(r, S.reqFilter));
+    const counts = {}; FILTERS.forEach(([k]) => { counts[k] = S.reqs.filter(r => inFilter(r, k) && reqMatches(r)).length; });
     return card("Projects & requests",
       '<div class="ad-add"><div class="ad-filters" role="group" aria-label="Filter">' + FILTERS.map(([k, t]) =>
         '<button type="button" data-act="req-filter" data-f="' + k + '" aria-pressed="' + (S.reqFilter === k) + '">' + t + " <span>" + counts[k] + "</span></button>").join("") + "</div>" +
         '<button type="button" class="btn ad-small" data-act="req-new">' + icon(I.plus) + " New project</button>" +
         '<button type="button" class="btn ad-small" data-act="reload-reqs">' + icon(I.reload) + " Refresh</button></div>" +
+      '<div class="ad-add"><input class="input ad-search" id="req-search" type="search" placeholder="නම, phone, ref, project නම…" aria-label="Requests search කරන්න" value="' + esc(S.reqQuery) + '">' +
+        '<button type="button" class="btn ad-small" data-act="req-toggle-all">සියල්ල open / close</button>' +
+        '<button type="button" class="btn ad-small" data-act="csv-req" title="දැන් පේන list එක CSV (Excel) එකක් විදියට">⬇ CSV</button></div>' +
       (S.newOpen ? newProjectForm() : "") +
-      (list.length ? '<div class="ad-reqs">' + list.map(reqCard).join("") + "</div>" : '<p class="muted">මෙතන projects නෑ.</p>'),
+      '<div class="ad-reqs" id="req-list">' + reqListHtml() + "</div>",
       "Project form එකෙන් එන requests සහ ඔයා හදන projects. Stage එක, %, ඉවර වෙන දවස සහ update එක customer ට එයාගේ account එකේ (මගේ projects) පේනවා. " +
-      "Customer accounts: " + S.customers.length + ".");
+      "Customer accounts: " + S.customers.length + "." + (S.reqs.length >= 300 ? " ⚠ අලුත්ම requests 300ක් විතරයි පේන්නේ (පරණ ඒවා Firebase console එකේ)." : ""));
   };
+  const reqText = r => [r.name, r.phone, r.email, r.business, r.title, r.ref, r.message].join(" ").toLowerCase();
+  function reqMatches(r) {
+    const q = (S.reqQuery || "").trim().toLowerCase();
+    if (!q) return true;
+    if (reqText(r).indexOf(q) !== -1) return true;
+    const pq = window.HXFB ? window.HXFB.phoneId(q) : "";   // "0771234567" finds "+94 77 123 4567"
+    return !!pq && waNum(r.phone) === pq;
+  }
+  const reqShown = () => S.reqs.filter(r => inFilter(r, S.reqFilter) && reqMatches(r));
+  function reqListHtml() {
+    const list = reqShown(), auto = list.length <= 3;   // a short list opens its cards, a long one stays folded
+    return list.length ? list.map(r => reqCard(r, auto)).join("") : '<p class="muted">' + (S.reqQuery ? "ඔය search එකට ගැළපෙන projects නෑ." : "මෙතන projects නෑ.") + "</p>";
+  }
+  // the list changes while typing in the search box: only the list is redrawn, so the box keeps its focus
+  function repaintReqs() {
+    const box = $("#req-list"); if (!box || !S.reqs) return;
+    box.innerHTML = reqListHtml();
+    $$('[data-act="req-filter"]').forEach(b => { const sp = b.querySelector("span"); if (sp) sp.textContent = S.reqs.filter(r => inFilter(r, b.dataset.f) && reqMatches(r)).length; });
+    refreshLive();
+    if (S.chatOpen && $('[data-chat="' + S.chatOpen + '"]')) openChatBox(S.chatOpen); else { stopChat(); S.chatOpen = null; }
+  }
   const waNum = p => { let d = String(p || "").replace(/\D/g, ""); if (/^0\d{9}$/.test(d)) d = "94" + d.slice(1); return d.length >= 10 ? d : ""; };
   const phoneLabel = id => window.HXFB ? window.HXFB.phoneLabel(id) : id;
   const stageOf = k => STAGES.find(x => x.key === k) || STAGES[0];
@@ -427,11 +525,13 @@
       match.map(c => custOpt(c, " (phone එක match)")).join("") + rest.map(c => custOpt(c)).join("") + "</select>" +
       '<button type="button" class="btn ad-small" data-act="req-link" data-id="' + esc(r.id) + '">Link</button></div>';
   }
-  function reqCard(r) {
+  function reqCard(r, autoOpen) {
     const wa = waNum(r.phone), id = esc(r.id), pct = pctOf(r), fid = k => ' id="rq-' + k + "-" + id + '"';
-    return '<article class="ad-req s-' + esc(r.status) + '" data-id="' + id + '">' +
-      '<div class="ad-req-head"><div><b>' + esc(r.title || r.name || "—") + "</b><small>" + (r.title ? esc(r.name) + " · " : "") + esc(fmtDate(r.createdAt)) + " · <code>" + esc(r.ref) + "</code></small></div>" +
-        '<span class="ad-pill">' + esc(STAGE_EN[r.status] || r.status) + " · " + pct + "%</span></div>" +
+    const open = S.reqOpen[r.id] !== undefined ? !!S.reqOpen[r.id] : !!autoOpen;
+    return '<details class="ad-req s-' + esc(r.status) + '" data-id="' + id + '"' + (open ? " open" : "") + '>' +
+      '<summary class="ad-req-head"><div><b>' + esc(r.title || r.name || "—") + "</b><small>" + (r.title ? esc(r.name) + " · " : "") + esc(fmtDate(r.createdAt)) + " · <code>" + esc(r.ref) + "</code></small></div>" +
+        '<span class="ad-req-end"><span class="ad-badge" data-adot="' + id + '"' + (isUnread(r.id) ? "" : " hidden") + '>අලුත්</span><span class="ad-pill">' + esc(STAGE_EN[r.status] || r.status) + " · " + pct + "%</span></span></summary>" +
+      '<div class="ad-req-body">' +
       '<div class="ad-req-meta">' + [r.track === "creative" ? "Logo, Design & Video" : r.track === "pkg" ? "Mobile App package" : "App / Website / System", r.estimate, r.business, r.contact ? "Contact: " + r.contact : ""].filter(Boolean).map(x => "<span>" + esc(x) + "</span>").join("") + "</div>" +
       linkBox(r) +
       '<div class="ad-grid tight ad-req-edit">' +
@@ -447,11 +547,11 @@
         (r.phone ? '<a class="btn ad-small" href="tel:' + esc(String(r.phone).replace(/[^\d+]/g, "")) + '">Call</a>' : "") +
         (r.email ? '<a class="btn ad-small" href="mailto:' + esc(r.email) + '">Email</a>' : "") +
         '<button type="button" class="btn btn-primary ad-small" data-act="req-save" data-id="' + id + '">Update</button>' +
-        (r.uid ? '<button type="button" class="btn ad-small ad-chat-btn" data-act="chat" data-id="' + id + '" aria-expanded="false">💬 Chat <span class="ad-badge" data-adot="' + id + '"' + (isUnread(r.id) ? "" : " hidden") + ">අලුත්</span></button>" : "") +
+        (r.uid ? '<button type="button" class="btn ad-small ad-chat-btn" data-act="chat" data-id="' + id + '" aria-expanded="false">💬 Chat</button>' : "") +
         mini("req-del", I.del, "මකන්න", ' data-id="' + id + '"') + "</div>" +
       (r.uid ? '<p class="ad-chat-note" data-chatnote="' + id + '">' + (S.chats[r.id] ? "💬 " + esc(S.chats[r.id].lastText || "") : "") + '</p><div class="ad-chat" data-chat="' + id + '" hidden></div>'
         : '<p class="ad-chat-note">Chat කරන්න මේ project එක customer ගේ account එකකට link කරන්න.</p>') +
-      (r.message ? "<details><summary>සම්පූර්ණ request එක</summary><pre>" + esc(r.message) + "</pre></details>" : "") + "</article>";
+      (r.message ? "<details><summary>සම්පූර්ණ request එක</summary><pre>" + esc(r.message) + "</pre></details>" : "") + "</div></details>";
   }
   function newProjectForm() {
     return '<form class="ad-newproj" id="newproj-form"><b>New project</b><div class="ad-grid tight">' +
@@ -505,7 +605,7 @@
         '<button type="button" class="btn ad-small" data-act="pin-show" data-id="' + esc(c.id) + '">' + (S.show[c.id] ? "හංගන්න" : "PIN බලන්න") + "</button>" : '<span class="ad-hint">PIN නෑ</span>') + "</div></div>").join("");
     return card("PIN requests", reqs.length ? '<div class="ad-reqs">' + reqs.join("") + "</div>" : '<p class="muted">PIN requests නෑ.</p>',
         "Customer ට PIN එක අමතක උනාම \"PIN එක අමතක උනාද?\" එබුවම මෙතන පේනවා. PIN එක යවන්න ඕන account එකේ phone number එකටමයි. Customer ටයිප් කරපු එකට නෙවෙයි.") +
-      card("Customer accounts (" + S.customers.length + ")", S.customers.length ? '<div class="ad-history">' + list + "</div>" : '<p class="muted">තාම accounts නෑ.</p>',
+      card("Customer accounts (" + S.customers.length + ")", (S.customers.length ? '<div class="ad-add"><button type="button" class="btn ad-small" data-act="csv-cust">⬇ CSV (PIN නැතුව)</button></div><div class="ad-history">' + list + "</div>" : '<p class="muted">තාම accounts නෑ.</p>'),
         "PIN එක customer ගේ secret එකක්. WhatsApp එකෙන් ඒ customer ට විතරක් එවන්න.");
   };
 
@@ -564,9 +664,12 @@
       return field(p, label, { type: type === "num" ? "num" : "text", lkr: !!money, lkrNow: lkrMode === "lkr" });
     }).join("");
   }
+  // a card that folds (the Prices tab has 9 long groups): its open / closed state survives redraws
+  const foldCard = (key, title, count, body, note, dflt) => '<details class="ad-card ad-fold" data-fold="' + key + '"' + ((S.fold[key] === undefined ? dflt : S.fold[key]) ? " open" : "") + '><summary><span class="ad-card-head"><h2>' + title +
+    (count != null ? ' <span class="ad-count">' + count + "</span>" : "") + "</h2>" + (note ? "<p>" + note + "</p>" : "") + "</span></summary>" + body + "</details>";
   VIEWS.prices = () => {
     const c = S.data.config;
-    return card("General", grid(
+    return foldCard("general", "General", null, grid(
         field("config.fallbackRate", "Fallback rate (LKR for 1 USD)", { type: "num", hint: "Live rate එක load නොවුණොත් use කරනවා." }) +
         field("config.packageBaseRate", "Package price list rate", { type: "num", hint: "Packages / add-ons වල LKR prices ලියලා තියෙන්නේ 1 USD = මේ rate එකට. අද rate එක මේකට වඩා වැඩි නම් prices වැඩි වෙනවා, අඩු නම් අඩු වෙනවා." }) +
         field("config.roundTo", "LKR round to", { type: "num", hint: "LKR 20,000 ට වැඩි prices මේකට round වෙනවා." }) +
@@ -575,14 +678,14 @@
         field("config.rangeSpread", "Estimate range ×", { type: "num", hint: "Estimate එකේ උපරිම = අවම × මේක." }) +
         field("config.rateCacheHours", "Rate cache (hours)", { type: "num" }) +
         field("config.rateApi", "Exchange rate API", { wide: true })),
-      "හැම price එකක්ම USD. Site එක ඒවා LKR වලට හරවනවා. පහළ පේන LKR එක fallback rate එකෙන්.") +
-    GROUPS.map(g => card(g.title,
+      "හැම price එකක්ම USD. Site එක ඒවා LKR වලට හරවනවා. පහළ පේන LKR එක fallback rate එකෙන්.", true) +
+    GROUPS.map(g => foldCard(g.key, g.title, Object.keys(c[g.key] || {}).length,
       '<div class="ad-items">' + Object.keys(c[g.key] || {}).map(k =>
         '<div class="ad-item"><div class="ad-item-head"><code class="ad-key">' + esc(k) + "</code>" +
           (g.fixed ? "" : mini("del-key", I.del, "මකන්න", ' data-group="' + g.key + '" data-key="' + esc(k) + '"')) + "</div>" +
         '<div class="ad-grid tight">' + itemFields(g, k) + "</div></div>").join("") + "</div>" +
       (g.fixed ? "" : '<div class="ad-add"><input class="input" id="newkey-' + g.key + '" placeholder="අලුත් key එක (ex: seo)" maxlength="20"><button type="button" class="btn ad-small" data-act="add-key" data-group="' + g.key + '">' + icon(I.plus) + " Add</button></div>"),
-      g.note)).join("");
+      g.note, g.key === "packages")).join("");
   };
 
   /* services */
@@ -649,6 +752,17 @@
       card("හැම service එකකම FAQ", arrayEditor("services.commonFaq", faqItem, "ප්‍රශ්නයක් add කරන්න", { q: "", a: "" }), "මේවා හැම service page එකකම FAQ එකේ අගට එකතු වෙනවා.");
   };
 
+  VIEWS.content = () => {
+    const h = S.data.services.home;
+    if (!h) return card("Home page", '<p class="muted">මේ version එකේ home page data නෑ. Page එක reload කරන්න.</p>');
+    return card("වැඩ කරන විදිය (home page steps)",
+        arrayEditor("services.home.steps", p => grid(field(p + ".time", "කාලය (Ex: විනාඩි 2)") + field(p + ".t", "Step එකේ නම") + field(p + ".d", "විස්තරය", { type: "area", rows: 2, wide: true })), "Step එකක් add කරන්න", { time: "", t: "", d: "" }),
+        "Home page එකේ \"වැඩ කරන විදිය\" කොටස. උඩ ඉඳන් පහළට අංක 01, 02… ලැබෙනවා. විස්තරයේ <code>{support}</code> (free support කාලය) සහ <code>{advance}</code> (advance %) ලියන්න පුළුවන්.") +
+      card("FAQ (home page)", arrayEditor("services.home.faq", faqItem, "ප්‍රශ්නයක් add කරන්න", { q: "", a: "" }),
+        "Home page එකේ \"ගොඩක් අය අහන ප්‍රශ්න\". පළවෙනි එක open වෙලා පේනවා. උත්තරයේ <code>{support}</code> සහ <code>{advance}</code> use කරන්න පුළුවන්. හැම service page එකකම FAQ එක වෙනම (Services tab).") +
+      card("Services list", '<p class="ad-note">Home page එකේ services list එක (ඒකේ icon, නම, කෙටි විස්තරය) ගන්නේ <b>Services</b> tab එකෙන්. ඒකේ service එකක් add / edit / මකපුවම ඒක home page එකේත් පේනවා.</p><div class="ad-add"><button type="button" class="btn ad-small" data-act="tab" data-tab="services">Services tab එකට</button></div>');
+  };
+
   VIEWS.history = () => card("History",
     '<div id="history-list" class="ad-history"><p class="muted">Firebase එකෙන් ගන්නවා…</p></div>',
     "Save කරපු අන්තිම versions 20. කලින් version එකක් load කරලා Save කළොත් site එක ඒ version එකට යනවා.");
@@ -669,13 +783,23 @@
 
   VIEWS.security = () => card("PIN එක මාරු කරන්න",
       '<form id="pin-form" class="ad-grid">' +
-        '<div class="ad-field"><label for="pin-new">අලුත් PIN (digits 6)</label><input class="input" id="pin-new" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>' +
-        '<div class="ad-field"><label for="pin-new2">ආයෙත් ගහන්න</label><input class="input" id="pin-new2" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>' +
+        '<div class="ad-field"><label for="pin-new">අලුත් PIN (digits ' + PIN_MIN + ' – ' + PIN_MAX + ')</label><input class="input" id="pin-new" type="password" inputmode="numeric" maxlength="' + PIN_MAX + '" autocomplete="new-password"><small class="ad-hint">දිග PIN එකක් (digits 8ක් හරි වැඩි) ආරක්ෂාවට හොඳයි. 123456, 111111 වගේ පහසු ඒවා බෑ.</small></div>' +
+        '<div class="ad-field"><label for="pin-new2">ආයෙත් ගහන්න</label><input class="input" id="pin-new2" type="password" inputmode="numeric" maxlength="' + PIN_MAX + '" autocomplete="new-password"></div>' +
         '<div class="ad-field wide"><button class="btn btn-primary" type="submit">PIN එක save කරන්න</button></div></form>',
       "PIN එක Firebase එකේ admin account එකේ password එක. මාරු කළාම ඊළඟ පාර අලුත් PIN එකෙන් log වෙන්න.") +
     card("Account",
       '<p class="ad-note">Firebase project: <b>' + esc(F.projectId) + "</b><br>Admin account: <b>" + esc(F.adminEmail) + "</b></p>",
       "විනාඩි 30ක් use නොකළොත් admin panel එක auto-lock වෙනවා (save නොකරපු වෙනස් නැත්නම්).");
+
+  /* ---------- CSV (opens in Excel / Google Sheets) ---------- */
+  const csvCell = v => { v = String(v == null ? "" : v); if (/^[=+\-@\t\r]/.test(v)) v = "'" + v; return '"' + v.replace(/"/g, '""') + '"'; };   // a customer cannot start a spreadsheet formula
+  function downloadCsv(name, rows) {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob(["\uFEFF" + rows.map(r => r.map(csvCell).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" }));
+    a.download = name; document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 800);
+  }
+  const csvDay = () => new Date().toISOString().slice(0, 10);
 
   /* ---------- live bits (LKR previews, names, icon) ---------- */
   function refreshLive() {
@@ -694,6 +818,24 @@
     if (c.notice.link && !/^(https:\/\/|[\w-]+\.html)/.test(c.notice.link)) out.push("Notice: link එක https://… හරි page.html විදියට දාන්න.");
     if (c.notice.show && !c.notice.text) out.push("Notice: පෙන්නන්න text එකක් දාන්න.");
     if (!(c.fallbackRate > 0)) out.push("Prices: fallback rate එක 0ට වඩා වැඩි වෙන්න ඕන.");
+    if (!(c.packageBaseRate > 0)) out.push("Prices: Package price list rate එක 0ට වඩා වැඩි වෙන්න ඕන (නැත්නම් package prices අනන්ත වෙනවා).");
+    if (!(c.roundTo > 0)) out.push("Prices: LKR round to එක 0ට වඩා වැඩි වෙන්න ඕන.");
+    if (!(c.advancePercent >= 0 && c.advancePercent <= 100)) out.push("Prices: Advance % එක 0 – 100 අතර වෙන්න ඕන.");
+    if (!(c.rangeSpread >= 1)) out.push("Prices: Estimate range × එක 1 හරි ඊට වැඩි වෙන්න ඕන.");
+    if (!(c.freeSupportMonths >= 0) || !(c.rateCacheHours >= 0)) out.push("Prices: Free support / Rate cache වල ඍණ අගයන් බෑ.");
+    if (c.rateApi && !/^https:\/\//.test(c.rateApi)) out.push("Prices: Exchange rate API එක https:// වලින් පටන් ගන්න ඕන.");
+    GROUPS.forEach(g => Object.keys(c[g.key] || {}).forEach(k => {
+      const it = c[g.key][k], at = g.title + " › " + k;
+      if (!String(it.label || "").trim()) out.push("Prices: " + at + " — නමක් දාන්න.");
+      g.fields.forEach(([f, label, type]) => {
+        if (type !== "num") return;
+        const v = it[f];
+        if (!(typeof v === "number" && isFinite(v) && v >= 0)) out.push("Prices: " + at + " — " + label + " හරියට (0 හෝ ඊට වැඩි) දාන්න.");
+        else if (v === 0 && /^(usd|lkr|priceX|weeksX)$/.test(f) && g.key !== "design" && !(g.key === "sizes" && f === "maintenanceUsd")) out.push("Prices: " + at + " — " + label + " 0 වෙන්න බෑ.");
+      });
+      if (g.key === "packages" && !(it.includes || []).length) out.push("Prices: " + at + " — Includes එකක් දාන්න.");
+      if (g.key === "packages" && String(it.badge || "").length > 30) out.push("Prices: " + at + " — Badge එක අකුරු 30ට අඩු වෙන්න ඕන.");
+    }));
     const seen = {};
     sv.list.forEach((s, i) => {
       const n = s.name || "Service " + (i + 1);
@@ -724,10 +866,12 @@
     const files = ["config", "services"].filter(dirty), now = new Date();
     const fields = { updatedAt: now, updatedBy: S.auth.email };
     files.forEach(k => { fields[k] = JSON.stringify(S.data[k]); });
-    const pre = S.content.exists ? "currentDocument.updateTime=" + encodeURIComponent(S.content.updateTime) : "currentDocument.exists=false";
+    // the precondition goes in the commit body: the document must still be the version this panel loaded (nobody saved in between)
+    const pre = S.content.exists ? { updateTime: S.content.updateTime } : { exists: false };
     btn.disabled = true; btn.textContent = "Save වෙනවා…";
     try {
-      const doc = await fs("PATCH", "/site/content", { fields: toFields(fields) }, mask(Object.keys(fields)) + "&" + pre);
+      const res = await fs("POST", ":commit", { writes: [{ update: { name: "projects/" + F.projectId + "/databases/(default)/documents/site/content", fields: toFields(fields) }, updateMask: { fieldPaths: Object.keys(fields) }, currentDocument: pre }] });
+      const doc = { updateTime: res.writeResults[0].updateTime };
       S.content = { exists: true, updateTime: doc.updateTime, updatedAt: now.toISOString() };
       files.forEach(k => { S.saved[k] = fields[k]; });
       // this browser's copy for boot.js, so the site shows the change here right away
@@ -761,6 +905,7 @@
 
   /* ---------- events ---------- */
   root.addEventListener("input", e => {
+    if (e.target.id === "req-search") { S.reqQuery = e.target.value; repaintReqs(); return; }
     if (e.target.dataset.rf === "progress") { e.target.closest(".ad-field").querySelector("[data-pct]").textContent = e.target.value + "%"; return; }
     const el = e.target.closest("[data-path]"); if (!el) return;
     let v;
@@ -799,17 +944,36 @@
     if (e.target.id !== "pin-form") return;
     e.preventDefault();
     const a = $("#pin-new").value, b = $("#pin-new2").value, btn = e.target.querySelector("button");
-    if (!/^\d{6}$/.test(a)) return toast("PIN එක digits 6ක් වෙන්න ඕන.", true);
+    const bad = pinProblem(a);
+    if (bad) return toast(bad, true);
     if (a !== b) return toast("PIN දෙක සමාන නෑ.", true);
     btn.disabled = true;
-    try { await changePin(a); e.target.reset(); toast("PIN එක මාරු උනා ✓ ඊළඟ පාර අලුත් PIN එකෙන් log වෙන්න."); }
+    try { await changePin(a); store.set(KEYS.len, a.length); e.target.reset(); toast("PIN එක මාරු උනා ✓ ඊළඟ පාර අලුත් PIN එකෙන් log වෙන්න."); }
     catch (err) { toast("PIN එක මාරු වුණේ නෑ: " + errText(err), true); }
     btn.disabled = false;
   });
+  // folded cards remember whether they were open (toggle does not bubble, so it is caught on the way down)
+  root.addEventListener("toggle", e => {
+    const d = e.target;
+    if (!d || !d.matches) return;
+    if (d.matches("details.ad-req")) S.reqOpen[d.dataset.id] = d.open ? 1 : 0;
+    else if (d.matches("details.ad-fold")) S.fold[d.dataset.fold] = d.open;
+  }, true);
   root.addEventListener("click", async e => {
     const b = e.target.closest("[data-act]"); if (!b) return;
     const d = b.dataset;
     switch (d.act) {
+      case "goto-req": S.tab = "requests"; S.reqFilter = "all"; S.reqQuery = ""; S.reqOpen[d.id] = 1; renderTab(); { const el = $('details.ad-req[data-id="' + d.id + '"]'); if (el) el.scrollIntoView({ block: "start" }); } break;
+      case "req-toggle-all": { const list = reqShown(), anyClosed = list.some(r => !(S.reqOpen[r.id] !== undefined ? S.reqOpen[r.id] : list.length <= 3)); list.forEach(r => { S.reqOpen[r.id] = anyClosed ? 1 : 0; }); repaintReqs(); break; }
+      case "csv-req": {
+        const rows = [["Ref", "Date", "Name", "Phone", "Email", "Business", "Project", "Type", "Stage", "Progress %", "Estimate", "Due", "Account"]];
+        reqShown().forEach(r => { const c = S.customers.find(x => x.id === r.uid); rows.push([r.ref, r.createdAt, r.name, waNum(r.phone) || r.phone, r.email, r.business, r.title, r.track === "creative" ? "Design & Video" : r.track === "pkg" ? "Mobile App package" : "App / Website / System", STAGE_EN[r.status] || r.status, pctOf(r), r.estimate, r.due, c ? c.name : ""]); });
+        downloadCsv("hexora-requests-" + csvDay() + ".csv", rows); toast("CSV එක download උනා (" + (rows.length - 1) + " rows)."); break;
+      }
+      case "csv-cust": {
+        const rows = [["Name", "Phone", "Joined"]]; S.customers.forEach(c => rows.push([c.name, c.phone, c.createdAt]));   // PINs are never exported
+        downloadCsv("hexora-customers-" + csvDay() + ".csv", rows); toast("CSV එක download උනා (" + (rows.length - 1) + " rows)."); break;
+      }
       case "tab": S.tab = d.tab; renderTab(); break;
       case "lock": if (anyDirty() && !armed(b, "Save නොකරපු වෙනස් නැති වෙනවා. ආයෙත් ඔබන්න")) return; lockScreen(); break;
       case "save": saveAll(b); break;
@@ -854,20 +1018,20 @@
       case "req-link": {
         const r = S.reqs.find(x => x.id === d.id), uid = $('[data-link="' + d.id + '"]').value; if (!r) return;
         if (!uid) return toast("Customer account එකක් තෝරන්න.", true);
-        try { await patchReq(r, { uid: uid }, ["uid"]); renderTab(); toast("Account එකට link උනා ✓"); }
+        try { await patchReq(r, { uid: uid }, ["uid"]); await syncChatOwner(r.id, uid).catch(() => {}); renderTab(); toast("Account එකට link උනා ✓"); }
         catch (err) { toast(errText(err), true); }
         break;
       }
       case "req-unlink": {
         const r = S.reqs.find(x => x.id === d.id); if (!r) return;
         if (!armed(b, "Unlink?")) return;
-        try { await patchReq(r, {}, ["uid"]); renderTab(); toast("Account එකෙන් අයින් කළා."); }
+        try { await patchReq(r, {}, ["uid"]); await syncChatOwner(r.id, "").catch(() => {}); if (S.chatOpen === r.id) S.chatOpen = null; renderTab(); toast("Account එකෙන් අයින් කළා."); }
         catch (err) { toast(errText(err), true); }
         break;
       }
       case "req-del": {
         if (!armed(b, "මකන්නද?")) return;
-        try { await fs("DELETE", "/requests/" + encodeURIComponent(d.id)); S.reqs = S.reqs.filter(r => r.id !== d.id); paintTabs(); renderTab(); toast("Request එක මැකුවා."); }
+        try { await deleteRequest(d.id); S.reqs = S.reqs.filter(r => r.id !== d.id); delete S.chats[d.id]; if (S.chatOpen === d.id) S.chatOpen = null; paintTabs(); renderTab(); toast("Request එක chat එකත් එක්ක මැකුවා."); }
         catch (err) { toast(errText(err), true); }
         break;
       }
@@ -913,6 +1077,8 @@
       }
     }
   });
+
+  document.addEventListener("visibilitychange", () => { if (S.auth && document.visibilityState === "visible") { pollChats(); pollInbox(); } });
 
   // unsaved-changes guard + idle auto-lock
   window.addEventListener("beforeunload", e => { if (S.auth && anyDirty()) { e.preventDefault(); e.returnValue = ""; } });

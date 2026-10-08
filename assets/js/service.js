@@ -148,23 +148,8 @@
       "</div></nav>";
   }
 
-  function row(s) {
-    return '<li><a class="svx-row" href="' + link(s) + '"><span class="hex-icon">' + icon(s.icon) + "</span>" +
-      '<span class="svx-t"><b>' + esc(s.name) + "</b><small>" + fill(s.short || s.summary) + "</small></span>" +
-      '<span class="svx-go" aria-hidden="true">→</span></a></li>';
-  }
-  // the service index: both categories side by side on a computer, tabs on a phone (one category = no tabs)
-  function indexHtml(cats, items) {
-    const one = cats.length === 1;
-    return '<div class="svx rv' + (one ? " svx-one" : "") + '"' + (one ? "" : " data-tabs") + ">" +
-      (one ? "" : '<div class="svx-tabs" role="tablist" aria-label="Services categories">' + cats.map((k, i) =>
-        '<button type="button" class="svx-tab ' + k + '" role="tab" id="svt-' + k + '" aria-controls="svx-' + k + '" aria-selected="' + (i === 0) + '"' + (i ? ' tabindex="-1"' : "") + ">" +
-        esc(S.categories[k].label) + " <b>" + inCat(k).length + "</b></button>").join("") + "</div>") +
-      '<div class="svx-cols">' + cats.map((k, i) =>
-        '<div class="svx-panel ' + k + (i === 0 ? " on" : "") + '" id="svx-' + k + '"' + (one ? "" : ' role="tabpanel" aria-labelledby="svt-' + k + '"') + ">" +
-        '<div class="svx-head"><span class="svc-label ' + k + '">' + esc(S.categories[k].label) + '</span><p class="muted">' + esc(S.categories[k].note) + "</p></div>" +
-        '<ul class="svx-list">' + (items && one ? items : inCat(k)).map(row).join("") + "</ul></div>").join("") + "</div></div>";
-  }
+  // the service index (shared with the home page): the one-line text may use {price} placeholders here
+  const indexHtml = (cats, items) => window.HXSvcUI.indexHtml(S, cats, items, s => fill(s.short || s.summary));
 
   function ctaBand(s) {
     const wa = s ? "Hi Hexora! මට " + s.name + " ගැන කතා කරන්න ඕන." : "Hi Hexora! මට project එකක් ගැන කතා කරන්න ඕන.";

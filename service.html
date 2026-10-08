@@ -18,6 +18,8 @@
 </head>
 <body class="service-page">
 
+<a class="skip-link" href="#svc-root">ප්‍රධාන content එකට යන්න</a>
+
 <div class="progress" aria-hidden="true"></div>
 <canvas id="fx" aria-hidden="true"></canvas>
 
@@ -42,7 +44,7 @@
 </header>
 
 <!-- Filled from assets/js/services.js by assets/js/service.js -->
-<main id="svc-root"></main>
+<main id="svc-root" tabindex="-1"></main>
 
 <footer class="site-footer">
   <div class="wrap">
@@ -53,7 +55,7 @@
         <p class="muted">ශ්‍රී ලංකාවේ හදන apps, websites, logo designs සහ videos.</p>
       </div>
       <div>
-        <h4>Contact</h4>
+        <h2 class="foot-h">Contact</h2>
         <ul>
           <li>WhatsApp: <a data-wa-link="" data-phone-label href="https://wa.me/94766792617" target="_blank" rel="noopener">076 679 2617</a></li>
           <li>Call: <a data-phone href="tel:+94766792617">076 679 2617</a></li>
@@ -61,16 +63,19 @@
         </ul>
       </div>
       <div>
-        <h4>Links</h4>
+        <h2 class="foot-h">Links</h2>
         <ul>
           <li><a href="index.html">Home</a></li>
-          <li><a href="service.html">ඔක්කොම services</a></li>
+          <li><a href="service.html">Services</a></li>
+          <li><a href="index.html#pricing">Pricing</a></li>
+          <li><a href="index.html#faq">FAQ</a></li>
           <li><a href="start-project.html">Project එක පටන් ගන්න</a></li>
           <li data-auth-out><a href="account.html">Login</a></li>
           <li data-auth-out><a href="account.html?new=1">Register</a></li>
           <li data-auth-in hidden><a href="account.html">මගේ projects</a></li>
-          <li><a data-facebook href="#" target="_blank" rel="noopener">Facebook</a></li>
-          <li><a data-youtube href="#" target="_blank" rel="noopener">YouTube</a></li>
+          <li hidden><a data-facebook href="#" target="_blank" rel="noopener">Facebook</a></li>
+          <li hidden><a data-youtube href="#" target="_blank" rel="noopener">YouTube</a></li>
+          <li><a href="privacy.html">Privacy</a></li>
         </ul>
       </div>
     </div>
@@ -81,15 +86,17 @@
   </div>
 </footer>
 
+<aside class="float-chat" aria-label="Chat කරන්න">
 <a class="wa-float" data-wa-link="Hi Hexora! මට project එකක් ගැන කතා කරන්න ඕන." href="https://wa.me/94766792617" target="_blank" rel="noopener" aria-label="WhatsApp එකෙන් message කරන්න">
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3C6.5 3 2 6.9 2 11.7c0 2.4 1.1 4.6 3 6.2L4 22l4.6-2.1c1.1.3 2.2.5 3.4.5 5.5 0 10-3.9 10-8.7S17.5 3 12 3zm-4 10a1.3 1.3 0 1 1 0-2.6A1.3 1.3 0 0 1 8 13zm4 0a1.3 1.3 0 1 1 0-2.6 1.3 1.3 0 0 1 0 2.6zm4 0a1.3 1.3 0 1 1 0-2.6 1.3 1.3 0 0 1 0 2.6z"/></svg>
 </a>
+</aside>
 
 <script src="assets/js/firebase-config.js"></script>
 <script src="assets/js/config.js"></script>
 <script src="assets/js/services.js"></script>
 <script src="assets/js/fb.js"></script>
 <script src="assets/js/chat.js"></script>
-<script src="assets/js/boot.js" data-load="pricing.js packages.js service.js main.js livechat.js"></script>
+<script src="assets/js/boot.js" data-load="pricing.js packages.js svcui.js service.js main.js livechat.js"></script>
 </body>
 </html>

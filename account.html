@@ -18,6 +18,8 @@
 </head>
 <body class="account-page">
 
+<a class="skip-link" href="#main">ප්‍රධාන content එකට යන්න</a>
+
 <div class="progress" aria-hidden="true"></div>
 <canvas id="fx" aria-hidden="true"></canvas>
 
@@ -41,7 +43,7 @@
   </nav>
 </header>
 
-<main>
+<main id="main" tabindex="-1">
   <!-- Login, sign up and the customer's projects are drawn by assets/js/account.js (data: Firebase) -->
   <div class="wrap acc-main" id="acc-root">
     <noscript><p class="muted">මේ page එකට JavaScript ඕන.</p></noscript>
@@ -57,7 +59,7 @@
         <p class="muted">ශ්‍රී ලංකාවේ හදන apps, websites, logo designs සහ videos.</p>
       </div>
       <div>
-        <h4>Contact</h4>
+        <h2 class="foot-h">Contact</h2>
         <ul>
           <li>WhatsApp: <a data-wa-link="" data-phone-label href="https://wa.me/94766792617" target="_blank" rel="noopener">076 679 2617</a></li>
           <li>Call: <a data-phone href="tel:+94766792617">076 679 2617</a></li>
@@ -65,16 +67,19 @@
         </ul>
       </div>
       <div>
-        <h4>Links</h4>
+        <h2 class="foot-h">Links</h2>
         <ul>
           <li><a href="index.html">Home</a></li>
+          <li><a href="service.html">Services</a></li>
+          <li><a href="index.html#pricing">Pricing</a></li>
+          <li><a href="index.html#faq">FAQ</a></li>
           <li><a href="start-project.html">Project එක පටන් ගන්න</a></li>
           <li data-auth-out><a href="account.html">Login</a></li>
           <li data-auth-out><a href="account.html?new=1">Register</a></li>
-          <li><a href="index.html#pricing">Pricing</a></li>
-          <li><a href="index.html#faq">FAQ</a></li>
-          <li><a data-facebook href="#" target="_blank" rel="noopener">Facebook</a></li>
-          <li><a data-youtube href="#" target="_blank" rel="noopener">YouTube</a></li>
+          <li data-auth-in hidden><a href="account.html">මගේ projects</a></li>
+          <li hidden><a data-facebook href="#" target="_blank" rel="noopener">Facebook</a></li>
+          <li hidden><a data-youtube href="#" target="_blank" rel="noopener">YouTube</a></li>
+          <li><a href="privacy.html">Privacy</a></li>
         </ul>
       </div>
     </div>

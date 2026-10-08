@@ -18,6 +18,7 @@
   // 0771234567 / +94 77 123 4567 / 771234567 → 94771234567 ("" if it is not a phone number)
   function phoneId(p) {
     let d = String(p || "").replace(/\D/g, "");
+    if (/^00/.test(d)) d = d.slice(2);   // 0094 77 123 4567 → 94771234567
     if (/^0\d{9}$/.test(d)) d = "94" + d.slice(1);
     else if (/^7\d{8}$/.test(d)) d = "94" + d;
     return /^\d{10,15}$/.test(d) ? d : "";

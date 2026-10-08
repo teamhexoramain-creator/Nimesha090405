@@ -273,13 +273,14 @@
     });
     return data;
   }
+  // the draft is kept for 3 days, then forgotten (a shared computer should not show the last person's details for ever)
   function saveDraft() {
-    try { localStorage.setItem(DRAFT, JSON.stringify(formData())); } catch (e) { /* ignore */ }
+    try { localStorage.setItem(DRAFT, JSON.stringify({ t: Date.now(), d: formData() })); } catch (e) { /* ignore */ }
   }
   function loadDraft() {
     try {
-      const data = JSON.parse(localStorage.getItem(DRAFT) || "null");
-      if (!data) return false;
+      const raw = JSON.parse(localStorage.getItem(DRAFT) || "null"), data = raw && raw.d;
+      if (!data || Date.now() - (raw.t || 0) > 3 * 86400e3) { localStorage.removeItem(DRAFT); return false; }
       Object.entries(data).forEach(([k, v]) => {
         $$('[name="' + k + '"]', form).forEach(el => {
           if (el.type === "radio") el.checked = el.value === v;
@@ -381,7 +382,7 @@
         if (!user) {
           let list = [];
           try { list = JSON.parse(localStorage.getItem(CLAIMS)) || []; } catch (e) { /* storage blocked */ }
-          list = list.filter(c => c.id !== job.id).concat({ id: job.id, claim: job.claim }).slice(-20);
+          list = list.filter(c => c.id !== job.id).concat({ id: job.id, claim: job.claim, phone: data.phone }).slice(-20);
           try { localStorage.setItem(CLAIMS, JSON.stringify(list)); } catch (e) { /* storage blocked */ }
         }
         if (sent === job) showSaved();
