@@ -850,3 +850,4 @@ section[id], #summary, #project-form, #estimate, .field, .opt-group { scroll-mar
   .acc-wa { justify-self: stretch; }
 }
 .acc-link { padding: 0; border: 0; background: none; color: var(--cyan); font: inherit; font-weight: 700; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.acc-bigpin { margin: 0; padding: 14px; border-radius: 14px; border: 1px solid var(--line-strong); background: var(--bg-2); color: var(--cyan); font-family: var(--f-mono); font-size: 2rem; letter-spacing: .4em; text-align: center; }

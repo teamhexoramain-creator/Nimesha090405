@@ -52,15 +52,17 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // "PIN එක අමතක උනා" requests. Anyone can send one (one per phone number); only the admin can see them.
-    // The admin then sends the PIN stored in that customer's profile to the phone number by WhatsApp.
+    // "PIN එක අමතක උනා" requests. Anyone can send one. The document id is a long random key that only the
+    // browser that sent it knows. When the admin approves, the PIN is written into the document and that
+    // browser (and only a reader who has the id) can read it for one hour. Everything else is admin only.
     match /pinRequests/{id} {
-      allow create: if data().keys().hasOnly(['name', 'phone', 'createdAt'])
+      allow create: if id.size() >= 30
+        && data().keys().hasOnly(['name', 'phone', 'createdAt'])
         && text('name', 100) && data().name.size() > 1
         && data().phone is string && data().phone.matches('[0-9]{10,15}')
-        && id == 'p' + data().phone
         && data().createdAt == request.time;
-      allow read, update, delete: if isAdmin();
+      allow get: if resource.data.get('pin', '') != '' && request.time < resource.data.sentAt + duration.value(1, 'h');
+      allow get, list, update, delete: if isAdmin();
     }
 
     // Project requests and projects.

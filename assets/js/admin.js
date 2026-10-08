@@ -383,7 +383,8 @@
         (c ? '<div class="ad-req-meta"><span>Account: ' + esc(c.name) + "</span><span>" + (norm(c.name) === norm(r.name) ? "✓ නම ගැලපෙනවා" : "⚠ නම වෙනස්") + "</span></div>" +
             (c.pin ? '<p class="ad-pinline">PIN: <code class="ad-pin">' + esc(c.pin) + "</code></p>" : '<p class="ad-hint">මේ account එකේ PIN එක save වෙලා නෑ (පරණ account එකක්). Firebase → Authentication එකෙන් ඒ user ව delete කරන්න, customer ට අලුත් account එකක් හදන්න කියන්න.</p>')
           : '<p class="ad-hint">මේ phone number එකට account එකක් නෑ.</p>') +
-        '<div class="ad-req-actions">' + (c && c.pin ? '<a class="btn btn-wa ad-small" href="' + esc(wa) + '" target="_blank" rel="noopener">PIN එක WhatsApp කරන්න</a>' : "") +
+        (c && c.pin ? '<p class="ad-hint">නම ගැලපෙනවා නම් <b>App එකට යවන්න</b> (customer ගේ page එකේ පැයක් ඇතුළත PIN එක පේනවා). සැක නම් WhatsApp එකෙන් යවන්න.</p>' : "") +
+        '<div class="ad-req-actions">' + (c && c.pin ? '<button type="button" class="btn btn-primary ad-small" data-act="pin-send" data-id="' + esc(r.id) + '">' + (r.sentAt ? "ආයෙත් App එකට යවන්න" : "App එකට PIN එක යවන්න") + "</button>" + (r.sentAt ? '<span class="ad-pill ok">App එකට යැව්වා ' + esc(fmtDate(r.sentAt)) + "</span>" : "") + '<a class="btn btn-wa ad-small" href="' + esc(wa) + '" target="_blank" rel="noopener">PIN එක WhatsApp කරන්න</a>' : "") +
         '<button type="button" class="btn ad-small" data-act="pin-done" data-id="' + esc(r.id) + '">එව්වා ✓ (list එකෙන් අයින් කරන්න)</button></div></article>';
     });
     const list = S.customers.map(c => '<div class="ad-hist"><div><b>' + esc(c.name || "—") + "</b><small>" + esc(phoneLabel(c.phone)) + " · " + esc(fmtDate(c.createdAt)) + "</small></div>" +
@@ -698,6 +699,15 @@
       case "reload-reqs": S.reqs = null; S.reqErr = ""; renderTab(); loadRequests(); break;
       case "req-filter": S.reqFilter = d.f; renderTab(); break;
       case "pin-show": S.show[d.id] = !S.show[d.id]; renderTab(); break;
+      case "pin-send": {
+        const r = S.pinReqs.find(x => x.id === d.id), c = r && S.customers.find(x => x.phone === r.phone);
+        if (!c || !c.pin) return;
+        if (!armed(b, "ඇත්තටම? ආයෙත් ඔබන්න")) return;
+        const at = new Date();
+        try { await fs("PATCH", "/pinRequests/" + encodeURIComponent(r.id), { fields: toFields({ pin: c.pin, sentAt: at }) }, mask(["pin", "sentAt"])); r.pin = c.pin; r.sentAt = at.toISOString(); renderTab(); toast("App එකට යැව්වා ✓ Customer ගේ page එකේ පැයක් ඇතුළත PIN එක පේනවා."); }
+        catch (err) { toast(errText(err), true); }
+        break;
+      }
       case "pin-done":
         try { await fs("DELETE", "/pinRequests/" + encodeURIComponent(d.id)); S.pinReqs = S.pinReqs.filter(r => r.id !== d.id); paintTabs(); renderTab(); toast("List එකෙන් අයින් කළා."); }
         catch (err) { toast(errText(err), true); }

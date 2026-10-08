@@ -15,7 +15,7 @@
   const STAGES = FB.stages, stageOf = k => STAGES.find(s => s.key === k) || STAGES[0];
   const wa = text => (window.hxWhatsAppLink ? window.hxWhatsAppLink(text) : "https://wa.me/" + (C.whatsapp || "") + "?text=" + encodeURIComponent(text));
   const fmtDay = d => { if (!d) return ""; const x = new Date(/^\d{4}-\d{2}-\d{2}$/.test(d) ? d + "T00:00:00" : d); return isNaN(x) ? "" : x.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }); };
-  let mode = "login", projects = null, profile = null;
+  let mode = "login", projects = null, profile = null, poll = null;
 
   function msg(text, ok) { const m = $("#acc-msg"); if (m) { m.textContent = text || ""; m.classList.toggle("ok", !!ok); } }
 
@@ -27,6 +27,7 @@
         '<a class="btn btn-wa" href="' + esc(wa("Hi Hexora! මගේ project එකේ status එක දැනගන්න ඕන.")) + '" target="_blank" rel="noopener">WhatsApp</a></section>';
       return;
     }
+    clearInterval(poll);
     if (mode === "forgot") return forgotScreen();
     const up = mode === "signup";
     root.innerHTML =
@@ -50,13 +51,17 @@
     $("#a-phone").focus({ preventScroll: true });
   }
 
-  function forgotScreen(done) {
+  /* ---------- forgot PIN: the request goes to the admin panel; once approved, the PIN shows up here ---------- */
+  const PR = "hx_pinreq_v1";   // the request made from this browser: { id, at }. The long random id is the key to read the answer.
+  const readPR = () => { try { const p = JSON.parse(localStorage.getItem(PR)); return p && Date.now() - p.at < 24 * 3600e3 ? p : null; } catch (e) { return null; } };
+  const clearPR = () => { try { localStorage.removeItem(PR); } catch (e) { /* storage blocked */ } };
+  function forgotScreen() {
+    if (readPR()) return waitScreen();
     root.innerHTML = '<section class="acc-card acc-gate"><span class="eyebrow">PIN එක අමතක උනාද?</span><h1 class="display">PIN <span class="grad-text">request</span></h1>' +
-      (done ? '<p class="acc-msg ok">✓ ' + esc(done) + '</p><p class="muted">අපි ඔයාගේ account එකේ phone number එකට WhatsApp එකෙන් PIN එක එවනවා.</p>' :
-        '<p class="muted">ඔයාගේ නමයි phone number එකයි ගහන්න. අපි ඒ phone number එකටම WhatsApp එකෙන් PIN එක එවනවා.</p>' +
-        '<form id="forgot-form" class="acc-form" novalidate><div class="field"><label for="f-fname">ඔයාගේ නම</label><input class="input" id="f-fname" type="text" autocomplete="name" maxlength="100"></div>' +
-        '<div class="field"><label for="f-fphone">Phone number</label><input class="input" id="f-fphone" type="tel" inputmode="tel" autocomplete="tel" placeholder="07X XXX XXXX"></div>' +
-        '<p class="acc-msg" id="acc-msg" role="alert"></p><button class="btn btn-primary btn-block" type="submit">PIN එක request කරන්න</button></form>') +
+      '<p class="muted">ඔයාගේ නමයි phone number එකයි ගහන්න. අපි ඔයාව check කරලා PIN එක මේ page එකටම එවනවා.</p>' +
+      '<form id="forgot-form" class="acc-form" novalidate><div class="field"><label for="f-fname">ඔයාගේ නම</label><input class="input" id="f-fname" type="text" autocomplete="name" maxlength="100"></div>' +
+      '<div class="field"><label for="f-fphone">Phone number</label><input class="input" id="f-fphone" type="tel" inputmode="tel" autocomplete="tel" placeholder="07X XXX XXXX"></div>' +
+      '<p class="acc-msg" id="acc-msg" role="alert"></p><button class="btn btn-primary btn-block" type="submit">PIN එක request කරන්න</button></form>' +
       '<p class="acc-help"><button type="button" class="acc-link" data-mode="login">← Login එකට</button></p></section>';
   }
   async function forgot(form) {
@@ -64,11 +69,33 @@
     if (name.length < 2) return msg("ඔයාගේ නම ගහන්න.");
     if (!phone) return msg("Phone number එක හරියට ගහන්න (Ex: 077 123 4567).");
     btn.disabled = true; msg("");
-    try { await FB.create("pinRequests", "p" + phone, { name: name, phone: phone }, ["createdAt"]); forgotScreen("Request එක ගියා."); }
-    catch (e) {
-      if (e.status === 409 || /ALREADY_EXISTS/.test(e.reason)) forgotScreen("ඔයාගේ request එක කලින්ම ගිහින් තියෙනවා.");
-      else { btn.disabled = false; msg(FB.errText(e)); }
-    }
+    const id = FB.newId() + FB.newId();
+    try {
+      await FB.create("pinRequests", id, { name: name, phone: phone }, ["createdAt"]);
+      try { localStorage.setItem(PR, JSON.stringify({ id: id, at: Date.now() })); } catch (e) { /* storage blocked */ }
+      waitScreen();
+    } catch (e) { btn.disabled = false; msg(FB.errText(e)); }
+  }
+  function waitScreen() {
+    root.innerHTML = '<section class="acc-card acc-gate"><span class="eyebrow">PIN request</span><h1 class="display">ඔයාගේ <span class="grad-text">PIN</span></h1>' +
+      '<div id="pin-box"><p class="acc-msg ok">✓ Request එක ගියා.</p><p class="muted">අපි check කරලා PIN එක මෙතනට එවනවා. මේ page එක open කරගෙන ඉන්න (හරි පස්සේ මේ phone එකෙන්ම ආයෙත් එන්න).</p></div>' +
+      '<div class="acc-actions"><button class="btn" type="button" data-act="pin-check">Refresh</button><button class="btn" type="button" data-act="pin-new">අලුත් request එකක්</button></div>' +
+      '<p class="acc-help">ඉක්මනට ඕන නම් <a href="' + esc(wa("Hi Hexora! මගේ account එකේ PIN එක අමතක උනා.")) + '" target="_blank" rel="noopener">WhatsApp එකෙන් කියන්න</a>.<br><button type="button" class="acc-link" data-mode="login">← Login එකට</button></p></section>';
+    clearInterval(poll);
+    poll = setInterval(() => { if (!$("#pin-box")) clearInterval(poll); else checkPin(); }, 8000);
+    checkPin();
+  }
+  async function checkPin() {
+    const r = readPR(); if (!r || !$("#pin-box")) return;
+    try {
+      const d = await FB.get("/pinRequests/" + encodeURIComponent(r.id));
+      if (d && d.pin && $("#pin-box")) {
+        clearInterval(poll);
+        const extra = $(".acc-actions"); if (extra) extra.remove();
+        $("#pin-box").innerHTML = '<p class="acc-msg ok">✓ ඔයාගේ PIN එක:</p><p class="acc-bigpin">' + esc(d.pin) + '</p><p class="muted">මේ PIN එකෙන් login වෙන්න. මේක වෙන කාටවත් කියන්න එපා.</p>' +
+          '<button class="btn btn-primary btn-block" type="button" data-act="pin-login">Login වෙන්න</button>';
+      }
+    } catch (e) { /* not approved yet (or offline): try again later */ }
   }
 
   async function submit(form) {
@@ -198,6 +225,9 @@
     if (t.dataset.mode) { mode = t.dataset.mode; gate(); return; }
     if (t.dataset.act === "logout") { FB.signOut(); profile = null; projects = null; mode = "login"; gate(); }
     if (t.dataset.act === "reload") portal();
+    if (t.dataset.act === "pin-check") checkPin();
+    if (t.dataset.act === "pin-new") { clearPR(); forgotScreen(); }
+    if (t.dataset.act === "pin-login") { clearPR(); mode = "login"; gate(); }
   });
   root.addEventListener("submit", e => {
     e.preventDefault();
