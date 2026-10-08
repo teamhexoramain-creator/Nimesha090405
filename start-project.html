@@ -32,7 +32,9 @@
       <li><a href="index.html#process">වැඩ කරන විදිය</a></li>
       <li><a href="index.html#pricing">Pricing</a></li>
       <li><a href="index.html#faq">FAQ</a></li>
-      <li><a href="account.html">මගේ projects</a></li>
+      <li data-auth-out><a href="account.html">Login</a></li>
+      <li data-auth-out><a class="btn nav-reg" href="account.html?new=1">Register</a></li>
+      <li data-auth-in hidden><a href="account.html">මගේ projects</a></li>
       <li><a class="btn btn-primary nav-cta" href="start-project.html" aria-current="page">Project එක පටන් ගන්න</a></li>
     </ul>
   </nav>
@@ -44,6 +46,8 @@
       <span class="eyebrow fade-up" style="--d:100ms">Free estimate</span>
       <h1 class="display" data-split style="--d:150ms">ඔයාගේ <span class="grad-text">Project</span> එක ගැන කියන්න</h1>
       <p class="lead fade-up" style="--d:550ms">App, website, logo, design හරි video, ඕන දෙයක් තෝරගන්න. Price එක අද dollar rate එකෙන් LKR වලින් live calculate වෙනවා. ඉවර උනාම WhatsApp හරි Email එකෙන් අපිට එවන්න.</p>
+      <p class="auth-hint fade-up" style="--d:650ms" data-auth-out>Account එකක් තියෙනවද? <a href="account.html">Login</a> වෙලා ඉන්නකොට ඔයාගේ details ඉබේම පුරවනවා, project status බලන්නයි Developer ට chat කරන්නයි පුළුවන්. අලුත් ද? <a href="account.html?new=1">Register</a></p>
+      <p class="auth-hint fade-up" style="--d:650ms" data-auth-in hidden>👤 <b data-user-name></b> විදියට login වෙලා ඉන්නේ. Project එක යැව්වම <a href="account.html">මගේ projects</a> එකේ status එක බලන්න පුළුවන්.</p>
       <ol class="stepper fade-up" style="--d:700ms" aria-label="Form එකේ කොටස්">
         <li data-stepper="1">1 · ඔයා ගැන</li>
         <li data-stepper="2">2 · Idea එක</li>
@@ -308,7 +312,9 @@
         <h4>Links</h4>
         <ul>
           <li><a href="index.html">Home</a></li>
-          <li><a href="account.html">මගේ projects</a></li>
+          <li data-auth-out><a href="account.html">Login</a></li>
+          <li data-auth-out><a href="account.html?new=1">Register</a></li>
+          <li data-auth-in hidden><a href="account.html">මගේ projects</a></li>
           <li><a href="index.html#pricing">Pricing</a></li>
           <li><a href="index.html#faq">FAQ</a></li>
           <li><a data-facebook href="#" target="_blank" rel="noopener">Facebook</a></li>

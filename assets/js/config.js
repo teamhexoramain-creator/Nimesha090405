@@ -32,14 +32,15 @@ window.HEXORA = {
 
   /* ---------- Mobile app packages ----------
      lkr = price in LKR when 1 USD = packageBaseRate. Shown price = lkr × (today's rate ÷ packageBaseRate).
-     weeks = how long it takes (shown as an estimate range). */
+     weeks = how long it takes (shown as an estimate range).
+     badge = optional label on the card ("ගොඩක් අය තෝරන්නේ"); leave it empty for none. */
   packageBaseRate: 369,
   packages: {
     basic:       { label: "Basic App", lkr: 10000, weeks: 1, includes: ["Basic UI Design", "3–5 Screens", "Basic Navigation", "Static Content", "Simple Forms"] },
     standard:    { label: "Standard App", lkr: 15000, weeks: 1.5, includes: ["5–7 Screens", "Better UI/UX", "Navigation", "Forms & Basic Data Handling", "Local Storage"] },
-    firebase:    { label: "Firebase App", lkr: 20000, weeks: 2, includes: ["7–10 Screens", "Professional UI", "Login / Register", "Firebase Authentication", "Firestore Database", "User Data Management"] },
+    firebase:    { label: "Firebase App", badge: "ගොඩක් අය තෝරන්නේ", lkr: 20000, weeks: 2, includes: ["7–10 Screens", "Professional UI", "Login / Register", "Firebase Authentication", "Firestore Database", "User Data Management"] },
     advanced:    { label: "Advanced App", lkr: 25000, weeks: 3, includes: ["10–12 Screens", "Firebase Authentication + Database", "User Profiles", "Search / Filter", "Basic Admin Functions", "Better UI/UX"] },
-    complete:    { label: "Complete App", lkr: 30000, weeks: 4, includes: ["Full App UI/UX", "Firebase Backend", "Authentication", "Database", "Admin Panel", "Push Notifications", "Search / Filter", "Basic Testing"] },
+    complete:    { label: "Complete App", badge: "Business වලට හොඳයි", lkr: 30000, weeks: 4, includes: ["Full App UI/UX", "Firebase Backend", "Authentication", "Database", "Admin Panel", "Push Notifications", "Search / Filter", "Basic Testing"] },
     advpro:      { label: "Advanced Professional App", lkr: 35000, weeks: 5, includes: ["Everything in 30K package", "Advanced Admin Panel", "API Integration", "Advanced Search / Filter", "Notifications", "Reports / Analytics", "More Custom Features"] },
     pro:         { label: "Professional App", lkr: 40000, weeks: 6, includes: ["Complete Professional UI/UX", "Advanced Backend", "Admin Dashboard", "Firebase / API Integration", "Authentication", "Notifications", "Analytics", "Testing & Bug Fixing"] },
     premium:     { label: "Premium App", lkr: 45000, weeks: 7, includes: ["Advanced UI/UX", "Complete Backend System", "Admin Panel", "API Integrations", "Payment/External Service Integration if required", "Notifications", "Analytics & Reports", "Testing & Optimization"] },

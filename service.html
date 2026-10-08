@@ -33,7 +33,9 @@
       <li><a href="index.html#process">වැඩ කරන විදිය</a></li>
       <li><a href="index.html#pricing">Pricing</a></li>
       <li><a href="index.html#faq">FAQ</a></li>
-      <li><a href="account.html">මගේ projects</a></li>
+      <li data-auth-out><a href="account.html">Login</a></li>
+      <li data-auth-out><a class="btn nav-reg" href="account.html?new=1">Register</a></li>
+      <li data-auth-in hidden><a href="account.html">මගේ projects</a></li>
       <li><a class="btn btn-primary nav-cta" href="start-project.html">Project එක පටන් ගන්න</a></li>
     </ul>
   </nav>
@@ -64,7 +66,9 @@
           <li><a href="index.html">Home</a></li>
           <li><a href="service.html">ඔක්කොම services</a></li>
           <li><a href="start-project.html">Project එක පටන් ගන්න</a></li>
-          <li><a href="account.html">මගේ projects</a></li>
+          <li data-auth-out><a href="account.html">Login</a></li>
+          <li data-auth-out><a href="account.html?new=1">Register</a></li>
+          <li data-auth-in hidden><a href="account.html">මගේ projects</a></li>
           <li><a data-facebook href="#" target="_blank" rel="noopener">Facebook</a></li>
           <li><a data-youtube href="#" target="_blank" rel="noopener">YouTube</a></li>
         </ul>
@@ -84,6 +88,8 @@
 <script src="assets/js/firebase-config.js"></script>
 <script src="assets/js/config.js"></script>
 <script src="assets/js/services.js"></script>
-<script src="assets/js/boot.js" data-load="pricing.js packages.js service.js main.js"></script>
+<script src="assets/js/fb.js"></script>
+<script src="assets/js/chat.js"></script>
+<script src="assets/js/boot.js" data-load="pricing.js packages.js service.js main.js livechat.js"></script>
 </body>
 </html>

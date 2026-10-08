@@ -139,5 +139,48 @@ service cloud.firestore {
         && (!('custOnlineAt' in changed()) || data().custOnlineAt == request.time));
       allow delete: if isAdmin();
     }
+
+    // Live chat for visitors who are not logged in (the green chat button). The visitor gives a name and phone number,
+    // and the chat is guests/<id>. <id> is a long random key kept only in that visitor's browser, so it is the secret:
+    // nobody can list guests (only the admin), but whoever has the id can read and write that one chat.
+    // The summary fields are in the guest doc itself (same meaning as in chats/<id>).
+    match /guests/{gid} {
+      allow get: if true;
+      allow list: if isAdmin();
+      allow create: if gid.size() >= 30
+        && data().keys().hasOnly(['gid', 'name', 'phone', 'page', 'device', 'uid', 'createdAt', 'lastAt', 'lastFrom', 'lastText'])
+        && data().gid == gid
+        && text('name', 100) && data().name.size() > 1
+        && data().phone is string && data().phone.matches('[0-9]{10,15}')
+        && optText('page', 200) && optText('device', 80)
+        && (!('uid' in data()) || (signedIn() && data().uid == request.auth.uid))
+        && data().createdAt == request.time
+        && data().lastFrom == 'c' && text('lastText', 120) && data().lastAt == request.time;
+      allow update: if isAdmin() || (resource.data.gid == gid
+        && data().gid == gid
+        && changed().hasOnly(['lastAt', 'lastFrom', 'lastText', 'custSeenAt', 'custOnlineAt'])
+        && (!('lastAt' in changed() || 'lastFrom' in changed() || 'lastText' in changed())
+            || (data().lastFrom == 'c' && text('lastText', 120) && data().lastAt == request.time))
+        && (!('custSeenAt' in changed()) || data().custSeenAt == request.time)
+        && (!('custOnlineAt' in changed()) || data().custOnlineAt == request.time));
+      allow delete: if isAdmin();
+
+      match /messages/{mid} {
+        allow read: if true;
+        allow create: if isAdmin() || (exists(/databases/$(database)/documents/guests/$(gid))
+          && data().keys().hasOnly(['from', 'kind', 'text', 'data', 'mime', 'dur', 'wave', 'createdAt'])
+          && data().keys().hasAll(['from', 'kind', 'text', 'createdAt'])
+          && data().from == 'c'
+          && data().kind in ['text', 'image', 'audio']
+          && text('text', 1000)
+          && ((data().kind == 'text' && data().text.size() > 0 && !('data' in data()))
+              || (data().kind != 'text' && data().data is string && data().data.size() > 100 && data().data.size() <= 700000
+                  && data().mime is string && data().mime.size() <= 40))
+          && (!('dur' in data()) || data().dur is int)
+          && (!('wave' in data()) || (data().wave is string && data().wave.size() <= 80))
+          && data().createdAt == request.time);
+        allow delete: if isAdmin();
+      }
+    }
   }
 }

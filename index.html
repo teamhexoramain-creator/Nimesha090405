@@ -39,7 +39,9 @@
       <li><a href="#process">වැඩ කරන විදිය</a></li>
       <li><a href="#pricing">Pricing</a></li>
       <li><a href="#faq">FAQ</a></li>
-      <li><a href="account.html">මගේ projects</a></li>
+      <li data-auth-out><a href="account.html">Login</a></li>
+      <li data-auth-out><a class="btn nav-reg" href="account.html?new=1">Register</a></li>
+      <li data-auth-in hidden><a href="account.html">මගේ projects</a></li>
       <li><a class="btn btn-primary nav-cta" href="start-project.html">Project එක පටන් ගන්න</a></li>
     </ul>
   </nav>
@@ -55,11 +57,13 @@
         <p class="lead fade-up" style="--d:700ms">Mobile apps, websites, logo design, photo editing සහ video editing. ඔයාගේ business එකට ඕන digital වැඩ ඔක්කොම Hexora team එක කරනවා.</p>
         <div class="hero-actions fade-up" style="--d:850ms">
           <a class="btn btn-primary" href="start-project.html">
-            Free estimate එකක් ගන්න
+            Project එක පටන් ගන්න
             <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </a>
           <a class="btn" href="#pricing">Prices බලන්න</a>
         </div>
+        <p class="hero-auth fade-up" style="--d:950ms" data-auth-out>Customer කෙනෙක්ද? <a href="account.html">Login</a> · අලුත් ද? <a href="account.html?new=1">Register</a> <span>· project status බලන්න, Developer ට chat කරන්න</span></p>
+        <p class="hero-auth fade-up" style="--d:950ms" data-auth-in hidden>👤 <b data-user-name></b> · <a href="account.html">මගේ projects</a> <span>· status සහ chat</span></p>
         <ul class="hero-points fade-up" style="--d:1000ms">
           <li>Apps · Web · Design · Video</li>
           <li>විනාඩි 2කින් price එක</li>
@@ -203,6 +207,10 @@
           <span class="svc-more" aria-hidden="true">විස්තර බලන්න →</span>
         </article>
       </div>
+      <div class="sec-cta rv">
+        <a class="btn btn-primary" href="start-project.html">Project එක පටන් ගන්න</a>
+        <a class="btn" href="service.html">ඔක්කොම services බලන්න</a>
+      </div>
     </div>
   </section>
 
@@ -223,6 +231,10 @@
         <li class="tl-item rv"><span class="tl-dot">05</span><div class="tl-body"><span class="tl-time">Delivery</span><h3>Launch &amp; delivery</h3><p>App එක store එකට, site එක domain එකට. Logo, design, video files ඔක්කොම full quality වලින් ඔයාට.</p></div></li>
         <li class="tl-item rv"><span class="tl-dot">06</span><div class="tl-body"><span class="tl-time">ඊට පස්සේ</span><h3>Support</h3><p><span data-support>1 month</span> එකක් free bug fixes. ඊට පස්සේ monthly maintenance plan එකක් ගන්න පුළුවන්.</p></div></li>
       </ol>
+      <div class="sec-cta rv">
+        <a class="btn btn-primary" href="start-project.html">Project එක පටන් ගන්න</a>
+        <button class="btn" type="button" data-open-chat>ප්‍රශ්නයක් තියෙනවද? Chat කරන්න</button>
+      </div>
     </div>
   </section>
 
@@ -260,6 +272,10 @@
         <p class="muted">Budget එකට ගැළපෙන package එකක් තෝරගන්න. ඊට පස්සේ පොඩි වෙනස්කම් එකතු කරලා price එක auto බලන්න පුළුවන්.</p>
       </div>
       <div class="prices pkg-prices" id="home-packages"></div>
+      <div class="sec-cta rv">
+        <a class="btn btn-primary" href="start-project.html?track=pkg">Package එකක් තෝරලා Project එක පටන් ගන්න</a>
+        <button class="btn" type="button" data-open-chat>කිසිම package එකක් ගැලපෙන්නේ නැද්ද? Chat කරන්න</button>
+      </div>
 
       <div class="svc-group rv">
         <span class="svc-label creative">Design &amp; Video</span>
@@ -310,6 +326,9 @@
           <div><strong><span data-support>1 month</span> free fixes</strong><span>ඊට පස්සේ monthly maintenance plans.</span></div>
         </div>
       </div>
+      <div class="sec-cta rv">
+        <a class="btn btn-primary" href="start-project.html">Project එක පටන් ගන්න</a>
+      </div>
     </div>
   </section>
 
@@ -354,6 +373,10 @@
           <div class="ans"><div><p>වැඩ පටන් ගන්න <span data-advance>50%</span> advance, ඉතුරු ටික deliver කරද්දී, bank transfer එකෙන්. ලොකු projects milestones වලට කඩලා ගෙවන්න පුළුවන්.</p></div></div>
         </details>
       </div>
+      <div class="sec-cta rv">
+        <button class="btn btn-primary" type="button" data-open-chat>තව ප්‍රශ්න තියෙනවද? Chat කරන්න</button>
+        <a class="btn" href="start-project.html">Project එක පටන් ගන්න</a>
+      </div>
     </div>
   </section>
 
@@ -364,6 +387,7 @@
         <div>
           <h2 class="display">Project එකක් තියෙනවද?</h2>
           <p class="lead">App එකක්, logo එකක්, video එකක්, මොකක් උනත් ප්‍රශ්න ටිකකට උත්තර දීලා විනාඩි 2කින් estimate price එකක් ගන්න. සල්ලි ඕන නෑ, commitment එකක් නෑ.</p>
+          <p class="cta-auth" data-auth-out>Account එකක් තියෙනවද? <a href="account.html">Login</a> · අලුත් ද? <a href="account.html?new=1">Register</a></p>
         </div>
         <div class="cta-actions">
           <a class="btn btn-primary" href="start-project.html">Project එක පටන් ගන්න</a>
@@ -394,7 +418,9 @@
         <h4>Links</h4>
         <ul>
           <li><a href="start-project.html">Project එක පටන් ගන්න</a></li>
-          <li><a href="account.html">මගේ projects</a></li>
+          <li data-auth-out><a href="account.html">Login</a></li>
+          <li data-auth-out><a href="account.html?new=1">Register</a></li>
+          <li data-auth-in hidden><a href="account.html">මගේ projects</a></li>
           <li><a href="#services">Services</a></li>
           <li><a href="#pricing">Pricing</a></li>
           <li><a data-facebook href="#" target="_blank" rel="noopener">Facebook</a></li>
@@ -415,6 +441,8 @@
 
 <script src="assets/js/firebase-config.js"></script>
 <script src="assets/js/config.js"></script>
-<script src="assets/js/boot.js" data-load="pricing.js packages.js main.js"></script>
+<script src="assets/js/fb.js"></script>
+<script src="assets/js/chat.js"></script>
+<script src="assets/js/boot.js" data-load="pricing.js packages.js main.js livechat.js"></script>
 </body>
 </html>

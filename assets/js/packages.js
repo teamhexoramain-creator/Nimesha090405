@@ -9,12 +9,14 @@
     const base = C.packageBaseRate || 369;
     return Object.keys(C.packages || {}).map((k, i) => {
       const p = C.packages[k], usd = p.lkr / base;
-      return '<article class="price-card spot rv pkg-card" style="--rd:' + (i % 4) + '">' +
+      const hot = !!p.badge;
+      return '<article class="price-card spot rv pkg-card' + (hot ? " featured" : "") + '" style="--rd:' + (i % 4) + '">' +
+        (hot ? '<span class="badge">' + esc(p.badge) + "</span>" : "") +
         "<h3>" + esc(p.label) + '</h3><span class="price-from">Package</span>' +
-        '<div><div class="price-amt" data-price-usd="' + usd.toFixed(4) + '">' + P.formatLKR(P.packageLKR(C, p.lkr, C.fallbackRate)) + "</div>" +
+        '<div><div class="price-amt' + (hot ? " grad-text" : "") + '" data-price-usd="' + usd.toFixed(4) + '">' + P.formatLKR(P.packageLKR(C, p.lkr, C.fallbackRate)) + "</div>" +
         '<div class="price-usd">≈ USD ' + Math.round(usd) + (p.weeks ? " · සති " + Math.max(1, Math.round(p.weeks)) + " – " + Math.max(2, Math.round(p.weeks * 1.3)) : "") + "</div></div>" +
         "<ul>" + (p.includes || []).map(x => "<li>" + esc(x) + "</li>").join("") + "</ul>" +
-        '<a class="btn" href="start-project.html?package=' + encodeURIComponent(k) + '">මේක තෝරගන්න</a></article>';
+        '<a class="btn' + (hot ? " btn-primary" : "") + '" href="start-project.html?package=' + encodeURIComponent(k) + '">මේක තෝරගන්න</a></article>';
     }).join("");
   }
   root.HXPkg = { html: html };

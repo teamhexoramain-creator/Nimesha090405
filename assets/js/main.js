@@ -17,6 +17,14 @@
     setTimeout(() => loader.classList.add("done"), 2400);
   }
 
+  /* ---------- logged-in customer? (account.js / fb.js keep the login in localStorage) ---------- */
+  let cu = null;
+  try { cu = JSON.parse(localStorage.getItem("hx_customer_v1")); } catch (e) { cu = null; }
+  const loggedIn = !!(cu && cu.uid);
+  $$("[data-auth-out]").forEach(el => { el.hidden = loggedIn; });
+  $$("[data-auth-in]").forEach(el => { el.hidden = !loggedIn; });
+  $$("[data-user-name]").forEach(el => { el.textContent = (cu && cu.name) || ""; });
+
   /* ---------- header state + scroll progress ---------- */
   const header = $(".site-header");
   const bar = $(".progress");

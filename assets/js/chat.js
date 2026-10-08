@@ -17,8 +17,13 @@
   const ms = iso => { const t = Date.parse(iso); return isNaN(t) ? 0 : t; };
 
   /* ---------- Firestore side. fs(method, path, body) talks to .../documents, db = "projects/<id>/databases/(default)" ---------- */
-  function api(fs, db) {
-    const doc = db + "/documents/";
+  // mode "guest": a visitor without an account. Their chat lives in guests/<id> (summary fields in the doc itself,
+  // messages in guests/<id>/messages) and the long random <id> is the only key. Default: a customer's project chat.
+  function api(fs, db, mode) {
+    const guest = mode === "guest", doc = db + "/documents/";
+    const root_ = guest ? "guests" : "requests", metaPath = rid => doc + (guest ? "guests/" : "chats/") + rid;
+    const idField = (rid, uid) => guest ? { gid: { stringValue: rid } } : { uid: { stringValue: uid } };
+    const idMask = guest ? ["gid"] : ["uid"];
     const fromFields = (f, id) => { const o = { id: id }; Object.keys(f || {}).forEach(k => { const v = f[k]; o[k] = v.stringValue != null ? v.stringValue : v.timestampValue != null ? v.timestampValue : v.integerValue != null ? Number(v.integerValue) : null; }); return o; };
     const fromDoc = d => fromFields(d.fields, d.name.split("/").pop());
     return {
@@ -26,7 +31,7 @@
       async load(rid, after) {
         const q = { from: [{ collectionId: "messages" }], orderBy: [{ field: { fieldPath: "createdAt" }, direction: after ? "ASCENDING" : "DESCENDING" }], limit: after ? 100 : 30 };
         if (after) q.where = { fieldFilter: { field: { fieldPath: "createdAt" }, op: "GREATER_THAN", value: { timestampValue: after } } };
-        const rows = await fs("POST", "/requests/" + encodeURIComponent(rid) + ":runQuery", { structuredQuery: q });
+        const rows = await fs("POST", "/" + root_ + "/" + encodeURIComponent(rid) + ":runQuery", { structuredQuery: q });
         const out = (rows || []).filter(r => r.document).map(r => fromDoc(r.document));
         return after ? out : out.reverse();
       },
@@ -39,8 +44,8 @@
         const last = m.kind === "image" ? "📷 Photo" : m.kind === "audio" ? "🎤 Voice message" : (m.text || "").slice(0, 100);
         const id = newId();
         await fs("POST", ":commit", { writes: [
-          { update: { name: doc + "requests/" + rid + "/messages/" + id, fields: f }, currentDocument: { exists: false }, updateTransforms: [{ fieldPath: "createdAt", setToServerValue: "REQUEST_TIME" }] },
-          { update: { name: doc + "chats/" + rid, fields: { uid: { stringValue: uid }, lastFrom: { stringValue: from }, lastText: { stringValue: last } } }, updateMask: { fieldPaths: ["uid", "lastFrom", "lastText"] }, updateTransforms: [{ fieldPath: "lastAt", setToServerValue: "REQUEST_TIME" }] }
+          { update: { name: doc + root_ + "/" + rid + "/messages/" + id, fields: f }, currentDocument: { exists: false }, updateTransforms: [{ fieldPath: "createdAt", setToServerValue: "REQUEST_TIME" }] },
+          { update: { name: metaPath(rid), fields: Object.assign(idField(rid, uid), { lastFrom: { stringValue: from }, lastText: { stringValue: last } }) }, updateMask: { fieldPaths: idMask.concat(["lastFrom", "lastText"]) }, updateTransforms: [{ fieldPath: "lastAt", setToServerValue: "REQUEST_TIME" }] }
         ] });
       },
       // "I am here" (customer: custOnlineAt) and/or "I have read everything" (custSeenAt / adminSeenAt)
@@ -49,17 +54,17 @@
         if (who === "c") tf.push({ fieldPath: "custOnlineAt", setToServerValue: "REQUEST_TIME" });
         if (seen) tf.push({ fieldPath: who === "c" ? "custSeenAt" : "adminSeenAt", setToServerValue: "REQUEST_TIME" });
         if (!tf.length) return;
-        await fs("POST", ":commit", { writes: [{ update: { name: doc + "chats/" + rid, fields: { uid: { stringValue: uid } } }, updateMask: { fieldPaths: ["uid"] }, updateTransforms: tf }] });
+        await fs("POST", ":commit", { writes: [{ update: { name: metaPath(rid), fields: idField(rid, uid) }, updateMask: { fieldPaths: idMask }, updateTransforms: tf }] });
       },
       // the chat summary + the admin's presence, with the server's clock
       async peek(rid) {
-        const rows = await fs("POST", ":batchGet", { documents: [doc + "chats/" + rid, doc + "site/presence"] });
+        const rows = await fs("POST", ":batchGet", { documents: [metaPath(rid), doc + "site/presence"] });
         const out = { chat: null, presence: null, now: "" };
         (rows || []).forEach(r => {
           if (r.readTime && !out.now) out.now = r.readTime;
           if (!r.found) return;
           const o = fromDoc(r.found), n = r.found.name;
-          if (/\/chats\/[^/]+$/.test(n)) out.chat = o; else if (/\/site\/presence$/.test(n)) out.presence = o;
+          if (/\/site\/presence$/.test(n)) out.presence = o; else out.chat = o;
         });
         return out;
       }
@@ -151,7 +156,7 @@
     const log = $(".chat-log"), note = $(".chat-note"), bar = $(".chat-bar"), ta = $("textarea"), file = $('input[type="file"]'), recBox = $(".chat-rec"), statusEl = $(".chat-status");
     const setNote = t => { note.textContent = t || ""; };
     const fmtTime = iso => { const d = new Date(iso); if (isNaN(d)) return ""; const t = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }); return d.toDateString() === new Date().toDateString() ? t : d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }) + " · " + t; };
-    const visible = () => box.isConnected && !box.hidden && document.visibilityState === "visible";
+    const visible = () => box.isConnected && box.getClientRects().length > 0 && document.visibilityState === "visible";
 
     function bubble(m) {
       let body;

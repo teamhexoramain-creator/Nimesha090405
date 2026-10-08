@@ -2,8 +2,9 @@
 <html lang="si-LK">
 <head>
   <meta charset="utf-8">
+  <script>(function(){var g=/github\.io$/.test(location.hostname),p=location.pathname.split("/")[1];document.write('<base href="'+(g&&p?"/"+p+"/":"/")+'">');})();</script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>මගේ projects | Hexora</title>
+  <title>Page එක හම්බුනේ නෑ | Hexora</title>
   <meta name="description" content="Hexora customer account: ඔයාගේ project එක කොච්චර දුරට ඉවරද, අලුත් updates සහ ඉවර වෙන දවස බලන්න.">
   <meta name="theme-color" content="#050918">
   <meta name="robots" content="noindex">
@@ -42,9 +43,18 @@
 </header>
 
 <main>
-  <!-- Login, sign up and the customer's projects are drawn by assets/js/account.js (data: Firebase) -->
-  <div class="wrap acc-main" id="acc-root">
-    <noscript><p class="muted">මේ page එකට JavaScript ඕන.</p></noscript>
+  <div class="wrap acc-main">
+    <section class="acc-card acc-gate">
+      <span class="eyebrow">404</span>
+      <h1 class="display">Page එක <span class="grad-text">හම්බුනේ නෑ</span></h1>
+      <p class="muted">ඔයා හොයපු page එක නෑ, නැත්නම් මාරු කරලා. පහළ තියෙන එකක් තෝරගන්න.</p>
+      <div class="acc-actions">
+        <a class="btn btn-primary" href="index.html">Home</a>
+        <a class="btn" href="start-project.html">Project එක පටන් ගන්න</a>
+        <a class="btn" href="service.html">Services</a>
+        <a class="btn" href="account.html">Login / Register</a>
+      </div>
+    </section>
   </div>
 </main>
 
@@ -87,8 +97,6 @@
 
 <script src="assets/js/firebase-config.js"></script>
 <script src="assets/js/config.js"></script>
-<script src="assets/js/fb.js"></script>
-<script src="assets/js/chat.js"></script>
-<script src="assets/js/boot.js" data-load="pricing.js main.js account.js"></script>
+<script src="assets/js/boot.js" data-load="pricing.js main.js"></script>
 </body>
 </html>

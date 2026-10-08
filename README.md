@@ -11,6 +11,7 @@ Built with plain **HTML + CSS + JavaScript**. No installs, no build step, no ser
 | `start-project.html` | Project request form with a live LKR price estimate for apps/websites and for logo, design & video work. Customers send the request to WhatsApp or Email; it is also saved for the admin panel. |
 | `account.html` | **මගේ projects**: customers log in with their phone number and a 6-digit PIN and see each project's stage, % done, latest update and finish date. |
 | `admin.html` | PIN-locked admin panel (see below). |
+| `404.html` | "Page එක හම්බුනේ නෑ" page (GitHub Pages shows it for a wrong link). |
 
 ## Folder structure
 ```
@@ -34,7 +35,8 @@ hexora-website/
    ├─ js/firebase-config.js  ← Firebase apiKey, projectId, admin email
    ├─ js/fb.js             Firebase login + database helper for the customer pages
    ├─ js/account.js        customer page (account.html)
-   ├─ js/chat.js           project chat: text, photos, voice (customer page + admin panel)
+   ├─ js/chat.js           chat box: text, photos, voice, Seen, Online (customer page, admin panel, live chat)
+   ├─ js/livechat.js       the green chat button: live chat for visitors
    ├─ js/packages.js       mobile app package cards (home page, Mobile Apps page)
    ├─ js/boot.js           loads the admin panel's saved data, then the page scripts
    ├─ js/admin.js          admin panel (admin.html)
@@ -44,6 +46,7 @@ hexora-website/
 
 ## How to change things (`assets/js/config.js`, or the admin panel once Firebase is set up)
 - **Mobile app packages** (`packages`, 9 of them) and **add-ons** (`addons`) are written in **LKR for 1 USD = 369** (`packageBaseRate`). The site multiplies by (today's rate ÷ 369), so when the dollar goes up the price goes up and when it goes down the price goes down. At exactly 369 a package shows its own price (Basic App = LKR 10,000). `weeks` and the add-on prices are starting values: check them in the admin panel → Prices.
+- **Badges on packages**: each package has an optional `badge` (Firebase App: "ගොඩක් අය තෝරන්නේ", Complete App: "Business වලට හොඳයි"). Change or clear them in the admin panel → Prices → Mobile app packages. A package with a badge is shown as a highlighted card.
 - **Other prices** (websites, web systems, design & video): every price is in **USD**. Change the `usd:` numbers. The site converts to LKR automatically.
 - **Design & video prices**: the `creative` list (logo, branding kit, posts, photo editing, video editing, motion…). Each has `usd` per item, a `unit` name, and `days` / `extraDays` for the delivery time.
 - **Exchange rate**: loaded live from `open.er-api.com` and saved for 12 hours. If it fails, `fallbackRate` (331) is used.
@@ -103,6 +106,7 @@ Good to know:
 - **Voice messages** look like WhatsApp: a play button, a waveform of how loud the speaker was, the time, and a 1× / 1.5× / 2× speed button. The waveform is saved with the message (`wave`, 40 digits).
 - **Seen and Online**: a sent message shows ✓; when the other side has the chat open and has read it, it turns to a blue ✓✓ and the newest one says "Seen". The chat header shows **Hexora Developer · Online** while the admin panel is open and in use (the panel writes the server time to `site/presence` every 25 seconds), otherwise "Last seen 10 min ago". The admin sees the same for the customer. Times are compared with the server's clock (`readTime`), not the phone's, so a wrong phone clock cannot fake it.
 - **New request notice**: after sending a request the customer sees "⏳ Pending · Under review. A Hexora Developer will contact you shortly, please wait." The same notice stays on the project in **මගේ projects** until you move it past **New** in the admin panel.
+- **Live chat for visitors (no login)**: the green chat button on the home page and service pages (and any "Chat කරන්න" button) opens a chat. A visitor first gives a **name and a phone number**, so you can tell who is writing; a logged-in customer skips the form and their account name and phone are used. It is the same chat box (text, photos, voice, Seen ticks, Online). The admin panel has a **Live chats** tab: every visitor with name, phone (with a WhatsApp / Call button), the page they were on, their device, an "Account: …" mark when the phone matches a customer account, and a red number for new messages. The phone number is typed by the visitor and is **not verified**; if in doubt, confirm with a WhatsApp message. The visitor's browser keeps a long random id, so closing the page and coming back continues the same chat, and a red 1 shows on the green button when the developer has replied. Delete a chat (and its messages) with the bin button. Anyone can start a chat, so an unwanted one can be deleted there.
 - **Account page tabs**: **මගේ projects** and **Settings** (name, PIN, logout).
 - After changing `firestore.rules`, paste it again in Firebase → Firestore Database → Rules → **Publish**.
 

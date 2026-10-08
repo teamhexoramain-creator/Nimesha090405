@@ -18,12 +18,21 @@
   function readCache() { try { return JSON.parse(localStorage.getItem(KEY)); } catch (e) { return null; } }
   function writeCache(c) { try { localStorage.setItem(KEY, JSON.stringify(c)); } catch (e) { /* storage blocked */ } }
 
+  // Fields added to the built-in packages / add-ons after the admin saved them (badge, ...) are filled in; a field the admin cleared stays cleared.
+  function fillMissing(saved, builtin) {
+    if (!saved || !builtin) return;
+    Object.keys(builtin).forEach(k => { if (saved[k] && typeof saved[k] === "object") Object.keys(builtin[k]).forEach(f => { if (saved[k][f] === undefined) saved[k][f] = builtin[k][f]; }); });
+  }
   // Saved values win; keys that only exist in the built-in files (added later in code) are kept.
   function apply(c) {
     if (!c) return;
     try {
       const conf = c.config ? JSON.parse(c.config) : null, svc = c.services ? JSON.parse(c.services) : null;
-      if (conf && typeof conf === "object") window.HEXORA = Object.assign({}, window.HEXORA, conf);
+      if (conf && typeof conf === "object") {
+        const built = window.HEXORA || {};
+        fillMissing(conf.packages, built.packages); fillMissing(conf.addons, built.addons);
+        window.HEXORA = Object.assign({}, built, conf);
+      }
       if (svc && Array.isArray(svc.list)) window.HX_SERVICES = Object.assign({}, window.HX_SERVICES, svc);
     } catch (e) { /* a broken copy: keep the built-in data */ }
   }
