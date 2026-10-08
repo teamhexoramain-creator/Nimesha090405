@@ -631,6 +631,7 @@
             field(base + ".video", "Video (optional)", { ph: "assets/video/file.mp4", hint: "දැම්මොත් animation එක වෙනුවට video එක පේනවා." }) +
             field(base + ".tags", "Tags (comma වලින්)", { type: "list" }) +
             field(base + ".packages", "Mobile app packages පෙන්නන්න", { type: "bool", hint: "ටික් කළොත් මේ service page එකේ App packages ටික (Pricing කොටසේ) පේනවා. Mobile Apps page එකට on." }) +
+            field(base + ".short", "Short line (services list එකේ)", { wide: true, hint: "පේළි එකකට ගැළපෙන කෙටි විස්තරයක්. හිස් නම් Summary එක පෙන්නනවා." }) +
             field(base + ".summary", "Summary (card එකේ)", { type: "area", rows: 2, wide: true }) +
             field(base + ".intro", "Intro (page එකේ උඩ)", { type: "area", rows: 3, wide: true }) +
             field(base + ".includes", "මොකද ලැබෙන්නේ (line එකකට එකක්)", { type: "lines", rows: 5, wide: true }) +
