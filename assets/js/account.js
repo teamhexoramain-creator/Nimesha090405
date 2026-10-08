@@ -170,7 +170,7 @@
     if (!box || !window.HXChat) return;
     const me = FB.user(), A = window.HXChat.api(FB.fs, FB.db);
     openChat = rid; box.hidden = false; if (btn) btn.setAttribute("aria-expanded", "true");
-    chatCtl = window.HXChat.mount(box, { me: "c", load: after => A.load(rid, after), send: m => A.send(rid, me.uid, "c", m), onSeen: last => markSeen(rid, last), errText: FB.errText });
+    chatCtl = window.HXChat.mount(box, { me: "c", peer: "Hexora Developer", load: after => A.load(rid, after), send: m => A.send(rid, me.uid, "c", m), peek: () => A.peek(rid), touch: seen => A.touch(rid, me.uid, "c", seen), onSeen: last => markSeen(rid, last), errText: FB.errText });
   }
 
   async function portal() {
@@ -205,6 +205,7 @@
       '<div class="acc-bar" role="progressbar" aria-label="ඉවර වෙලා තියෙන ප්‍රමාණය" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '"><i style="width:' + pct + '%"></i></div>' +
       '<p class="acc-pct"><b>' + pct + "%</b> ඉවරයි</p>" +
       '<ol class="acc-steps">' + STAGES.map((s, i) => '<li class="' + (i < idx || st.key === "done" ? "done" : i === idx ? "now" : "") + '"' + (i === idx ? ' aria-current="step"' : "") + "><i></i><span>" + esc(s.short) + "</span></li>").join("") + "</ol>" +
+      (st.key === "new" ? '<div class="acc-wait"><b>⏳ Pending · Under review</b><p>Hexora Developer කෙනෙක් ඔයා එක්ක ඉක්මනින්ම සම්බන්ධ වෙනවා. මද වේලාවක් රැඳී ඉන්න.</p></div>' : "") +
       (r.note ? '<div class="acc-note"><b>Hexora update</b><p>' + esc(r.note) + "</p>" + (r.updatedAt ? "<small>" + esc(fmtDay(r.updatedAt)) + "</small>" : "") + "</div>" : "") +
       '<dl class="acc-facts">' +
         (r.due ? "<div><dt>" + (st.key === "done" ? "ඉවර කළ දවස" : "ඉවර වෙන්න බලාපොරොත්තු වෙන දවස") + "</dt><dd>" + esc(fmtDay(r.due)) + "</dd></div>" : "") +

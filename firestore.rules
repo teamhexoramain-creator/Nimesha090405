@@ -96,7 +96,7 @@ service cloud.firestore {
         allow read: if isAdmin() || (signedIn() && get(/databases/$(database)/documents/requests/$(id)).data.get('uid', '') == request.auth.uid);
         allow create: if isAdmin() || (signedIn()
           && get(/databases/$(database)/documents/requests/$(id)).data.get('uid', '') == request.auth.uid
-          && data().keys().hasOnly(['from', 'kind', 'text', 'data', 'mime', 'dur', 'createdAt'])
+          && data().keys().hasOnly(['from', 'kind', 'text', 'data', 'mime', 'dur', 'wave', 'createdAt'])
           && data().keys().hasAll(['from', 'kind', 'text', 'createdAt'])
           && data().from == 'c'
           && data().kind in ['text', 'image', 'audio']
@@ -105,21 +105,38 @@ service cloud.firestore {
               || (data().kind != 'text' && data().data is string && data().data.size() > 100 && data().data.size() <= 700000
                   && data().mime is string && data().mime.size() <= 40))
           && (!('dur' in data()) || data().dur is int)
+          && (!('wave' in data()) || (data().wave is string && data().wave.size() <= 80))
           && data().createdAt == request.time);
         allow delete: if isAdmin();
       }
     }
 
-    // One summary per project chat, for the "new message" dots. The customer writes lastFrom 'c', the admin 'a'.
+    // One summary per project chat: the "new message" dots, "Seen" ticks and the customer's online time.
+    //   customer writes: lastAt/lastFrom 'c'/lastText (sending), custSeenAt, custOnlineAt (always the server time)
+    //   admin writes anything (adminSeenAt, ...). The admin's online time is in site/presence.
+    function chatOwner(rid) {
+      return signedIn() && get(/databases/$(database)/documents/requests/$(rid)).data.get('uid', '') == request.auth.uid;
+    }
+    function changed() {
+      return data().diff(resource.data).affectedKeys();
+    }
     match /chats/{rid} {
-      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
-      allow create, update: if isAdmin() || (signedIn()
-        && data().keys().hasOnly(['uid', 'lastAt', 'lastFrom', 'lastText'])
+      allow get: if isAdmin() || (signedIn() && (resource == null || resource.data.uid == request.auth.uid));
+      allow list: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if isAdmin() || (chatOwner(rid)
         && data().uid == request.auth.uid
-        && data().lastFrom == 'c'
-        && text('lastText', 120)
-        && data().lastAt == request.time
-        && get(/databases/$(database)/documents/requests/$(rid)).data.get('uid', '') == request.auth.uid);
+        && data().keys().hasOnly(['uid', 'lastAt', 'lastFrom', 'lastText', 'custSeenAt', 'custOnlineAt'])
+        && (!('lastFrom' in data()) || (data().lastFrom == 'c' && text('lastText', 120) && data().lastAt == request.time))
+        && (!('custSeenAt' in data()) || data().custSeenAt == request.time)
+        && (!('custOnlineAt' in data()) || data().custOnlineAt == request.time));
+      allow update: if isAdmin() || (chatOwner(rid)
+        && resource.data.uid == request.auth.uid
+        && data().uid == request.auth.uid
+        && changed().hasOnly(['lastAt', 'lastFrom', 'lastText', 'custSeenAt', 'custOnlineAt'])
+        && (!('lastAt' in changed() || 'lastFrom' in changed() || 'lastText' in changed())
+            || (data().lastFrom == 'c' && text('lastText', 120) && data().lastAt == request.time))
+        && (!('custSeenAt' in changed()) || data().custSeenAt == request.time)
+        && (!('custOnlineAt' in changed()) || data().custOnlineAt == request.time));
       allow delete: if isAdmin();
     }
   }

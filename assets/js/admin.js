@@ -135,7 +135,7 @@
 
   /* ==================== 1. PIN screen ==================== */
   function lockScreen(msg) {
-    S.auth = null; stopChat(); clearInterval(chatTimer);
+    S.auth = null; stopChat(); clearInterval(chatTimer); clearInterval(presenceTimer);
     if (!ready) {
       root.innerHTML = gate("<h1>Firebase setup</h1>" +
         '<p class="muted">Admin panel එක වැඩ කරන්න Firebase project එකක් ඕන. <code>assets/js/firebase-config.js</code> එකේ apiKey, projectId, adminEmail තාම දාලා නෑ.</p>' +
@@ -215,6 +215,7 @@
       panel();
       loadRequests();
       clearInterval(chatTimer); chatTimer = setInterval(pollChats, 45000);
+      clearInterval(presenceTimer); beatPresence(); presenceTimer = setInterval(beatPresence, 25000);
     } catch (e) {
       root.innerHTML = gate("<h1>Data ගන්න බැරි උනා</h1><p class=\"ad-gate-msg\">" + esc(errText(e)) + "</p>" +
         '<div class="ad-connect"><button class="btn btn-primary" type="button" id="retry">ආයෙත් try කරන්න</button></div>' +
@@ -246,7 +247,14 @@
     $$("[data-adot]").forEach(el => { el.hidden = !isUnread(el.dataset.adot); });
     paintTabs();
   }
-  let chatTimer = null, chatCtl = null;
+  let chatTimer = null, chatCtl = null, presenceTimer = null;
+  // "Hexora Developer: Online" for customers: while this panel is open and in use, write the server time to site/presence every 25 s
+  async function beatPresence() {
+    if (!S.auth || document.visibilityState !== "visible" || Date.now() - S.last > 5 * 60000) return;
+    try {
+      await fs("POST", ":commit", { writes: [{ update: { name: "projects/" + F.projectId + "/databases/(default)/documents/site/presence", fields: { v: { stringValue: "1" } } }, updateMask: { fieldPaths: ["v"] }, updateTransforms: [{ fieldPath: "adminOnlineAt", setToServerValue: "REQUEST_TIME" }] }] });
+    } catch (e) { /* the next beat tries again */ }
+  }
   async function pollChats() {
     if (!S.auth || document.visibilityState !== "visible") return;
     try {
@@ -268,7 +276,8 @@
     if (!r || !r.uid || !box || !window.HXChat) return;
     box.hidden = false;
     const A = window.HXChat.api(fs, "projects/" + F.projectId + "/databases/(default)");
-    chatCtl = window.HXChat.mount(box, { me: "a", load: after => A.load(rid, after), send: m => A.send(rid, r.uid, "a", m), onSeen: last => markSeen(rid, last), errText: errText });
+    const cust = S.customers.find(c => c.id === r.uid);
+    chatCtl = window.HXChat.mount(box, { me: "a", peer: cust ? cust.name : (r.name || "Customer"), load: after => A.load(rid, after), send: m => A.send(rid, r.uid, "a", m), peek: () => A.peek(rid), touch: seen => A.touch(rid, r.uid, "a", seen), onSeen: last => markSeen(rid, last), errText: errText });
   }
 
   const TABS = [["home", "Dashboard"], ["requests", "Requests"], ["customers", "Customers"], ["notice", "Notice"], ["contact", "Contact"], ["prices", "Prices"], ["services", "Services"], ["history", "History"], ["security", "Security"]];

@@ -117,7 +117,7 @@
 
   // project stages, in order (the admin panel sets one; pct = progress shown when no % is set)
   const stages = [
-    { key: "new", label: "Request එක ලැබුණා", short: "ලැබුණා", pct: 5 },
+    { key: "new", label: "Pending · Under review", short: "Review", pct: 5 },
     { key: "contacted", label: "කතා කරලා plan කරනවා", short: "Plan", pct: 15 },
     { key: "design", label: "Design කරනවා", short: "Design", pct: 35 },
     { key: "building", label: "හදනවා", short: "හදනවා", pct: 60 },
