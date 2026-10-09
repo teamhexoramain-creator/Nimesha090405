@@ -17,22 +17,7 @@
     setTimeout(() => loader.classList.add("done"), 2400);
   }
 
-  /* ---------- the menu link of the page you are on ---------- */
-  (function () {
-    const here = (location.pathname.split("/").pop() || "index.html");
-    $$(".nav-links a[href]").forEach(a => {
-      const h = a.getAttribute("href");
-      if (h.indexOf("#") === -1 && h.split("?")[0] === here && !a.classList.contains("nav-cta") && !a.classList.contains("nav-reg")) a.setAttribute("aria-current", "page");
-    });
-  })();
-
-  /* ---------- logged-in customer? (account.js / fb.js keep the login in localStorage) ---------- */
-  let cu = null;
-  try { cu = JSON.parse(localStorage.getItem("hx_customer_v1")); } catch (e) { cu = null; }
-  const loggedIn = !!(cu && cu.uid);
-  $$("[data-auth-out]").forEach(el => { el.hidden = loggedIn; });
-  $$("[data-auth-in]").forEach(el => { el.hidden = !loggedIn; });
-  $$("[data-user-name]").forEach(el => { el.textContent = (cu && cu.name) || ""; });
+  /* the menu, current page, anchor links and the login state in the header live in nav.js (it loads before this file) */
 
   /* ---------- package ladder + "from" prices (built first so every later step sees them) ---------- */
   const homePk = $("#home-packages");
@@ -86,8 +71,7 @@
     if (go) go.click();
   });
 
-  /* ---------- header state + scroll progress ---------- */
-  const header = $(".site-header");
+  /* ---------- scroll progress ---------- */
   const bar = $(".progress");
   let ticking = false;
   function onScroll() {
@@ -95,7 +79,6 @@
     ticking = true;
     requestAnimationFrame(() => {
       const y = window.scrollY;
-      if (header) header.classList.toggle("scrolled", y > 12);
       if (bar) {
         const h = document.documentElement.scrollHeight - window.innerHeight;
         bar.style.transform = "scaleX(" + (h > 0 ? Math.min(1, y / h) : 0) + ")";
@@ -107,19 +90,6 @@
   }
   window.addEventListener("scroll", onScroll, { passive: true });
   window.addEventListener("resize", onScroll);
-
-  /* ---------- mobile menu ---------- */
-  const menuBtn = $(".menu-btn");
-  if (menuBtn && header) {
-    const set = open => {
-      header.classList.toggle("menu-open", open);
-      menuBtn.setAttribute("aria-expanded", String(open));
-      menuBtn.setAttribute("aria-label", open ? "Menu එක වහන්න" : "Menu එක අරින්න");
-    };
-    menuBtn.addEventListener("click", () => set(!header.classList.contains("menu-open")));
-    $$(".nav-links a").forEach(a => a.addEventListener("click", () => set(false)));
-    document.addEventListener("keydown", e => { if (e.key === "Escape") set(false); });
-  }
 
   /* ---------- split headings into words ---------- */
   $$("[data-split]").forEach(el => {
@@ -383,4 +353,5 @@
   }
 
   onScroll();
+  window.dispatchEvent(new Event("hx:ready"));   // nav.js re-aligns a #link target now that the lists are built
 })();

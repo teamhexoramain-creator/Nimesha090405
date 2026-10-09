@@ -30,7 +30,8 @@ hexora-website/
    ├─ css/admin.css        admin panel design
    ├─ js/config.js         prices, WhatsApp, email, links (starting data; the admin panel edits the live copy)
    ├─ js/pricing.js        USD → LKR rate + price maths
-   ├─ js/main.js           menu, animations, video, live prices
+   ├─ js/nav.js            navigation: phone menu, anchor links, current page / section, back to top, login state in the header (loaded straight from the page, not through boot.js)
+   ├─ js/main.js           animations, video, live prices, tabs
    ├─ js/services.js       service pages text, categories, FAQ (starting data)
    ├─ js/service.js        builds service.html from services.js
    ├─ js/svcui.js          the service index (rows) shared by the home page and service.html
@@ -66,6 +67,15 @@ hexora-website/
 - In text you can write `{support}`, `{advance}`, `{urgent}` or a price like `{creative:photo}`; the page fills in the current value.
 - `anim` picks the built-in animation (`phone`, `browser`, `dashboard`, `backend`, `chat`, `server`, `logo`, `social`, `photo`, `timeline`, `uiux`). To show your own video instead, set `video: "assets/video/your-file.mp4"`.
 - New service: copy one block in `list`, give it a new `slug`, and add a row linking to it in the Services list of `index.html` (`<li><a class="svx-row" …>`; the service.html pages build their lists automatically).
+
+## Navigation (`assets/js/nav.js`)
+- **The menu works at once.** `nav.js` is loaded directly by every page, so the phone menu opens the moment the page shows, even when Firebase is slow and the other scripts are still waiting (before, it could take up to 3 seconds).
+- **Phone menu**: a drawer under the header that fits the screen, a dimmed backdrop, and the page behind does not scroll. It closes with a tap outside, **Escape** (focus goes back to the menu button), a link, **Tab** moving out of it, a bigger screen / turned phone, and Back / Forward. Without JavaScript the links are simply shown.
+- **Links to a part of a page** (`#pricing`, `#faq`…) land with the section's heading just under the header (not with 100 px of empty space above it), and are put right again once the page has finished building its lists. If the visitor scrolls themselves first, the page never pulls them back.
+- **Short addresses you can share**: `index.html#pricing-web` / `#pricing-design` open that pricing tab, `index.html#pkg-firebase` (or `service.html?s=mobile-apps#pkg-complete`) opens that package. Picking a tab or package puts its address in the bar (a refresh keeps it) without filling the Back history. `account.html#settings` and `admin.html#prices` do the same for those tabs; in the admin panel Back / Forward move between tabs and `admin.html#contact` opens Contact straight after the PIN.
+- **Where am I**: the menu marks the page you are on, and on the home page the section you are reading (Services / Process / Pricing / FAQ). The logo on the page you are already on scrolls to the top. A **back to top** button appears on long pages (bottom-left).
+- **Login state in the header** is known before the page is drawn (no "Login / Register" flash for a customer), and follows a login / logout straight away, also from another tab.
+- One breakpoint (900 px) for the whole header; the header is the same height on every page; breadcrumbs (Home › …) on every inner page.
 
 ## How the pages are put together (design notes)
 - **Cut-corner look**: buttons, cards, the package panel and the process steps share one chamfered corner (like a hexagon's edge) so every page reads as one system. It is `clip-path`, so a thin outline is drawn with an inset layer (`.btn::before`) and a button shows a normal focus ring when focused with the keyboard.
@@ -125,7 +135,7 @@ Good to know:
 - After changing `firestore.rules`, paste it again in Firebase → Firestore Database → Rules → **Publish**.
 
 ## Checks that were run (so you know it is solid)
-- 270 end-to-end checks against the Firebase emulators with the real `firestore.rules` (accounts, requests, chat, voice, security rules, slow / offline network), plus 80 admin-panel checks (every tab, validation, save / conflict / history, PIN change, search, CSV, polling) and 50 public-site checks (every page on phone, tablet and desktop, menu, footer, keyboard, SEO files, shared-computer privacy).
+- 270 end-to-end checks against the Firebase emulators with the real `firestore.rules` (accounts, requests, chat, voice, security rules, slow / offline network), plus 80 admin-panel checks (every tab, validation, save / conflict / history, PIN change, search, CSV, polling), 50 public-site checks (every page on phone, tablet and desktop, footer, SEO files, shared-computer privacy) and 72 navigation checks (phone menu, anchors on slow connections, Back / Forward, tab addresses, login state, keyboard, no-JavaScript, header layout 901 – 1600 px).
 - axe-core accessibility scan: no violations on any page (phone and desktop); every colour pair is at least 4.5:1.
 - Every link, image and `#anchor` on every page resolves.
 
