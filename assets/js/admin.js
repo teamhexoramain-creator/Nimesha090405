@@ -238,6 +238,7 @@
         S.saved = { config: "", services: "" };
       }
       S.svc = Math.min(S.svc, S.data.services.list.length - 1);
+      S.tab = tabFromHash() || S.tab;   // admin.html#prices opens Prices straight after the PIN
       panel();
       loadRequests();
       clearInterval(chatTimer); chatTimer = setInterval(() => { pollChats(); pollInbox(); }, 45000);
@@ -406,6 +407,11 @@
       (k === "customers" && S.pinReqs.length ? ' <span class="ad-badge">' + S.pinReqs.length + "</span>" : "") + "</button>").join("") + "</div>").join("");
     const total = n + unreadCount() + unreadGuests() + S.pinReqs.length;   // the browser tab says how much is waiting
     document.title = (total ? "(" + total + ") " : "") + "Admin | Hexora";
+  }
+  const tabFromHash = () => { let h = ""; try { h = decodeURIComponent((location.hash || "").slice(1)); } catch (e) { h = ""; } return TABS.some(t => t[0] === h) ? h : ""; };
+  function setTab(t) {
+    S.tab = t;
+    if (location.hash !== "#" + t) { try { history.pushState(null, "", "#" + t); } catch (e) { /* file:// */ } }
   }
   function renderTab() {
     const main = $("#ad-main"); if (!main) return;
@@ -963,7 +969,7 @@
     const b = e.target.closest("[data-act]"); if (!b) return;
     const d = b.dataset;
     switch (d.act) {
-      case "goto-req": S.tab = "requests"; S.reqFilter = "all"; S.reqQuery = ""; S.reqOpen[d.id] = 1; renderTab(); { const el = $('details.ad-req[data-id="' + d.id + '"]'); if (el) el.scrollIntoView({ block: "start" }); } break;
+      case "goto-req": setTab("requests"); S.reqFilter = "all"; S.reqQuery = ""; S.reqOpen[d.id] = 1; renderTab(); { const el = $('details.ad-req[data-id="' + d.id + '"]'); if (el) el.scrollIntoView({ block: "start" }); } break;
       case "req-toggle-all": { const list = reqShown(), anyClosed = list.some(r => !(S.reqOpen[r.id] !== undefined ? S.reqOpen[r.id] : list.length <= 3)); list.forEach(r => { S.reqOpen[r.id] = anyClosed ? 1 : 0; }); repaintReqs(); break; }
       case "csv-req": {
         const rows = [["Ref", "Date", "Name", "Phone", "Email", "Business", "Project", "Type", "Stage", "Progress %", "Estimate", "Due", "Account"]];
@@ -974,7 +980,7 @@
         const rows = [["Name", "Phone", "Joined"]]; S.customers.forEach(c => rows.push([c.name, c.phone, c.createdAt]));   // PINs are never exported
         downloadCsv("hexora-customers-" + csvDay() + ".csv", rows); toast("CSV එක download උනා (" + (rows.length - 1) + " rows)."); break;
       }
-      case "tab": S.tab = d.tab; renderTab(); break;
+      case "tab": setTab(d.tab); renderTab(); window.scrollTo(0, 0); break;
       case "lock": if (anyDirty() && !armed(b, "Save නොකරපු වෙනස් නැති වෙනවා. ආයෙත් ඔබන්න")) return; lockScreen(); break;
       case "save": saveAll(b); break;
       case "discard":
@@ -1078,6 +1084,11 @@
     }
   });
 
+  window.addEventListener("hashchange", () => {   // Back / Forward between tabs
+    if (!S.auth || !$("#ad-main")) return;
+    const t = tabFromHash() || "home";
+    if (t !== S.tab) { S.tab = t; paintTabs(); renderTab(); window.scrollTo(0, 0); }
+  });
   document.addEventListener("visibilitychange", () => { if (S.auth && document.visibilityState === "visible") { pollChats(); pollInbox(); } });
 
   // unsaved-changes guard + idle auto-lock

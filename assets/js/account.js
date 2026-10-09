@@ -139,7 +139,8 @@
   }
 
   /* ---------- the customer's projects ---------- */
-  let tab = "projects", chats = {}, openChat = null, chatCtl = null, chatPoll = null;
+  const tabOfHash = () => (location.hash === "#settings" ? "settings" : "projects");
+  let tab = tabOfHash(), chats = {}, openChat = null, chatCtl = null, chatPoll = null;
   const SEEN = "hx_chat_seen_v1";   // { projectId: time of the last message already seen }
   const seen = () => { try { return JSON.parse(localStorage.getItem(SEEN)) || {}; } catch (e) { return {}; } };
   const ms = iso => { const t = Date.parse(iso); return isNaN(t) ? 0 : t; };
@@ -282,7 +283,10 @@
     const t = e.target.closest("[data-mode], [data-act]"); if (!t) return;
     if (t.dataset.mode) { mode = t.dataset.mode; gate(); return; }
     if (t.dataset.act === "logout") { try { localStorage.removeItem("hexora_project_draft_v2"); } catch (e) { /* storage blocked */ } stopChat(); clearInterval(chatPoll); FB.signOut(); profile = null; projects = null; chats = {}; tab = "projects"; mode = "login"; gate(); }
-    if (t.dataset.act === "tab") { tab = t.dataset.tab; paint(); }
+    if (t.dataset.act === "tab") {
+      tab = t.dataset.tab; paint();
+      try { history.replaceState(null, "", location.pathname + location.search + (tab === "settings" ? "#settings" : "")); } catch (err) { /* file:// */ }
+    }
     if (t.dataset.act === "chat") toggleChat(t.dataset.id);
     if (t.dataset.act === "reload") portal();
     if (t.dataset.act === "pin-check") checkPin();
@@ -298,5 +302,6 @@
   });
   root.addEventListener("input", e => { if (e.target.classList.contains("acc-pin")) e.target.value = e.target.value.replace(/\D/g, "").slice(0, 6); });
 
+  window.addEventListener("hashchange", () => { const t = tabOfHash(); if (t !== tab && root.querySelector(".acc-tabs2")) { tab = t; paint(); } });   // Back / Forward
   if (FB.user()) portal(); else { mode = new URLSearchParams(location.search).get("new") ? "signup" : "login"; gate(); }
 })();

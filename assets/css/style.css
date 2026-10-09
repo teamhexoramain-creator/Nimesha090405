@@ -961,8 +961,8 @@ section[id], #summary, #project-form, #estimate, .field, .opt-group { scroll-mar
 
 /* ===================== login / register buttons, section CTAs ===================== */
 .nav-reg { min-height: 44px; padding: 0 16px; font-size: .9rem; }
-@media (min-width: 861px) and (max-width: 1180px) { .nav-links { gap: 18px; } .nav-cta, .nav-reg { padding: 0 13px; font-size: .84rem; } }
-@media (max-width: 860px) { .nav-links .nav-reg { width: 100%; min-height: 50px; margin-top: 10px; } .nav-links li:last-child { margin-top: 10px; } }
+@media (min-width: 901px) and (max-width: 1180px) { .nav-links { gap: 18px; } .nav-cta, .nav-reg { padding: 0 13px; font-size: .84rem; } }
+@media (max-width: 900px) { .nav-links .nav-reg { width: 100%; min-height: 50px; margin-top: 10px; } .nav-links li:last-child { margin-top: 10px; } }
 .hero-auth, .auth-hint, .cta-auth { margin: 0; color: var(--muted); font-size: .92rem; }
 .hero-auth { margin-top: 14px; }
 .hero-auth a, .auth-hint a, .cta-auth a { color: var(--cyan); font-weight: 800; text-underline-offset: 3px; }
@@ -1174,7 +1174,7 @@ section[id], #summary, #project-form, #estimate, .field, .opt-group { scroll-mar
 
 /* ---------- FAQ: heading beside the questions on desktop ---------- */
 .faq-wrap { display: grid; grid-template-columns: minmax(250px, .7fr) minmax(0, 1.5fr); gap: clamp(28px, 5vw, 70px); align-items: start; }
-.faq-left { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 100px); display: grid; gap: 22px; }
+.faq-left { position: sticky; top: calc(var(--hh, 73px) + 12px); display: grid; gap: 22px; }
 .faq-left .section-head { margin-bottom: 0; }
 .faq-wrap .faq { max-width: none; margin: 0; }
 .faq summary { min-height: 60px; }
@@ -1267,3 +1267,48 @@ main:focus { outline: none; }
 .legal-sec a { color: var(--cyan); }
 .legal-sec b { color: var(--fg); }
 .legal-date { font-size: .86rem; }
+
+
+/* ==========================================================================
+   NAVIGATION (nav.js): phone menu drawer, current page / section, back to top
+   ========================================================================== */
+/* a logged-in customer never sees "Login / Register" first: the flag is set in <head>, before the page is drawn */
+.auth-in [data-auth-out] { display: none !important; }
+html:not(.auth-in) [data-auth-in] { display: none !important; }
+
+/* phone menu: a drawer that fits the screen, with a dim backdrop; the page behind does not scroll */
+@media (max-width: 900px) {
+  .nav-links { max-height: calc(100vh - var(--hh, 73px)); max-height: calc(100dvh - var(--hh, 73px)); overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; box-shadow: 0 30px 60px -20px rgba(0, 0, 0, .8); }
+  .nav-links li a:not(.btn) { min-height: 52px; display: flex; align-items: center; }
+  .nav-links a[aria-current]:not(.btn) { color: var(--cyan); }
+  .nav-links li a.nav-cta, .nav-links li a.nav-reg { display: inline-flex; }
+}
+html.menu-lock { overflow: hidden; }
+.nav-backdrop { position: fixed; inset: 0; z-index: 49; background: rgba(2, 5, 16, .66); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); animation: nav-fade .25s ease; }
+.nav-backdrop[hidden] { display: none; }
+@keyframes nav-fade { from { opacity: 0; } to { opacity: 1; } }
+/* without JavaScript the menu is just shown */
+html:not(.js) .menu-btn { display: none; }
+@media (max-width: 900px) { html:not(.js) .nav-links { position: static; visibility: visible; opacity: 1; transform: none; max-height: none; flex-direction: row; flex-wrap: wrap; gap: 4px 18px; padding: 0 0 14px; box-shadow: none; background: none; border: 0; } html:not(.js) .nav { flex-wrap: wrap; } }
+
+/* the page you are on (and, on the home page, the section you are reading) */
+.nav-links a[aria-current="page"]:not(.btn), .nav-links a[aria-current="location"]:not(.btn) { color: var(--fg); }
+.nav-links a[aria-current="page"]:not(.btn)::after, .nav-links a[aria-current="location"]:not(.btn)::after { transform: scaleX(1); }
+
+/* back to top */
+.to-top { position: fixed; left: 16px; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); z-index: 44; width: 48px; height: 52px; display: grid; place-items: center; border: 0; padding: 0; color: #fff; cursor: pointer; background: var(--grad); clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); opacity: 0; visibility: hidden; transform: translateY(12px); transition: opacity .25s ease, transform .3s var(--ease), visibility 0s .3s; }
+.to-top.show { opacity: 1; visibility: visible; transform: none; transition: opacity .25s ease, transform .3s var(--ease); }
+.to-top:hover { filter: brightness(1.12); }
+.to-top:focus-visible { clip-path: none; border-radius: 12px; }
+.to-top svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+body.planner-page .to-top { bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
+@media (min-width: 1001px) { body.planner-page .to-top { bottom: calc(18px + env(safe-area-inset-bottom, 0px)); } }
+.acc-crumbs { padding-top: clamp(18px, 3vw, 30px); }
+.acc-crumbs + .acc-main { padding-top: 14px; }
+.page-head .crumbs { margin-bottom: 14px; }
+.acc-crumbs { max-width: 860px; }
+
+/* a #link lands with the section's heading just under the header, not with 100 px of empty padding above it */
+section { --sec-pad: clamp(70px, 9vw, 120px); }
+.svc-section { --sec-pad: clamp(50px, 7vw, 90px); }
+section[id]:not(.estimate) { scroll-margin-top: calc(var(--hh, 73px) + 12px - var(--sec-pad)); }

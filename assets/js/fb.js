@@ -50,11 +50,13 @@
       exp: Date.now() + (Number(j.expiresIn || j.expires_in) || 3600) * 1000
     });
     store.set(KEY, S);
+    tell();
   }
+  const tell = () => { try { window.dispatchEvent(new Event("hx:auth")); } catch (e) { /* old browser */ } };   // nav.js updates the header
   const auth = (path, body) => http("https://identitytoolkit.googleapis.com/v1/accounts:" + path + "?key=" + encodeURIComponent(F.apiKey), post(body));
   async function signUp(phone, pin, name) { keep(await auth("signUp", { email: emailFor(phone), password: pin, returnSecureToken: true }), { phone: phone, name: name }); }
   async function signIn(phone, pin) { S = null; keep(await auth("signInWithPassword", { email: emailFor(phone), password: pin, returnSecureToken: true }), { phone: phone }); }
-  function signOut() { S = null; store.del(KEY); }
+  function signOut() { S = null; store.del(KEY); tell(); }
   async function token() {
     if (!S) { const er = new Error("signed out"); er.reason = "UNAUTHENTICATED"; throw er; }
     if (Date.now() > S.exp - 5 * 60000) {
@@ -68,7 +70,7 @@
     return S.id;
   }
   async function changePin(pin) { keep(await auth("update", { idToken: await token(), password: pin, returnSecureToken: true })); }
-  function setName(name) { if (S) { S.name = name; store.set(KEY, S); } }
+  function setName(name) { if (S) { S.name = name; store.set(KEY, S); tell(); } }
 
   /* ---------- Firestore ---------- */
   async function fs(method, path, body, query) {

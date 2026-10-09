@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@400;500;600;700;800&family=Michroma&family=Noto+Sans+Sinhala:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="assets/css/style.css">
-  <script>document.documentElement.classList.add("js");</script>
+  <script>document.documentElement.classList.add("js");try{var c=JSON.parse(localStorage.getItem("hx_customer_v1"));if(c&&c.uid)document.documentElement.classList.add("auth-in");if(sessionStorage.getItem("hx_seen"))document.documentElement.classList.add("no-loader")}catch(e){}</script>
 </head>
 <body class="account-page">
 
@@ -37,13 +37,14 @@
       <li><a href="index.html#faq">FAQ</a></li>
       <li data-auth-out><a href="account.html" aria-current="page">Login</a></li>
       <li data-auth-out><a class="btn nav-reg" href="account.html?new=1">Register</a></li>
-      <li data-auth-in hidden><a href="account.html" aria-current="page">මගේ projects</a></li>
+      <li data-auth-in><a href="account.html" aria-current="page">මගේ projects</a></li>
       <li><a class="btn btn-primary nav-cta" href="start-project.html">Project එක පටන් ගන්න</a></li>
     </ul>
   </nav>
 </header>
 
 <main id="main" tabindex="-1">
+  <div class="wrap acc-crumbs"><nav aria-label="Breadcrumb"><ol class="crumbs"><li><a href="index.html">Home</a></li><li>මගේ projects</li></ol></nav></div>
   <!-- Login, sign up and the customer's projects are drawn by assets/js/account.js (data: Firebase) -->
   <div class="wrap acc-main" id="acc-root">
     <noscript><p class="muted">මේ page එකට JavaScript ඕන.</p></noscript>
@@ -76,7 +77,7 @@
           <li><a href="start-project.html">Project එක පටන් ගන්න</a></li>
           <li data-auth-out><a href="account.html">Login</a></li>
           <li data-auth-out><a href="account.html?new=1">Register</a></li>
-          <li data-auth-in hidden><a href="account.html">මගේ projects</a></li>
+          <li data-auth-in><a href="account.html">මගේ projects</a></li>
           <li hidden><a data-facebook href="#" target="_blank" rel="noopener">Facebook</a></li>
           <li hidden><a data-youtube href="#" target="_blank" rel="noopener">YouTube</a></li>
           <li><a href="privacy.html">Privacy</a></li>
@@ -94,6 +95,7 @@
 <script src="assets/js/config.js"></script>
 <script src="assets/js/fb.js"></script>
 <script src="assets/js/chat.js"></script>
+<script src="assets/js/nav.js"></script>
 <script src="assets/js/boot.js" data-load="pricing.js main.js account.js"></script>
 </body>
 </html>
