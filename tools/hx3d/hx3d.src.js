@@ -22,13 +22,16 @@ function hexShape(r, hole) {
   if (hole) { const h = new Path(); hexPoints(hole).reverse().forEach(([x, y], i) => (i ? h.lineTo(x, y) : h.moveTo(x, y))); h.closePath(); s.holes.push(h); }
   return s;
 }
-// vertical brand gradient baked into the geometry: cyan at the top → blue → violet at the bottom
+// the brand gradient, sampled from the logo file: cyan (top) -> blue -> violet (bottom), slightly deeper towards the right
+const STOPS = [[0, "#11D2FC"], [.32, "#0A8CFD"], [.62, "#1C53FB"], [1, "#5634FD"]].map(([t, c]) => [t, new Color(c)]);
 function paint(geo) {
   geo.computeBoundingBox();
   const { min, max } = geo.boundingBox, pos = geo.attributes.position, col = new Float32Array(pos.count * 3), c = new Color();
   for (let i = 0; i < pos.count; i++) {
-    const t = 1 - (pos.getY(i) - min.y) / (max.y - min.y || 1);
-    if (t < .5) c.copy(CYAN).lerp(BLUE, t / .5); else c.copy(BLUE).lerp(VIOLET, (t - .5) / .5);
+    const t = Math.min(1, Math.max(0, 1 - (pos.getY(i) - min.y) / (max.y - min.y || 1)));
+    let k = 1; while (k < STOPS.length - 1 && t > STOPS[k][0]) k++;
+    const [t0, c0] = STOPS[k - 1], [t1, c1] = STOPS[k];
+    c.copy(c0).lerp(c1, (t - t0) / (t1 - t0));
     col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
   }
   geo.setAttribute("color", new BufferAttribute(col, 3));
@@ -37,16 +40,45 @@ function paint(geo) {
 const bevel = (depth, size) => ({ depth, bevelEnabled: true, bevelThickness: size, bevelSize: size, bevelSegments: 5, curveSegments: 6 });
 const glossy = extra => new MeshPhysicalMaterial(Object.assign({ vertexColors: true, metalness: .55, roughness: .22, clearcoat: 1, clearcoatRoughness: .12, envMapIntensity: 1.1 }, extra));
 
-// the Hexora mark: a gradient hexagon ring and a satin-white H (same proportions as the site icon)
+// the Hexora mark, rebuilt from the logo file: two slanted side bars and the diagonal crossbar that together read as an "H" inside a hexagon.
+// Corner points are measured on the 1254 px logo (centre 626,475; y grows downwards).
+const LOGO = {
+  left: [[407, 348], [549, 268], [549, 683], [407, 602]],
+  right: [[705, 268], [846, 348], [846, 602], [705, 683]],
+  bar: [[476, 508], [705, 392], [705, 478], [549, 552]]
+};
+function logoShape(pts) {
+  const sh = new Shape();
+  pts.forEach(([x, y], i) => { const X = (x - 626) / 211, Y = -(y - 475) / 211; i ? sh.lineTo(X, Y) : sh.moveTo(X, Y); });
+  sh.closePath(); return sh;
+}
 function mark() {
   const g = new Group();
-  const ring = paint(new ExtrudeGeometry(hexShape(1, .8), bevel(.2, .04))); ring.center();
-  g.add(new Mesh(ring, glossy()));
-  const h = new Shape(), P = [[21, 18], [28, 18], [28, 29], [36, 29], [36, 18], [43, 18], [43, 46], [36, 46], [36, 35], [28, 35], [28, 46], [21, 46]];
-  P.forEach(([x, y], i) => { const X = (x - 32) / 32 * .98, Y = -(y - 32) / 32 * .98; i ? h.lineTo(X, Y) : h.moveTo(X, Y); }); h.closePath();
-  const hg = new ExtrudeGeometry(h, bevel(.16, .03)); hg.center();
-  g.add(new Mesh(hg, new MeshPhysicalMaterial({ color: new Color("#eef3ff"), metalness: .25, roughness: .32, clearcoat: 1, clearcoatRoughness: .2, envMapIntensity: .9 })));
+  const all = new Group();   // centred as one piece, so the vertical gradient runs over the whole logo
+  const mats = glossy({ metalness: .1, roughness: .42, clearcoat: .55, clearcoatRoughness: .18, envMapIntensity: .42 });
+  const depth = { left: .34, right: .34, bar: .22 };
+  for (const k of ["left", "right", "bar"]) {
+    const geo = new ExtrudeGeometry(logoShape(LOGO[k]), bevel(depth[k], .018));
+    geo.translate(0, 0, -depth[k] / 2);
+    all.add(new Mesh(paintGlobal(geo), mats));
+  }
+  g.add(all);
   return g;
+}
+// like paint(), but with the gradient spanning the whole logo (y from -1 to 1) instead of each piece on its own
+function paintGlobal(geo) {
+  const pos = geo.attributes.position, col = new Float32Array(pos.count * 3), c = new Color();
+  for (let i = 0; i < pos.count; i++) {
+    const t = Math.min(1, Math.max(0, (1 - pos.getY(i)) / 2));
+    let k = 1; while (k < STOPS.length - 1 && t > STOPS[k][0]) k++;
+    const [t0, c0] = STOPS[k - 1], [t1, c1] = STOPS[k];
+    c.copy(c0).lerp(c1, (t - t0) / (t1 - t0));
+    const side = Math.min(1, Math.max(0, (pos.getX(i) + 1) / 2));   // a little deeper towards the right, as in the logo
+    c.multiplyScalar(1 - .18 * side);
+    col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
+  }
+  geo.setAttribute("color", new BufferAttribute(col, 3));
+  return geo;
 }
 // a dark glass hex tile with a gradient rim and a glowing line icon on its face
 function tile(icon) {
@@ -72,14 +104,14 @@ export function mount(el, opts) {
   try { renderer = new WebGLRenderer({ antialias: true, alpha: true, powerPreference: "low-power" }); } catch (e) { return null; }
   const small = Math.min(innerWidth, innerHeight) < 700;
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, small ? 1.25 : 1.5));
-  renderer.toneMapping = ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05; renderer.outputColorSpace = SRGBColorSpace;
+  renderer.toneMapping = ACESFilmicToneMapping; renderer.toneMappingExposure = opts.kind === "tile" ? 1.05 : .95; renderer.outputColorSpace = SRGBColorSpace;
   const cv = renderer.domElement; cv.className = "hx3d-canvas"; cv.setAttribute("aria-hidden", "true");
   el.appendChild(cv);
 
   const scene = new Scene();
   const pmrem = new PMREMGenerator(renderer); scene.environment = pmrem.fromScene(new RoomEnvironment(), .04).texture; pmrem.dispose();
   scene.add(new AmbientLight(0x8fa6ff, .35));
-  const key = new DirectionalLight(0xffffff, 1.6); key.position.set(2.5, 3, 4); scene.add(key);
+  const key = new DirectionalLight(0xffffff, opts.kind === "tile" ? 1.6 : .9); key.position.set(2.5, 3, 4); scene.add(key);
   const rimL = new DirectionalLight(0x16d9ff, 2.2); rimL.position.set(-3.5, 1.5, -2); scene.add(rimL);
   const rimR = new DirectionalLight(0x7b3bff, 1.6); rimR.position.set(3.5, -2, -2.5); scene.add(rimR);
 
