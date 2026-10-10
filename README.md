@@ -109,6 +109,13 @@ What made the difference, each measured on its own:
 - The hero video has a poster image, so the frame is never empty (iPhone low-power mode, data saver).
 - Still open: LCP is ~3 s on the simulated slow-4G profile because the first-visit loader's logo is the largest paint; repeat visits skip the loader.
 
+## UX rules applied (ui-ux-pro-max)
+- **Project form**: the service and package come first (the price shows at once); contact details are asked last, next to the Send button. Step numbers are counted from the steps that are shown.
+- **Account forms**: an error marks the exact box (red outline, read out with it, focused); every PIN box has a show / hide button; guessable PINs are refused at sign-up and when changing the PIN.
+- **Prices** appear with a short rise but always show the real number (no count-up from 0).
+- **Icons** are SVG line icons, not emoji (logged-in hint, refresh, package star, admin chat buttons).
+- Sinhala text is never letter-spaced (labels, steps, breadcrumbs, estimate bar).
+
 ## Browsers and devices that were actually run
 - **Chromium** (Blink): every page on 19 device / screen profiles (iPhone SE/13/14 Pro Max, Pixel 7, Galaxy S8/S9+/A55, iPad Mini/Pro, Galaxy Tab, laptops, 1080p, 1440p, 320 px, phones in landscape): no sideways scroll, no console errors, no CSP violations, no element stuck invisible, every control at least 44 px on touch.
 - **Real WebKit** (WebKitGTK 2.52, the engine family Safari uses) and **real Firefox 157**: every page at phone and desktop widths, plus the same click-through (menu, anchors, tabs, package ladder, FAQ, chat, back-to-top, service pages, project form, account form) — 42 / 48 checks each, all passing.
@@ -176,7 +183,7 @@ Good to know:
 - After changing `firestore.rules`, paste it again in Firebase → Firestore Database → Rules → **Publish**.
 
 ## Checks that were run (so you know it is solid)
-- 275 end-to-end checks against the Firebase emulators with the real `firestore.rules` (accounts, requests, chat, voice, security rules, slow / offline network), plus 81 admin-panel checks (every tab, validation, save / conflict / history, PIN change, search, CSV, polling), 50 public-site checks (every page on phone, tablet and desktop, footer, SEO files, shared-computer privacy) and 72 navigation checks (phone menu, anchors on slow connections, Back / Forward, tab addresses, login state, keyboard, no-JavaScript, header layout 901 – 1600 px).
+- 276 end-to-end checks against the Firebase emulators with the real `firestore.rules` (accounts, requests, chat, voice, security rules, slow / offline network), plus 81 admin-panel checks (every tab, validation, save / conflict / history, PIN change, search, CSV, polling), 50 public-site checks (every page on phone, tablet and desktop, footer, SEO files, shared-computer privacy) and 72 navigation checks (phone menu, anchors on slow connections, Back / Forward, tab addresses, login state, keyboard, no-JavaScript, header layout 901 – 1600 px).
 - axe-core accessibility scan: no violations on any page (phone and desktop); every colour pair is at least 4.5:1.
 - Every link, image and `#anchor` on every page resolves.
 

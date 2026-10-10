@@ -12,6 +12,19 @@
   if (!root || !FB) return;
 
   const $ = (s, r = document) => r.querySelector(s);
+  // every PIN box gets a show / hide button (the forms are redrawn often, so this watches the page)
+  const EYE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+  function eyes() {
+    root.querySelectorAll("input.acc-pin:not([data-eye])").forEach(inp => {
+      inp.setAttribute("data-eye", "1");
+      const wrap = document.createElement("span"); wrap.className = "pin-wrap"; inp.parentNode.insertBefore(wrap, inp); wrap.appendChild(inp);
+      const b = document.createElement("button"); b.type = "button"; b.className = "pin-eye"; b.innerHTML = EYE;
+      b.setAttribute("aria-label", "PIN එක පෙන්නන්න"); b.setAttribute("aria-pressed", "false"); b.setAttribute("aria-controls", inp.id);
+      b.addEventListener("click", () => { const show = inp.type === "password"; inp.type = show ? "text" : "password"; b.setAttribute("aria-pressed", String(show)); b.setAttribute("aria-label", show ? "PIN එක හංගන්න" : "PIN එක පෙන්නන්න"); inp.focus(); });
+      wrap.appendChild(b);
+    });
+  }
+  if ("MutationObserver" in window) new MutationObserver(eyes).observe(root, { childList: true, subtree: true });
   const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const CLAIMS = "hx_claims_v1";
   const STAGES = FB.stages, stageOf = k => STAGES.find(s => s.key === k) || STAGES[0];
@@ -19,7 +32,13 @@
   const fmtDay = d => { if (!d) return ""; const x = new Date(/^\d{4}-\d{2}-\d{2}$/.test(d) ? d + "T00:00:00" : d); return isNaN(x) ? "" : x.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }); };
   let mode = "login", projects = null, profile = null, poll = null;
 
-  function msg(text, ok) { const m = $("#acc-msg"); if (m) { m.textContent = text || ""; m.classList.toggle("ok", !!ok); } }
+  // the message under the form; with a field id the error is tied to that box (red outline, read out with it, focused)
+  function msg(text, ok, field) {
+    const m = $("#acc-msg"); if (m) { m.textContent = text || ""; m.classList.toggle("ok", !!ok); }
+    root.querySelectorAll("[aria-invalid]").forEach(el => { el.removeAttribute("aria-invalid"); el.removeAttribute("aria-describedby"); });
+    const f = field && document.getElementById(field);
+    if (f) { f.setAttribute("aria-invalid", "true"); f.setAttribute("aria-describedby", "acc-msg"); f.focus(); }
+  }
 
   /* ---------- login / sign up ---------- */
   function gate() {
@@ -69,8 +88,8 @@
   }
   async function forgot(form) {
     const name = $("#f-fname").value.trim(), phone = FB.phoneId($("#f-fphone").value), btn = form.querySelector("button[type=submit]");
-    if (name.length < 2) return msg("ඔයාගේ නම ගහන්න.");
-    if (!phone) return msg("Phone number එක හරියට ගහන්න (Ex: 077 123 4567).");
+    if (name.length < 2) return msg("ඔයාගේ නම ගහන්න.", false, "f-fname");
+    if (!phone) return msg("Phone number එක හරියට ගහන්න (Ex: 077 123 4567).", false, "f-fphone");
     btn.disabled = true; msg("");
     const id = FB.newId() + FB.newId();
     try {
@@ -104,11 +123,11 @@
   async function submit(form) {
     const up = mode === "signup", btn = form.querySelector("button[type=submit]");
     const name = up ? $("#a-name").value.trim() : "", phone = FB.phoneId($("#a-phone").value), pin = $("#a-pin").value;
-    if (up && name.length < 2) return msg("ඔයාගේ නම ගහන්න.");
-    if (!phone) return msg("Phone number එක හරියට ගහන්න (Ex: 077 123 4567).");
-    if (!/^\d{6}$/.test(pin)) return msg("PIN එක digits 6ක් වෙන්න ඕන.");
-    if (up && weakPin(pin)) return msg("මේ PIN එක ඉතා පහසුවෙන් අනුමාන කරන්න පුළුවන් (111111, 123456 වගේ). වෙන එකක් තෝරන්න.");
-    if (up && pin !== $("#a-pin2").value) return msg("PIN දෙක සමාන නෑ.");
+    if (up && name.length < 2) return msg("ඔයාගේ නම ගහන්න.", false, "a-name");
+    if (!phone) return msg("Phone number එක හරියට ගහන්න (Ex: 077 123 4567).", false, "a-phone");
+    if (!/^\d{6}$/.test(pin)) return msg("PIN එක digits 6ක් වෙන්න ඕන.", false, "a-pin");
+    if (up && weakPin(pin)) return msg("මේ PIN එක ඉතා පහසුවෙන් අනුමාන කරන්න පුළුවන් (111111, 123456 වගේ). වෙන එකක් තෝරන්න.", false, "a-pin");
+    if (up && pin !== $("#a-pin2").value) return msg("PIN දෙක සමාන නෑ.", false, "a-pin2");
     btn.disabled = true; msg(up ? "Account එක හදනවා…" : "Login වෙනවා…", true);
     try {
       if (up) {
@@ -246,7 +265,7 @@
         '<div><span class="eyebrow">මගේ projects</span><h1 class="display">ආයුබෝවන්' + (name ? ", " + esc(name) : "") + "</h1>" +
           '<p class="muted">' + esc(FB.phoneLabel(me.phone)) + "</p></div>" +
         '<div class="acc-actions"><a class="btn btn-primary" href="start-project.html">අලුත් project එකක්</a>' +
-          '<button class="btn" type="button" data-act="reload" aria-label="Refresh">↻</button></div>' +
+          '<button class="btn" type="button" data-act="reload" aria-label="Refresh"><svg class="ic-inline" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button></div>' +
       "</section>" +
       '<nav class="acc-tabs2" role="tablist" aria-label="Account menu">' +
         '<button type="button" role="tab" data-act="tab" data-tab="projects" aria-selected="' + (tab === "projects") + '">මගේ projects <i class="acc-dot" data-tab-dot hidden>අලුත්</i></button>' +
@@ -256,8 +275,8 @@
   }
 
   async function saveName(form) {
-    const name = $("#s-name").value.trim(), me = FB.user(), btn = form.querySelector("button");
-    if (name.length < 2) return msg("නම අකුරු 2කට වඩා වෙන්න ඕන.");
+    const name = $("#s-name").value.trim(), me = FB.user(), btn = form.querySelector(".btn");
+    if (name.length < 2) return msg("නම අකුරු 2කට වඩා වෙන්න ඕන.", false, "s-name");
     btn.disabled = true;
     try {
       if (profile) await FB.patch("/customers/" + me.uid, { name: name }, ["name"]);
@@ -267,9 +286,10 @@
     } catch (e) { msg(FB.errText(e)); btn.disabled = false; }
   }
   async function savePin(form) {
-    const a = $("#s-pin").value, b = $("#s-pin2").value, btn = form.querySelector("button");
-    if (!/^\d{6}$/.test(a)) return msg("PIN එක digits 6ක් වෙන්න ඕන.");
-    if (a !== b) return msg("PIN දෙක සමාන නෑ.");
+    const a = $("#s-pin").value, b = $("#s-pin2").value, btn = form.querySelector(".btn");
+    if (!/^\d{6}$/.test(a)) return msg("PIN එක digits 6ක් වෙන්න ඕන.", false, "s-pin");
+    if (weakPin(a)) return msg("මේ PIN එක ඉතා පහසුවෙන් අනුමාන කරන්න පුළුවන් (111111, 123456 වගේ). වෙන එකක් තෝරන්න.", false, "s-pin");
+    if (a !== b) return msg("PIN දෙක සමාන නෑ.", false, "s-pin2");
     btn.disabled = true;
     try {
       await FB.changePin(a);

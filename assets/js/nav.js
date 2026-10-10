@@ -171,7 +171,7 @@
   /* ---------- Sinhala is never letter-spaced ----------
      The small caps-style labels (eyebrows, times, price captions, badges) are tracked out for Latin letters, but tracking pulls
      Sinhala's joined letters apart. A label that contains Sinhala gets class "si" (letter-spacing: 0). Runs again for content built later. */
-  const SI = /[\u0D80-\u0DFF]/, LABELS = ".eyebrow, .picker-cap, .tl-time, .price-from, .badge, .pkg-badge, .rung-badge, .est-label, .foot-h, .svc-label, .video-tag, .chip, .rate-pill, .tags span, .ad-pill";
+  const SI = /[\u0D80-\u0DFF]/, LABELS = ".eyebrow, .picker-cap, .tl-time, .price-from, .badge, .pkg-badge, .rung-badge, .est-label, .foot-h, .svc-label, .video-tag, .chip, .rate-pill, .tags span, .ad-pill, .stepper li, .crumbs li, .crumbs a, .est-total, .est-label, .cat-tab, .tab small, .pk-meta, .price-usd";
   const tagSi = () => $$(LABELS).forEach(el => { const on = SI.test(el.textContent); if (el.classList.contains("si") !== on) el.classList.toggle("si", on); });
   tagSi();
   window.addEventListener("hx:ready", tagSi);
