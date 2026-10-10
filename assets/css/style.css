@@ -1028,7 +1028,7 @@ section[id], #summary, #project-form, #estimate, .field, .opt-group { scroll-mar
 
 /* "what do you need?" picker under the hero */
 .picker-wrap { position: relative; margin-top: clamp(40px, 6vw, 66px); }
-.picker { position: relative; list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--line-strong); background: rgba(9, 15, 43, .78); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.picker { position: relative; list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--line-strong); background: rgba(9, 15, 43, .92); }
 .picker > li + li { border-left: 1px solid var(--line); }
 .picker-cap { position: absolute; z-index: 2; left: calc(var(--gutter) + 18px); top: -11px; margin: 0; padding: 2px 12px; background: var(--bg); font-family: var(--f-mono); font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; color: var(--cyan); }
 .pick { position: relative; display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center; min-height: 92px; padding: 18px 20px; text-decoration: none; transition: background-color .25s ease; }
@@ -1312,3 +1312,69 @@ body.planner-page .to-top { bottom: calc(92px + env(safe-area-inset-bottom, 0px)
 section { --sec-pad: clamp(70px, 9vw, 120px); }
 .svc-section { --sec-pad: clamp(50px, 7vw, 90px); }
 section[id]:not(.estimate) { scroll-margin-top: calc(var(--hh, 73px) + 12px - var(--sec-pad)); }
+
+
+/* ==========================================================================
+   PREMIUM POLISH (typography, surfaces, motion, resilience)
+   ========================================================================== */
+:root {
+  --lift: 0 28px 60px -30px rgba(6, 18, 80, .9);          /* shadows are tinted with the page's navy, never plain black */
+  --edge: inset 0 1px 0 rgba(255, 255, 255, .06);          /* a faint top highlight: one light source, top-left */
+  --spring: cubic-bezier(.32, .72, 0, 1);
+}
+/* type: balanced headings, no one-word last lines, calmer measure */
+h1, h2, h3, .display { text-wrap: balance; }
+p, li, .lead { text-wrap: pretty; }
+h1.display { font-size: clamp(1.8rem, 4.7vw, 3.6rem); letter-spacing: -.012em; }
+h2.display { letter-spacing: -.006em; }
+body { font-feature-settings: "kern", "liga", "calt"; text-rendering: optimizeLegibility; }
+.lead { line-height: 1.7; }
+
+/* surfaces: faint inner highlight on every panel, tinted lift on the important ones */
+.price-card, .pk-panel, .rung, .tl-body, .term, .cta-band, .picker, .legal-sec, .acc-card, .acc-proj, .form-step, .summary, .estimate, .svc-box, .faq details, .ad-card { box-shadow: var(--edge); }
+.pk-panel, .cta-band, .estimate { box-shadow: var(--edge); }
+.price-card:hover, .rung[aria-selected="true"] { box-shadow: var(--edge); }
+/* a second hairline frame inside the main panels (a plate sitting in a tray) */
+.pk-panel { position: relative; }
+.pk-panel::after { content: ""; position: absolute; inset: 7px; pointer-events: none; border: 1px solid rgba(255, 255, 255, .045);
+  clip-path: polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px); }
+.pk-panel > * { position: relative; z-index: 1; }
+
+/* a very fine grain over the whole page (fixed, never scrolls, ignores the pointer) */
+body::after { content: ""; position: fixed; inset: 0; z-index: 40; pointer-events: none; opacity: .045; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+/* buttons: the arrow lives in its own small disc and moves a little on hover */
+.btn svg.arrow { width: 28px; height: 28px; padding: 7px; border-radius: 50%; background: rgba(255, 255, 255, .2); margin-right: -10px; transition: transform .45s var(--spring), background-color .3s ease; }
+.btn:hover svg.arrow { transform: translate(3px, -1px) scale(1.06); background: rgba(255, 255, 255, .3); }
+.btn { transition-timing-function: var(--spring); }
+
+/* motion: lists arrive one after another (transform + opacity only) */
+@media (prefers-reduced-motion: no-preference) {
+  .js .svx.rv .svx-list li, .js .faq.rv details, .js .ladder.rv .rung { opacity: 0; transform: translateY(14px); }
+  .js .svx.rv.in .svx-list li, .js .faq.rv.in details, .js .rv.in .ladder .rung { opacity: 1; transform: none; transition: opacity .7s var(--spring), transform .8s var(--spring); }
+  .js .svx.rv.in .svx-list li:nth-child(2), .js .faq.rv.in details:nth-child(2) { transition-delay: 60ms; }
+  .js .svx.rv.in .svx-list li:nth-child(3), .js .faq.rv.in details:nth-child(3) { transition-delay: 120ms; }
+  .js .svx.rv.in .svx-list li:nth-child(4), .js .faq.rv.in details:nth-child(4) { transition-delay: 180ms; }
+  .js .svx.rv.in .svx-list li:nth-child(5), .js .faq.rv.in details:nth-child(5) { transition-delay: 240ms; }
+  .js .svx.rv.in .svx-list li:nth-child(n + 6), .js .faq.rv.in details:nth-child(n + 6) { transition-delay: 300ms; }
+}
+
+/* a little more air between the big sections on a computer */
+@media (min-width: 1100px) { section { --sec-pad: clamp(96px, 9vw, 132px); } }
+
+/* high-contrast / forced-colours mode: cut-corner shapes keep a real outline, nothing relies on a background colour */
+@media (forced-colors: active) {
+  .btn, .rung, .price-card, .pk-panel, .tl-body, .term, .cta-band, .picker, .legal-sec, .acc-card, .acc-proj, .form-step, .summary, .estimate, .svc-box, .faq details, .to-top, .skip-link, .ad-card { clip-path: none; border: 1px solid CanvasText; }
+  .btn::before, .btn::after, body::after { display: none; }
+  .rung[aria-selected="true"], .tab[aria-selected="true"], .svx-tab[aria-selected="true"] { outline: 2px solid Highlight; }
+}
+
+/* printing the estimate / a page: no menus, chat or backgrounds, black on white */
+@media print {
+  .site-header, .wa-float, .float-chat, .to-top, #fx, .loader, .progress, .est-bar, .notice-bar, .lc, .skip-link, body::after, .nav-backdrop, .site-footer .foot-grid + .foot-bottom .admin-lock { display: none !important; }
+  body { background: #fff; color: #000; }
+  * { color: #000 !important; box-shadow: none !important; text-shadow: none !important; background-image: none !important; }
+  .form-step, .summary, .price-card, .legal-sec, .estimate { background: #fff !important; border: 1px solid #999 !important; clip-path: none !important; break-inside: avoid; }
+  a { text-decoration: underline; }
+}
