@@ -20,11 +20,15 @@
 .pin-input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 .pin-pad { display: grid; grid-template-columns: repeat(3, 64px); gap: 12px; justify-content: center; }
 .pin-pad button { width: 64px; height: 64px; border-radius: 50%; border: 1px solid var(--line-strong); background: var(--bg-2); color: var(--fg); font-family: var(--f-mono); font-size: 1.3rem; cursor: pointer; display: grid; place-items: center; transition: border-color .15s ease, transform .1s ease, background-color .15s ease; }
-.pin-pad button:hover { border-color: var(--cyan); }
+@media (hover: hover) and (pointer: fine) {
+  .pin-pad button:hover { border-color: var(--cyan); }
+}
 .pin-pad button:active { transform: scale(.93); background: var(--surface-2); }
 .pin-pad .ad-ico { width: 20px; height: 20px; }
 .ad-back { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; border: 0; background: none; color: var(--faint); font-size: .85rem; text-decoration: none; cursor: pointer; }
-.ad-back:hover { color: var(--fg); }
+@media (hover: hover) and (pointer: fine) {
+  .ad-back:hover { color: var(--fg); }
+}
 .ad-steps { text-align: left; display: grid; gap: 8px; margin: 0; padding-left: 20px; color: var(--muted); font-size: .9rem; justify-self: stretch; }
 .ad-steps a { color: var(--cyan); }
 .ad-connect { display: grid; gap: 10px; justify-self: stretch; text-align: left; }
@@ -43,7 +47,9 @@
 .btn.armed { border-color: var(--danger); color: var(--danger); }
 .ad-tabs { display: flex; gap: 6px; overflow-x: auto; padding: 12px var(--gutter); border-bottom: 1px solid var(--line); scrollbar-width: thin; }
 .ad-tabs button { flex: none; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: var(--muted); font-weight: 700; font-size: .88rem; cursor: pointer; }
-.ad-tabs button:hover { color: var(--fg); }
+@media (hover: hover) and (pointer: fine) {
+  .ad-tabs button:hover { color: var(--fg); }
+}
 .ad-tabs button[aria-selected="true"] { color: var(--fg); border-color: var(--cyan); background: linear-gradient(140deg, rgba(22, 217, 255, .1), rgba(123, 59, 255, .1)); }
 .ad-main { display: grid; gap: 18px; width: 100%; max-width: 1120px; margin-inline: auto; padding: 24px var(--gutter); }
 
@@ -71,7 +77,9 @@
 /* dashboard */
 .ad-stats { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 160px), 1fr)); }
 .ad-stat { display: grid; gap: 2px; text-align: left; padding: 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--bg-2); color: var(--fg); cursor: pointer; transition: border-color .2s ease; }
-.ad-stat:hover { border-color: var(--line-strong); }
+@media (hover: hover) and (pointer: fine) {
+  .ad-stat:hover { border-color: var(--line-strong); }
+}
 .ad-stat b { font-family: var(--f-mono); font-size: 1.3rem; }
 .ad-stat span { color: var(--faint); font-size: .8rem; }
 
@@ -83,7 +91,9 @@
 .ad-add { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .ad-add .input { flex: 1 1 200px; min-height: 40px; padding: 8px 12px; }
 .ad-mini { display: inline-grid; place-items: center; min-width: 32px; height: 32px; padding: 0; border-radius: 9px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); cursor: pointer; font-size: .78rem; font-weight: 700; }
-.ad-mini:hover { color: var(--fg); border-color: var(--line-strong); }
+@media (hover: hover) and (pointer: fine) {
+  .ad-mini:hover { color: var(--fg); border-color: var(--line-strong); }
+}
 .ad-mini.armed { padding: 0 8px; color: var(--danger); border-color: var(--danger); }
 
 /* lists (FAQ, steps, price refs) */
@@ -99,7 +109,9 @@
 .ad-svc-cat { margin-top: 8px; font-family: var(--f-mono); font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); }
 .ad-svc-cat:first-child { margin-top: 0; }
 .ad-svc-list button:not(.btn) { display: flex; align-items: center; gap: 9px; padding: 9px 10px; border-radius: 10px; border: 1px solid transparent; background: none; color: var(--muted); font-weight: 700; font-size: .88rem; text-align: left; cursor: pointer; }
-.ad-svc-list button:not(.btn):hover { color: var(--fg); }
+@media (hover: hover) and (pointer: fine) {
+  .ad-svc-list button:not(.btn):hover { color: var(--fg); }
+}
 .ad-svc-list button[aria-current="true"] { color: var(--fg); border-color: var(--cyan); background: rgba(22, 217, 255, .07); }
 .ad-svc-list .ad-ico { stroke: var(--cyan); stroke-width: 1.8; }
 .ad-svc-list .btn { margin-top: 10px; }
@@ -212,7 +224,9 @@ details.ad-req > summary.ad-req-head > div { flex: 1; }
 .ad-todo-i { display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 16px; border: 1px solid rgba(255, 92, 122, .5); background: rgba(255, 92, 122, .08); color: var(--fg); font-weight: 700; cursor: pointer; clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); }
 .ad-todo-i b { display: inline-grid; place-items: center; min-width: 26px; height: 26px; padding: 0 7px; border-radius: 999px; background: var(--danger); color: #fff; font-family: var(--f-mono); font-size: .82rem; }
 .ad-hist-btn { width: 100%; text-align: left; color: var(--fg); cursor: pointer; font: inherit; }
-.ad-hist-btn:hover { border-color: var(--line-strong); }
+@media (hover: hover) and (pointer: fine) {
+  .ad-hist-btn:hover { border-color: var(--line-strong); }
+}
 @media (max-width: 640px) {
   .ad-stats { grid-template-columns: 1fr 1fr; }
   .ad-stat { padding: 12px; }
