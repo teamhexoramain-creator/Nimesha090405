@@ -5,6 +5,8 @@
    automatically (planner.js keeps a claim for each); other projects are linked from the admin panel. */
 (function () {
   "use strict";
+  // a PIN anyone would try first: one repeated digit, a run (123456 / 654321), pairs (121212, 112233) and a few famous ones
+  const weakPin = p => /^(\d)\1+$/.test(p) || "0123456789".indexOf(p) !== -1 || "9876543210".indexOf(p) !== -1 || /^(\d\d)\1\1$/.test(p) || /^(\d)\1(\d)\2(\d)\3$/.test(p) || ["696969", "159753", "147258", "123321", "100000", "010203", "202020"].indexOf(p) !== -1;
   const FB = window.HXFB, C = window.HEXORA || {};
   const root = document.getElementById("acc-root");
   if (!root || !FB) return;
@@ -105,6 +107,7 @@
     if (up && name.length < 2) return msg("ඔයාගේ නම ගහන්න.");
     if (!phone) return msg("Phone number එක හරියට ගහන්න (Ex: 077 123 4567).");
     if (!/^\d{6}$/.test(pin)) return msg("PIN එක digits 6ක් වෙන්න ඕන.");
+    if (up && weakPin(pin)) return msg("මේ PIN එක ඉතා පහසුවෙන් අනුමාන කරන්න පුළුවන් (111111, 123456 වගේ). වෙන එකක් තෝරන්න.");
     if (up && pin !== $("#a-pin2").value) return msg("PIN දෙක සමාන නෑ.");
     btn.disabled = true; msg(up ? "Account එක හදනවා…" : "Login වෙනවා…", true);
     try {

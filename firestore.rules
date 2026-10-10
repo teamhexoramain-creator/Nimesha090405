@@ -56,7 +56,7 @@ service cloud.firestore {
     // browser that sent it knows. When the admin approves, the PIN is written into the document and that
     // browser (and only a reader who has the id) can read it for one hour. Everything else is admin only.
     match /pinRequests/{id} {
-      allow create: if id.size() >= 30
+      allow create: if id.matches('[A-Za-z0-9]{30,64}')
         && data().keys().hasOnly(['name', 'phone', 'createdAt'])
         && text('name', 100) && data().name.size() > 1
         && data().phone is string && data().phone.matches('[0-9]{10,15}')
@@ -72,7 +72,8 @@ service cloud.firestore {
     //   browser before they had an account, by showing its claim code (kept only in that browser).
     match /requests/{id} {
       allow create: if isAdmin() || (
-        data().keys().hasOnly(['ref', 'title', 'name', 'phone', 'email', 'business', 'contact', 'track', 'estimate', 'message', 'status', 'createdAt', 'uid', 'claim'])
+        id.matches('[A-Za-z0-9]{20}')
+        && data().keys().hasOnly(['ref', 'title', 'name', 'phone', 'email', 'business', 'contact', 'track', 'estimate', 'message', 'status', 'createdAt', 'uid', 'claim'])
         && data().keys().hasAll(['ref', 'name', 'phone', 'message', 'status', 'createdAt'])
         && text('ref', 20) && text('name', 100) && data().name.size() > 1
         && text('phone', 30) && text('message', 6000)
@@ -96,6 +97,7 @@ service cloud.firestore {
         allow read: if isAdmin() || (signedIn() && get(/databases/$(database)/documents/requests/$(id)).data.get('uid', '') == request.auth.uid);
         allow create: if isAdmin() || (signedIn()
           && get(/databases/$(database)/documents/requests/$(id)).data.get('uid', '') == request.auth.uid
+          && mid.matches('[A-Za-z0-9]{20}')
           && data().keys().hasOnly(['from', 'kind', 'text', 'data', 'mime', 'dur', 'wave', 'createdAt'])
           && data().keys().hasAll(['from', 'kind', 'text', 'createdAt'])
           && data().from == 'c'
@@ -103,7 +105,7 @@ service cloud.firestore {
           && text('text', 1000)
           && ((data().kind == 'text' && data().text.size() > 0 && !('data' in data()))
               || (data().kind != 'text' && data().data is string && data().data.size() > 100 && data().data.size() <= 700000
-                  && data().mime is string && data().mime.size() <= 40))
+                  && data().mime in ['image/jpeg', 'image/png', 'image/webp', 'audio/webm', 'audio/mp4', 'audio/ogg', 'audio/mpeg']))
           && (!('dur' in data()) || data().dur is int)
           && (!('wave' in data()) || (data().wave is string && data().wave.size() <= 80))
           && data().createdAt == request.time);
@@ -147,7 +149,7 @@ service cloud.firestore {
     match /guests/{gid} {
       allow get: if true;
       allow list: if isAdmin();
-      allow create: if gid.size() >= 30
+      allow create: if gid.matches('[A-Za-z0-9]{30,64}')
         && data().keys().hasOnly(['gid', 'name', 'phone', 'page', 'device', 'uid', 'createdAt', 'lastAt', 'lastFrom', 'lastText'])
         && data().gid == gid
         && text('name', 100) && data().name.size() > 1
@@ -168,6 +170,7 @@ service cloud.firestore {
       match /messages/{mid} {
         allow read: if true;
         allow create: if isAdmin() || (exists(/databases/$(database)/documents/guests/$(gid))
+          && mid.matches('[A-Za-z0-9]{20}')
           && data().keys().hasOnly(['from', 'kind', 'text', 'data', 'mime', 'dur', 'wave', 'createdAt'])
           && data().keys().hasAll(['from', 'kind', 'text', 'createdAt'])
           && data().from == 'c'
@@ -175,7 +178,7 @@ service cloud.firestore {
           && text('text', 1000)
           && ((data().kind == 'text' && data().text.size() > 0 && !('data' in data()))
               || (data().kind != 'text' && data().data is string && data().data.size() > 100 && data().data.size() <= 700000
-                  && data().mime is string && data().mime.size() <= 40))
+                  && data().mime in ['image/jpeg', 'image/png', 'image/webp', 'audio/webm', 'audio/mp4', 'audio/ogg', 'audio/mpeg']))
           && (!('dur' in data()) || data().dur is int)
           && (!('wave' in data()) || (data().wave is string && data().wave.size() <= 80))
           && data().createdAt == request.time);

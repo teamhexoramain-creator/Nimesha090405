@@ -21,8 +21,9 @@
   const pinLen = () => { const n = Number(store.get(KEYS.len)); return n >= PIN_MIN && n <= PIN_MAX ? n : PIN_MIN; };
   // a PIN that is easy to guess is refused: repeated digits, runs like 123456 / 654321, and a few famous ones
   const WEAK = ["123123", "112233", "121212", "100000", "696969", "159753", "147258", "123321", "010203", "202020"];
-  function pinProblem(p) {
-    if (!new RegExp("^\\d{" + PIN_MIN + "," + PIN_MAX + "}$").test(p)) return "PIN එක digits " + PIN_MIN + " – " + PIN_MAX + " අතර වෙන්න ඕන.";
+  function pinProblem(p, min) {
+    min = min || PIN_MIN;
+    if (!new RegExp("^\\d{" + min + "," + PIN_MAX + "}$").test(p)) return "PIN එක digits " + min + " – " + PIN_MAX + " අතර වෙන්න ඕන.";
     if (/^(\d)\1+$/.test(p)) return "PIN එකේ digits ඔක්කොම එකම වෙන්න බෑ.";
     const d = p.split("").map(Number);
     if (d.every((x, i) => i === 0 || x === d[i - 1] + 1) || d.every((x, i) => i === 0 || x === d[i - 1] - 1)) return "123456 වගේ පිළිවෙළට යන PIN එකක් බෑ.";
@@ -527,7 +528,7 @@
     if (!S.customers.length) return '<div class="ad-req-link"><span class="ad-hint">Customer account එකක් නෑ. Status එක online බලන්න customer ට "මගේ projects" page එකෙන් account එකක් හදාගන්න කියන්න.</span></div>';
     const ph = waNum(r.phone), match = S.customers.filter(c => c.phone === ph), rest = S.customers.filter(c => c.phone !== ph);
     return '<div class="ad-req-link">' + icon(I.user) + '<select class="input" data-link="' + esc(r.id) + '" aria-label="Customer account">' +
-      (match.length ? "" : '<option value="">Customer account එකකට link කරන්න…</option>') +
+      '<option value="">Customer account එකකට link කරන්න…</option>' +
       match.map(c => custOpt(c, " (phone එක match)")).join("") + rest.map(c => custOpt(c)).join("") + "</select>" +
       '<button type="button" class="btn ad-small" data-act="req-link" data-id="' + esc(r.id) + '">Link</button></div>';
   }
@@ -551,7 +552,7 @@
       '<div class="ad-req-actions">' +
         (wa ? '<a class="btn btn-wa ad-small" href="https://wa.me/' + wa + '" target="_blank" rel="noopener">WhatsApp</a>' : "") +
         (r.phone ? '<a class="btn ad-small" href="tel:' + esc(String(r.phone).replace(/[^\d+]/g, "")) + '">Call</a>' : "") +
-        (r.email ? '<a class="btn ad-small" href="mailto:' + esc(r.email) + '">Email</a>' : "") +
+        (r.email ? '<a class="btn ad-small" href="mailto:' + esc(encodeURIComponent(r.email).replace(/%40/g, "@")) + '">Email</a>' : "") +
         '<button type="button" class="btn btn-primary ad-small" data-act="req-save" data-id="' + id + '">Update</button>' +
         (r.uid ? '<button type="button" class="btn ad-small ad-chat-btn" data-act="chat" data-id="' + id + '" aria-expanded="false">💬 Chat</button>' : "") +
         mini("req-del", I.del, "මකන්න", ' data-id="' + id + '"') + "</div>" +
@@ -576,10 +577,10 @@
   VIEWS.live = () => {
     const ids = Object.keys(S.guests).sort((a, b) => ms(S.guests[b].lastAt) - ms(S.guests[a].lastAt));
     const rows = ids.map(id => {
-      const g = S.guests[id], acc = S.customers.find(c => c.id === g.uid || c.phone === g.phone);
+      const g = S.guests[id], acc = S.customers.find(c => c.id === g.uid), maybe = !acc && S.customers.find(c => c.phone === g.phone);
       return '<article class="ad-req' + (isUnreadG(id) ? " s-new" : "") + '">' +
         '<div class="ad-req-head"><div><b>' + esc(g.name || "—") + '</b><small>' + esc(phoneLabel(g.phone)) + " · " + esc(fmtDate(g.createdAt)) + '</small></div>' +
-          '<span class="ad-pill' + (acc ? " ok" : "") + '">' + (acc ? "Account: " + esc(acc.name) : "Login නැති visitor") + "</span></div>" +
+          '<span class="ad-pill' + (acc ? " ok" : "") + '">' + (acc ? "Account: " + esc(acc.name) : maybe ? "Phone එක match (verify කරලා නෑ)" : "Login නැති visitor") + "</span></div>" +
         '<div class="ad-req-meta">' + [g.page ? "Page: " + g.page : "", g.device].filter(Boolean).map(x => "<span>" + esc(x) + "</span>").join("") + "<span>Phone verify කරලා නෑ</span></div>" +
         '<p class="ad-chat-note" data-gnote="' + esc(id) + '">' + (g.lastText ? "💬 " + esc(g.lastText) : "") + "</p>" +
         '<div class="ad-req-actions"><button type="button" class="btn btn-primary ad-small ad-chat-btn" data-act="glive" data-id="' + esc(id) + '" aria-expanded="false">💬 Chat <span class="ad-badge" data-adot="' + esc(id) + '"' + (isUnreadG(id) ? "" : " hidden") + ">අලුත්</span></button>" +
@@ -602,7 +603,7 @@
         (c ? '<div class="ad-req-meta"><span>Account: ' + esc(c.name) + "</span><span>" + (norm(c.name) === norm(r.name) ? "✓ නම ගැලපෙනවා" : "⚠ නම වෙනස්") + "</span></div>" +
             (c.pin ? '<p class="ad-pinline">PIN: <code class="ad-pin">' + esc(c.pin) + "</code></p>" : '<p class="ad-hint">මේ account එකේ PIN එක save වෙලා නෑ (පරණ account එකක්). Firebase → Authentication එකෙන් ඒ user ව delete කරන්න, customer ට අලුත් account එකක් හදන්න කියන්න.</p>')
           : '<p class="ad-hint">මේ phone number එකට account එකක් නෑ.</p>') +
-        (c && c.pin ? '<p class="ad-hint">නම ගැලපෙනවා නම් <b>App එකට යවන්න</b> (customer ගේ page එකේ පැයක් ඇතුළත PIN එක පේනවා). සැක නම් WhatsApp එකෙන් යවන්න.</p>' : "") +
+        (c && c.pin ? '<p class="ad-hint"><b>ආරක්ෂිතම විදිය: WhatsApp</b> (account එකේ phone number එකටම යනවා). <b>App එකට යවන්න</b> පාවිච්චි කරන්න ඔයා දන්න customer කෙනෙක් නම් විතරයි: නම + phone number දන්න ඕනම කෙනෙකුට request එකක් යවන්න පුළුවන්, ඒ නිසා නම ගැලපෙනවා කියන්නේ ඒ customer ම කියලා සාක්ෂියක් නෙවෙයි.</p>' : "") +
         '<div class="ad-req-actions">' + (c && c.pin ? '<button type="button" class="btn btn-primary ad-small" data-act="pin-send" data-id="' + esc(r.id) + '">' + (r.sentAt ? "ආයෙත් App එකට යවන්න" : "App එකට PIN එක යවන්න") + "</button>" + (r.sentAt ? '<span class="ad-pill ok">App එකට යැව්වා ' + esc(fmtDate(r.sentAt)) + "</span>" : "") + '<a class="btn btn-wa ad-small" href="' + esc(wa) + '" target="_blank" rel="noopener">PIN එක WhatsApp කරන්න</a>' : "") +
         '<button type="button" class="btn ad-small" data-act="pin-done" data-id="' + esc(r.id) + '">එව්වා ✓ (list එකෙන් අයින් කරන්න)</button></div></article>';
     });
@@ -789,7 +790,7 @@
 
   VIEWS.security = () => card("PIN එක මාරු කරන්න",
       '<form id="pin-form" class="ad-grid">' +
-        '<div class="ad-field"><label for="pin-new">අලුත් PIN (digits ' + PIN_MIN + ' – ' + PIN_MAX + ')</label><input class="input" id="pin-new" type="password" inputmode="numeric" maxlength="' + PIN_MAX + '" autocomplete="new-password"><small class="ad-hint">දිග PIN එකක් (digits 8ක් හරි වැඩි) ආරක්ෂාවට හොඳයි. 123456, 111111 වගේ පහසු ඒවා බෑ.</small></div>' +
+        '<div class="ad-field"><label for="pin-new">අලුත් PIN (digits 8 – ' + PIN_MAX + ', අනුමාන කරන්න අමාරු එකක්)</label><input class="input" id="pin-new" type="password" inputmode="numeric" maxlength="' + PIN_MAX + '" autocomplete="new-password"><small class="ad-hint">දිග PIN එකක් (digits 8ක් හරි වැඩි) ආරක්ෂාවට හොඳයි. 123456, 111111 වගේ පහසු ඒවා බෑ.</small></div>' +
         '<div class="ad-field"><label for="pin-new2">ආයෙත් ගහන්න</label><input class="input" id="pin-new2" type="password" inputmode="numeric" maxlength="' + PIN_MAX + '" autocomplete="new-password"></div>' +
         '<div class="ad-field wide"><button class="btn btn-primary" type="submit">PIN එක save කරන්න</button></div></form>',
       "PIN එක Firebase එකේ admin account එකේ password එක. මාරු කළාම ඊළඟ පාර අලුත් PIN එකෙන් log වෙන්න.") +
@@ -849,6 +850,7 @@
       if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(s.slug || "")) out.push("Services: " + n + " — slug එකට a-z, 0-9, - විතරයි.");
       else if (seen[s.slug]) out.push("Services: slug \"" + s.slug + "\" දෙපාරක් තියෙනවා.");
       seen[s.slug] = 1;
+      if (!/^(?:\s*<(?:path|circle|rect|line|polyline|polygon|ellipse)(?:\s+(?!on|href|xlink)[a-z-]+="[^"<>]*")*\s*\/?>)*\s*$/i.test(s.icon || "")) out.push("Services: " + n + " — Icon එකේ <path>, <rect>, <circle>, <line>, <polyline>, <polygon>, <ellipse> විතරයි පාවිච්චි කරන්න පුළුවන් (script, link, on… attributes බෑ).");
       if (!s.video && ANIMS.indexOf(s.anim) === -1) out.push("Services: " + n + " — animation එකක් හරි video එකක් තෝරන්න.");
       (s.prices || []).forEach(r => { if (!refOk(r)) out.push("Services: " + n + " — Prices tab එකේ නැති price එකක් තියෙනවා."); });
     });
@@ -950,7 +952,7 @@
     if (e.target.id !== "pin-form") return;
     e.preventDefault();
     const a = $("#pin-new").value, b = $("#pin-new2").value, btn = e.target.querySelector("button");
-    const bad = pinProblem(a);
+    const bad = pinProblem(a, 8);   // the site's admin PIN is the Firebase password: 8+ digits for a new one
     if (bad) return toast(bad, true);
     if (a !== b) return toast("PIN දෙක සමාන නෑ.", true);
     btn.disabled = true;
@@ -1001,7 +1003,7 @@
       case "pin-send": {
         const r = S.pinReqs.find(x => x.id === d.id), c = r && S.customers.find(x => x.phone === r.phone);
         if (!c || !c.pin) return;
-        if (!armed(b, "ඇත්තටම? ආයෙත් ඔබන්න")) return;
+        if (!armed(b, "මේ customer ම බව දන්නවාද? ආයෙත් ඔබන්න")) return;
         const at = new Date();
         try { await fs("PATCH", "/pinRequests/" + encodeURIComponent(r.id), { fields: toFields({ pin: c.pin, sentAt: at }) }, mask(["pin", "sentAt"])); r.pin = c.pin; r.sentAt = at.toISOString(); renderTab(); toast("App එකට යැව්වා ✓ Customer ගේ page එකේ පැයක් ඇතුළත PIN එක පේනවා."); }
         catch (err) { toast(errText(err), true); }

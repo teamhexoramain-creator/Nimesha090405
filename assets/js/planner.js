@@ -512,14 +512,14 @@
   const q = new URLSearchParams(location.search);
   const pick = (name, v) => { const el = form.querySelector('input[name="' + name + '"][value="' + v + '"]'); if (el) el.checked = true; };
   const qTrack = q.get("track"), qType = q.get("type"), qItem = q.get("item");
-  const qPkg = q.get("package");
-  if (qPkg && C.packages && C.packages[qPkg]) { pick("track", "pkg"); pick("pkg", qPkg); }
+  const qPkg = q.get("package"), own = (o, k) => !!o && Object.prototype.hasOwnProperty.call(o, k);
+  if (qPkg && own(C.packages, qPkg)) { pick("track", "pkg"); pick("pkg", qPkg); }
   else if (qTrack === "pkg") pick("track", "pkg");
-  if (qType && C.types[qType]) {
+  if (qType && own(C.types, qType)) {
     if (C.types[qType].kind === "app" || C.types[qType].kind === "both") pick("track", "pkg");
     else { pick("track", "dev"); pick("type", qType); }
   }
-  if (qTrack === "creative" || (qItem && C.creative && C.creative[qItem])) {
+  if (qTrack === "creative" || (qItem && own(C.creative, qItem))) {
     pick("track", "creative");
     if (qItem && C.creative[qItem] && !qtyOf(qItem)) form.querySelector('input[name="cr-' + qItem + '"]').value = 1;
   }

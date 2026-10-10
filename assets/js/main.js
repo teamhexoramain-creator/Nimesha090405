@@ -207,69 +207,87 @@
     });
   }
 
-  /* ---------- ambient background: hex grid + particles + pointer glow ---------- */
+  /* ---------- ambient background ----------
+     The still hex grid is plain CSS (body::before). This canvas only draws what moves: a few drifting dots and, with a mouse,
+     a brighter patch of grid under the pointer. It runs at ~30 fps and redraws only that small patch, never the whole screen
+     (the old full-screen version cost ~100 ms a frame on a mid-range phone). */
   const cv = $("#fx");
   if (cv && !reduce && cv.getContext) {
     const ctx = cv.getContext("2d");
-    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-    let W = 0, H = 0, grid = null, parts = [], mx = -999, my = -999, tx = -999, ty = -999, running = true;
-    const mobile = window.innerWidth < 700;
+    const dpr = Math.min(window.devicePixelRatio || 1, finePointer ? 1.5 : 1);
+    const R = 300, SZ = R * 2;   // spotlight radius and its box, in css px
+    let W = 0, H = 0, grid = null, spot = null, sctx = null, mask = null, parts = [];
+    let mx = -999, my = -999, tx = -999, ty = -999, moved = false, running = true, last = 0;
 
-    function hexPath(c, cx, cy, r) {
-      c.beginPath();
-      for (let i = 0; i < 6; i++) {
-        const a = Math.PI / 180 * (60 * i - 90);
-        const x = cx + r * Math.cos(a), y = cy + r * Math.sin(a);
-        i ? c.lineTo(x, y) : c.moveTo(x, y);
-      }
-      c.closePath();
-    }
-    function build() {
-      W = window.innerWidth; H = window.innerHeight;
-      cv.width = W * dpr; cv.height = H * dpr;
+    // one hexagon outline, same lattice as the CSS grid (radius 32)
+    function hexGrid() {
       grid = document.createElement("canvas"); grid.width = cv.width; grid.height = cv.height;
       const g = grid.getContext("2d"); g.scale(dpr, dpr);
       g.strokeStyle = "rgba(100,140,255,0.07)"; g.lineWidth = 1;
       const r = 32, w = Math.sqrt(3) * r;
+      g.beginPath();
       for (let row = -1; row < H / (r * 1.5) + 1; row++)
-        for (let col = -1; col < W / w + 1; col++) { hexPath(g, col * w + (row % 2 ? w / 2 : 0), row * r * 1.5, r); g.stroke(); }
-      const n = mobile ? 26 : 60;
+        for (let col = -1; col < W / w + 1; col++) {
+          const cx = col * w + (row % 2 ? w / 2 : 0), cy = row * r * 1.5;
+          for (let i = 0; i < 6; i++) {
+            const a = Math.PI / 180 * (60 * i - 90), x = cx + r * Math.cos(a), y = cy + r * Math.sin(a);
+            i ? g.lineTo(x, y) : g.moveTo(x, y);
+          }
+          g.closePath();
+        }
+      g.stroke();
+    }
+    function build() {
+      W = window.innerWidth; H = window.innerHeight;
+      cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+      grid = null;   // rebuilt on the first mouse move
+      const n = W < 700 ? 20 : 46;
       parts = Array.from({ length: n }, () => ({
         x: Math.random() * W, y: Math.random() * H,
-        vx: (Math.random() - .5) * .15, vy: -(.05 + Math.random() * .2),
+        vx: (Math.random() - .5) * .3, vy: -(.1 + Math.random() * .4),   // px per 33 ms frame
         r: .6 + Math.random() * 1.6, c: Math.random() < .5 ? "22,217,255" : "140,110,255", a: .2 + Math.random() * .5
       }));
     }
+    function patch() {   // the bright grid around the pointer, built in a small off-screen canvas
+      if (!grid) hexGrid();
+      if (!spot) {
+        spot = document.createElement("canvas"); spot.width = spot.height = Math.round(SZ * dpr);
+        sctx = spot.getContext("2d");
+        mask = sctx.createRadialGradient(R * dpr, R * dpr, 0, R * dpr, R * dpr, R * dpr);
+        mask.addColorStop(0, "rgba(0,0,0,1)"); mask.addColorStop(1, "rgba(0,0,0,0)");
+      }
+      sctx.globalCompositeOperation = "source-over";
+      sctx.clearRect(0, 0, spot.width, spot.height);
+      sctx.drawImage(grid, Math.round((mx - R) * dpr), Math.round((my - R) * dpr), spot.width, spot.height, 0, 0, spot.width, spot.height);
+      sctx.globalCompositeOperation = "destination-in";
+      sctx.fillStyle = mask; sctx.fillRect(0, 0, spot.width, spot.height);
+    }
     function frame(t) {
       if (!running) return;
+      requestAnimationFrame(frame);
+      if (t - last < 32) return;   // ~30 fps: the slow drift looks the same, half the work
+      const dt = Math.min(3, (t - last) / 33); last = t;
+      if (moved) {
+        mx += (tx - mx) * .2; my += (ty - my) * .2;
+        if (Math.abs(tx - mx) < .5 && Math.abs(ty - my) < .5) { mx = tx; my = ty; moved = false; }
+        patch();
+      }
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, W, H);
-      // grid revealed around the pointer (or a slow wandering spot on touch screens)
-      if (!finePointer) { tx = W * (.5 + .35 * Math.sin(t / 5200)); ty = H * (.4 + .25 * Math.cos(t / 6100)); }
-      mx += (tx - mx) * .08; my += (ty - my) * .08;
-      ctx.save();
-      const m = ctx.createRadialGradient(mx, my, 0, mx, my, 320);
-      m.addColorStop(0, "rgba(0,0,0,1)"); m.addColorStop(1, "rgba(0,0,0,0)");
-      ctx.drawImage(grid, 0, 0, W, H);
-      ctx.globalCompositeOperation = "destination-in";
-      ctx.fillStyle = m; ctx.fillRect(0, 0, W, H);
-      ctx.restore();
-      ctx.globalAlpha = .35; ctx.drawImage(grid, 0, 0, W, H); ctx.globalAlpha = 1;
+      if (spot && mx > -900) ctx.drawImage(spot, Math.round(mx - R), Math.round(my - R), SZ, SZ);
       for (const p of parts) {
-        p.x += p.vx; p.y += p.vy;
+        p.x += p.vx * dt; p.y += p.vy * dt;
         if (p.y < -10) { p.y = H + 10; p.x = Math.random() * W; }
-        if (p.x < -10) p.x = W + 10; if (p.x > W + 10) p.x = -10;
+        if (p.x < -10) p.x = W + 10; else if (p.x > W + 10) p.x = -10;
         ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
         ctx.fillStyle = "rgba(" + p.c + "," + p.a + ")"; ctx.fill();
       }
-      requestAnimationFrame(frame);
     }
     build();
-    window.addEventListener("resize", () => { clearTimeout(build._t); build._t = setTimeout(build, 200); });
-    window.addEventListener("pointermove", e => { tx = e.clientX; ty = e.clientY; }, { passive: true });
-    document.addEventListener("visibilitychange", () => {
-      running = !document.hidden; if (running) requestAnimationFrame(frame);
-    });
+    let rt = 0;
+    window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (Math.abs(window.innerWidth - W) > 1 || Math.abs(window.innerHeight - H) > 160) { build(); spot = null; } }, 200); });
+    if (finePointer) window.addEventListener("pointermove", e => { if (mx < -900) { mx = e.clientX; my = e.clientY; } tx = e.clientX; ty = e.clientY; moved = true; }, { passive: true });
+    document.addEventListener("visibilitychange", () => { running = !document.hidden; if (running) requestAnimationFrame(frame); });
     requestAnimationFrame(frame);
   }
 
@@ -280,8 +298,9 @@
   $$("[data-email]").forEach(el => { el.textContent = C.email; if (el.tagName === "A") el.href = "mailto:" + C.email; });
   $$("[data-phone]").forEach(el => { el.textContent = C.phoneDisplay; if (el.tagName === "A") el.href = "tel:+" + wa; });
   $$("[data-phone-label]").forEach(el => { el.textContent = C.phoneDisplay; });
-  $$("[data-facebook]").forEach(a => { if (C.facebook) { a.href = C.facebook; (a.closest("li") || a).hidden = false; } });
-  $$("[data-youtube]").forEach(a => { if (C.youtube) { a.href = C.youtube; (a.closest("li") || a).hidden = false; } });
+  const https = u => /^https:\/\//i.test(u || "") ? u : "";   // only https links from the admin panel are used
+  $$("[data-facebook]").forEach(a => { if (https(C.facebook)) { a.href = C.facebook; (a.closest("li") || a).hidden = false; } });
+  $$("[data-youtube]").forEach(a => { if (https(C.youtube)) { a.href = C.youtube; (a.closest("li") || a).hidden = false; } });
   $$("[data-advance]").forEach(el => el.textContent = (C.advancePercent || 50) + "%");
   $$("[data-support]").forEach(el => { const m = C.freeSupportMonths || 1; el.textContent = m + (m === 1 ? " month" : " months"); });
   $$("[data-year]").forEach(el => el.textContent = new Date().getFullYear());

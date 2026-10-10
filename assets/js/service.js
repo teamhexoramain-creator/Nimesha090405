@@ -14,11 +14,13 @@
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const lkrText = usd => P.formatLKR(P.smartRound(usd * C.fallbackRate, C));
   const money = usd => '<span data-price-usd="' + usd + '">' + lkrText(usd) + "</span>";
-  const icon = inner => '<svg viewBox="0 0 24 24" aria-hidden="true">' + inner + "</svg>";
+  // icons are small SVG shapes typed in the admin panel: only plain shapes with plain attributes are drawn (no scripts, handlers or links)
+  const SHAPES = /^(?:\s*<(?:path|circle|rect|line|polyline|polygon|ellipse)(?:\s+(?!on|href|xlink)[a-z-]+="[^"<>]*")*\s*\/?>)*\s*$/i;
+  const icon = inner => '<svg viewBox="0 0 24 24" aria-hidden="true">' + (SHAPES.test(inner || "") ? inner : "") + "</svg>";
   const arrow = '<svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
   const bySlug = slug => S.list.find(x => x.slug === slug);
   const inCat = cat => S.list.filter(x => x.cat === cat);
-  const link = s => "service.html?s=" + s.slug;
+  const link = s => "service.html?s=" + encodeURIComponent(s.slug);
 
   /* ---------- prices from config.js ---------- */
   const POOLS = { type: "types", creative: "creative", feature: "features", extra: "extras", maint: "sizes", design: "design", package: "packages" };
