@@ -19,7 +19,7 @@
         '<span class="rung-name">' + esc(p.label) + "</span>" +
         '<span class="rung-price" data-price-usd="' + usd.toFixed(4) + '">' + amt + "</span>" +
         '<span class="rung-meta">' + esc(weeks(p)) + "</span>" +
-        (hot ? '<span class="rung-badge">' + esc(p.badge) + '</span><i class="rung-star" aria-hidden="true">★</i>' : "") + "</button>";
+        (hot ? '<span class="rung-badge">' + esc(p.badge) + '</span><svg class="rung-star" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"/></svg>' : "") + "</button>";
       panels += '<div class="pk-panel pkg-card' + (hot ? " hot" : "") + (on ? " on" : "") + '" role="tabpanel" id="pk-' + esc(k) + '" aria-labelledby="rung-' + esc(k) + '" data-card>' +
         '<div class="pk-head"><h3>' + esc(p.label) + '</h3><span class="price-from">Package</span>' +
         (hot ? '<a class="pk-badge" href="' + href + '">' + esc(p.badge) + " →</a>" : "") + "</div>" +

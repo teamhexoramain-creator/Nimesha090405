@@ -53,14 +53,14 @@
       <h1 class="display" data-split style="--d:150ms">ඔයාගේ <span class="grad-text">Project</span> එක ගැන කියන්න</h1>
       <p class="lead fade-up" style="--d:550ms">App, website, logo, design හරි video, ඕන දෙයක් තෝරගන්න. Price එක අද dollar rate එකෙන් LKR වලින් live calculate වෙනවා. ඉවර උනාම WhatsApp හරි Email එකෙන් අපිට එවන්න.</p>
       <p class="auth-hint fade-up" style="--d:650ms" data-auth-out>Account එකක් තියෙනවද? <a href="account.html">Login</a> වෙලා ඉන්නකොට ඔයාගේ details ඉබේම පුරවනවා, project status බලන්නයි Developer ට chat කරන්නයි පුළුවන්. අලුත් ද? <a href="account.html?new=1">Register</a></p>
-      <p class="auth-hint fade-up" style="--d:650ms" data-auth-in>👤 <b data-user-name></b> විදියට login වෙලා ඉන්නේ. Project එක යැව්වම <a href="account.html">මගේ projects</a> එකේ status එක බලන්න පුළුවන්.</p>
+      <p class="auth-hint fade-up" style="--d:650ms" data-auth-in><svg class="ic-inline" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg> <b data-user-name></b> විදියට login වෙලා ඉන්නේ. Project එක යැව්වම <a href="account.html">මගේ projects</a> එකේ status එක බලන්න පුළුවන්.</p>
       <ol class="stepper fade-up" style="--d:700ms" role="list" aria-label="Form එකේ කොටස්">
-        <li data-stepper="1">1 · ඔයා ගැන</li>
-        <li data-stepper="2">2 · Idea එක</li>
-        <li data-stepper="3">3 · Service එක</li>
-        <li data-stepper="4" data-tracks="dev pkg">4 · Features</li>
-        <li data-stepper="5" data-tracks="dev">5 · Design &amp; launch</li>
-        <li data-stepper="6">6 · Timeline</li>
+        <li data-stepper="3">1 · Service එක</li>
+        <li data-stepper="4" data-tracks="dev pkg">2 · Features</li>
+        <li data-stepper="5" data-tracks="dev">3 · Design &amp; launch</li>
+        <li data-stepper="6">4 · Timeline</li>
+        <li data-stepper="2">5 · Idea එක</li>
+        <li data-stepper="1">6 · ඔයා ගැන</li>
       </ol>
     </div>
   </div>
@@ -72,62 +72,10 @@
         <form id="project-form" novalidate>
           <div class="form-alert" id="form-alert" role="alert" hidden></div>
 
-          <!-- 1 -->
-          <fieldset class="form-step" data-step="1">
-            <legend class="sr-only">ඔයා ගැන</legend>
-            <div class="step-head"><span class="n">01</span><div><h2>ඔයා ගැන</h2><p>අපි ඔයාට contact කරන්නේ මේකට.</p></div></div>
-            <div class="fields">
-              <div class="field" data-field="name">
-                <label for="f-name">ඔයාගේ නම <span class="req">*</span></label>
-                <input class="input" id="f-name" name="name" type="text" autocomplete="name" placeholder="Ex: Kasun Perera">
-                <span class="err">ඔයාගේ නම type කරන්න.</span>
-              </div>
-              <div class="field" data-field="phone">
-                <label for="f-phone">WhatsApp number <span class="req">*</span></label>
-                <input class="input" id="f-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="07X XXX XXXX">
-                <span class="err">හරි phone number එකක් දාන්න (Ex: 0771234567).</span>
-              </div>
-              <div class="field" data-field="email">
-                <label for="f-email">Email <span class="hint">(optional)</span></label>
-                <input class="input" id="f-email" name="email" type="email" autocomplete="email" placeholder="oya@gmail.com">
-                <span class="err">Email එක හරියට දාන්න.</span>
-              </div>
-              <div class="field">
-                <label for="f-business">Business / Organization <span class="hint">(optional)</span></label>
-                <input class="input" id="f-business" name="business" type="text" autocomplete="organization" placeholder="Ex: Perera Hardware">
-              </div>
-            </div>
-          </fieldset>
-
-          <!-- 2 -->
-          <fieldset class="form-step" data-step="2">
-            <legend class="sr-only">Project idea එක</legend>
-            <div class="step-head"><span class="n">02</span><div><h2>Project idea එක</h2><p>Simple විදියට කියන්න, technical words ඕන නෑ.</p></div></div>
-            <div class="fields">
-              <div class="field">
-                <label for="f-appname">Project එකේ නම <span class="hint">(මේ නමින් ඔයාගේ account එකේ project එක පේනවා)</span></label>
-                <input class="input" id="f-appname" name="appname" type="text" placeholder="Ex: QuickFix, Perera Hardware">
-              </div>
-              <div class="field">
-                <label for="f-users">කවුද use කරන්නේ / බලන්නේ?</label>
-                <input class="input" id="f-users" name="users" type="text" placeholder="Ex: Customers, staff, YouTube viewers">
-              </div>
-              <div class="field full" data-field="desc">
-                <label for="f-desc">ඔයාට මොකද කරලා ඕන? <span class="req">*</span></label>
-                <textarea class="input" id="f-desc" name="desc" placeholder="Ex: Customersලා phone එකෙන් order දාන්න app එකක් ඕන. / මගේ cake shop එකට logo එකක් ඕන, blue සහ white colours. / YouTube video 4ක් edit කරන්න ඕන, subtitles එක්ක."></textarea>
-                <span class="err">පොඩ්ඩක් විස්තර කරන්න (අකුරු 15 කට වඩා).</span>
-              </div>
-              <div class="field full">
-                <label for="f-refs">ඔයාට කැමති examples / links <span class="hint">(optional)</span></label>
-                <input class="input" id="f-refs" name="refs" type="text" placeholder="Ex: PickMe වගේ app එකක්, footage Google Drive link එක">
-              </div>
-            </div>
-          </fieldset>
-
           <!-- 3 -->
           <fieldset class="form-step" data-step="3">
             <legend class="sr-only">Service එක</legend>
-            <div class="step-head"><span class="n">03</span><div><h2>Service එක</h2><p>මොන වගේ දෙයක්ද ඕන?</p></div></div>
+            <div class="step-head"><span class="n">01</span><div><h2>Service එක</h2><p>මොන වගේ දෙයක්ද ඕන?</p></div></div>
             <div class="options track-opts" role="radiogroup" aria-label="Service type">
               <label class="opt"><input type="radio" name="track" value="pkg"><span class="opt-box"><span class="tick"></span><span class="t">Mobile App (Package)</span><span class="s">LKR 10,000 ඉඳන් packages 9ක්</span></span></label>
               <label class="opt"><input type="radio" name="track" value="dev"><span class="opt-box"><span class="tick"></span><span class="t">Website / Web system</span><span class="s">Business sites, POS, booking systems</span></span></label>
@@ -161,7 +109,7 @@
           <!-- 4 -->
           <fieldset class="form-step" data-step="4" data-track="dev pkg">
             <legend class="sr-only">Features</legend>
-            <div class="step-head"><span class="n">04</span><div><h2>Features</h2><p>ඔයාට ඕන features tick කරන්න. ඕන තරම් තෝරගන්න පුළුවන්.</p></div></div>
+            <div class="step-head"><span class="n">02</span><div><h2>Features</h2><p>ඔයාට ඕන features tick කරන්න. ඕන තරම් තෝරගන්න පුළුවන්.</p></div></div>
             <div data-track="dev"><div class="options" id="opt-features"></div></div>
             <div class="opt-group" data-track="pkg" hidden>
               <span class="group-label">Package එකට පොඩි වෙනස්කම්</span>
@@ -174,7 +122,7 @@
           <!-- 5 -->
           <fieldset class="form-step" data-step="5" data-track="dev">
             <legend class="sr-only">Design සහ launch</legend>
-            <div class="step-head"><span class="n">05</span><div><h2>Design &amp; launch</h2><p>Design එක සහ launch කරන්න ඕන තැන.</p></div></div>
+            <div class="step-head"><span class="n">03</span><div><h2>Design &amp; launch</h2><p>Design එක සහ launch කරන්න ඕන තැන.</p></div></div>
             <div class="opt-group">
               <span class="group-label">Design</span>
               <div class="options" id="opt-design" role="radiogroup" aria-label="Design"></div>
@@ -188,7 +136,7 @@
           <!-- 6 -->
           <fieldset class="form-step" data-step="6">
             <legend class="sr-only">Timeline සහ budget</legend>
-            <div class="step-head"><span class="n">06</span><div><h2>Timeline &amp; budget</h2><p>කවද්ද ඕන ද, budget එක කොච්චර ද?</p></div></div>
+            <div class="step-head"><span class="n">04</span><div><h2>Timeline &amp; budget</h2><p>කවද්ද ඕන ද, budget එක කොච්චර ද?</p></div></div>
             <div class="opt-group">
               <span class="group-label">Speed</span>
               <div class="options" id="opt-urgency" role="radiogroup" aria-label="Speed"></div>
@@ -218,6 +166,58 @@
                 <label class="opt"><input type="radio" name="contact" value="WhatsApp" checked><span class="opt-box"><span class="tick"></span><span class="t">WhatsApp</span><span class="s">ඉක්මන්ම විදිය</span></span></label>
                 <label class="opt"><input type="radio" name="contact" value="Phone call"><span class="opt-box"><span class="tick"></span><span class="t">Phone call</span><span class="s">කතා කරමු</span></span></label>
                 <label class="opt"><input type="radio" name="contact" value="Email"><span class="opt-box"><span class="tick"></span><span class="t">Email</span><span class="s">Email එකෙන් reply</span></span></label>
+              </div>
+            </div>
+          </fieldset>
+
+          <!-- 2 -->
+          <fieldset class="form-step" data-step="2">
+            <legend class="sr-only">Project idea එක</legend>
+            <div class="step-head"><span class="n">05</span><div><h2>Project idea එක</h2><p>Simple විදියට කියන්න, technical words ඕන නෑ.</p></div></div>
+            <div class="fields">
+              <div class="field">
+                <label for="f-appname">Project එකේ නම <span class="hint">(මේ නමින් ඔයාගේ account එකේ project එක පේනවා)</span></label>
+                <input class="input" id="f-appname" name="appname" type="text" placeholder="Ex: QuickFix, Perera Hardware">
+              </div>
+              <div class="field">
+                <label for="f-users">කවුද use කරන්නේ / බලන්නේ?</label>
+                <input class="input" id="f-users" name="users" type="text" placeholder="Ex: Customers, staff, YouTube viewers">
+              </div>
+              <div class="field full" data-field="desc">
+                <label for="f-desc">ඔයාට මොකද කරලා ඕන? <span class="req">*</span></label>
+                <textarea class="input" id="f-desc" name="desc" placeholder="Ex: Customersලා phone එකෙන් order දාන්න app එකක් ඕන. / මගේ cake shop එකට logo එකක් ඕන, blue සහ white colours. / YouTube video 4ක් edit කරන්න ඕන, subtitles එක්ක."></textarea>
+                <span class="err">පොඩ්ඩක් විස්තර කරන්න (අකුරු 15 කට වඩා).</span>
+              </div>
+              <div class="field full">
+                <label for="f-refs">ඔයාට කැමති examples / links <span class="hint">(optional)</span></label>
+                <input class="input" id="f-refs" name="refs" type="text" placeholder="Ex: PickMe වගේ app එකක්, footage Google Drive link එක">
+              </div>
+            </div>
+          </fieldset>
+
+          <!-- 1 -->
+          <fieldset class="form-step" data-step="1">
+            <legend class="sr-only">ඔයා ගැන</legend>
+            <div class="step-head"><span class="n">06</span><div><h2>ඔයා ගැන</h2><p>අපි ඔයාට contact කරන්නේ මේකට.</p></div></div>
+            <div class="fields">
+              <div class="field" data-field="name">
+                <label for="f-name">ඔයාගේ නම <span class="req">*</span></label>
+                <input class="input" id="f-name" name="name" type="text" autocomplete="name" placeholder="Ex: Kasun Perera">
+                <span class="err">ඔයාගේ නම type කරන්න.</span>
+              </div>
+              <div class="field" data-field="phone">
+                <label for="f-phone">WhatsApp number <span class="req">*</span></label>
+                <input class="input" id="f-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="07X XXX XXXX">
+                <span class="err">හරි phone number එකක් දාන්න (Ex: 0771234567).</span>
+              </div>
+              <div class="field" data-field="email">
+                <label for="f-email">Email <span class="hint">(optional)</span></label>
+                <input class="input" id="f-email" name="email" type="email" autocomplete="email" placeholder="oya@gmail.com">
+                <span class="err">Email එක හරියට දාන්න.</span>
+              </div>
+              <div class="field">
+                <label for="f-business">Business / Organization <span class="hint">(optional)</span></label>
+                <input class="input" id="f-business" name="business" type="text" autocomplete="organization" placeholder="Ex: Perera Hardware">
               </div>
             </div>
           </fieldset>

@@ -319,15 +319,11 @@
   }
 
   /* ---------- live prices on the home page ---------- */
+  // prices appear with a short rise, always showing the real number (a count-up from 0 would flash wrong prices)
   function countUp(el, to) {
-    if (reduce) { el.textContent = P.formatLKR(to); return; }
-    const dur = 1200, t0 = performance.now(), step100 = to < 20000 ? 10 : 100;
-    const step = t => {
-      const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
-      el.textContent = P.formatLKR(Math.round((to * e) / step100) * step100);
-      if (k < 1) requestAnimationFrame(step); else el.textContent = P.formatLKR(to);
-    };
-    requestAnimationFrame(step);
+    el.textContent = P.formatLKR(to);
+    if (reduce) return;
+    el.classList.remove("price-in"); void el.offsetWidth; el.classList.add("price-in");
   }
   // an element shows a price either by project type (data-price-type) or a plain USD amount (data-price-usd)
   const usdOf = el => {

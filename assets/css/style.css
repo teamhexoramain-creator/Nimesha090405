@@ -1237,7 +1237,7 @@ section[id], #summary, #project-form, #estimate, .field, .opt-group { scroll-mar
 }
   .rung:last-child:nth-child(odd) { grid-column: 1 / -1; }
   .rung-badge { display: none; }
-  .rung-star { display: block; position: absolute; right: 12px; top: 10px; color: #FFD479; font-style: normal; font-size: .9rem; }
+  .rung-star { display: block; position: absolute; right: 12px; top: 10px; width: 15px; height: 15px; fill: #FFD479; }
   .ladder-panel { position: static; }
   .pk-list { grid-template-columns: 1fr; }
   .pk-panel .btn { justify-self: stretch; }
@@ -1482,6 +1482,23 @@ html:not(.js) .nav-cta-mini { display: none !important; }
 body.account-page > main { min-height: 100vh; min-height: 100svh; }
 
 @media (max-width: 380px) { .tabs-bar .tab { padding-inline: 7px; font-size: .82rem; } }
+
+/* small line icons that sit inside text (instead of emoji) */
+.ic-inline { display: inline-block; width: 1.05em; height: 1.05em; vertical-align: -.16em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* PIN show / hide, and a field that has an error */
+.pin-wrap { position: relative; display: block; }
+.pin-wrap .input { padding-right: 56px; }
+.pin-eye { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 10px; background: transparent; color: var(--muted); cursor: pointer; }
+.pin-eye svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.pin-eye[aria-pressed="true"] { color: var(--cyan); }
+.pin-eye:focus-visible { outline-offset: -2px; }
+.input[aria-invalid="true"] { border-color: var(--danger, #ff5d73); box-shadow: 0 0 0 3px rgba(255, 93, 115, .18); }
+
+/* a price that has just been filled in (main.js) */
+.price-in { display: inline-block; animation: price-in .55s cubic-bezier(.22, 1, .36, 1) both; }
+@keyframes price-in { from { opacity: 0; transform: translateY(6px); filter: blur(2px); } to { opacity: 1; transform: none; filter: none; } }
+@media (prefers-reduced-motion: reduce) { .price-in { animation: none; } }
 
 /* touch targets: every control is at least 44 x 44 px on a phone / touch screen */
 @media (pointer: coarse), (max-width: 700px) {

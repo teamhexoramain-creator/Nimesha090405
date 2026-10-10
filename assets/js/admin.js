@@ -112,7 +112,7 @@
     del: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>', back: '<path d="M14 6l-6 6 6 6"/>',
     ext: '<path d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6"/>', plus: '<path d="M12 5v14M5 12h14"/>',
     reload: '<path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/>',
-    user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>', unlink: '<path d="M6 6l12 12M18 6L6 18"/>'
+    user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>', chat: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>', unlink: '<path d="M6 6l12 12M18 6L6 18"/>'
   };
   const lkr = usd => P.formatLKR(P.smartRound((Number(usd) || 0) * (Number(S.data.config.fallbackRate) || 0), S.data.config));
   const fmtDate = iso => { if (!iso) return "—"; const d = new Date(iso); return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) + " · " + d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }); };
@@ -295,7 +295,7 @@
       const fresh = (rows || []).filter(r => r.document).map(r => fromDoc(r.document));
       if (fresh.length) {
         fresh.forEach(c => { S.chats[c.id] = c; if (!S.chatMax || ms(c.lastAt) > ms(S.chatMax)) S.chatMax = c.lastAt; });
-        fresh.filter(c => c.lastFrom === "c" && isUnread(c.id)).forEach(c => { const el = $('[data-chatnote="' + c.id + '"]'); if (el) el.textContent = "💬 " + (c.lastText || ""); });
+        fresh.filter(c => c.lastFrom === "c" && isUnread(c.id)).forEach(c => { const el = $('[data-chatnote="' + c.id + '"]'); if (el) el.textContent = c.lastText || ""; });
       }
       // visitors chatting from the green button (no login)
       const grows = await fs("POST", ":runQuery", { structuredQuery: { from: [{ collectionId: "guests" }], ...(S.guestMax ? { where: { fieldFilter: { field: { fieldPath: "lastAt" }, op: "GREATER_THAN", value: { timestampValue: S.guestMax } } } } : {}), orderBy: [{ field: { fieldPath: "lastAt" }, direction: "ASCENDING" }], limit: 100 } });
@@ -303,7 +303,7 @@
       if (gfresh.length) {
         gfresh.forEach(g => { S.guests[g.id] = g; if (!S.guestMax || ms(g.lastAt) > ms(S.guestMax)) S.guestMax = g.lastAt; });
         if (S.tab === "live" && !S.guestOpen) renderTab();
-        gfresh.filter(g => g.lastFrom === "c" && isUnreadG(g.id)).forEach(g => { const el = $('[data-gnote="' + g.id + '"]'); if (el) el.textContent = "💬 " + (g.lastText || ""); });
+        gfresh.filter(g => g.lastFrom === "c" && isUnreadG(g.id)).forEach(g => { const el = $('[data-gnote="' + g.id + '"]'); if (el) el.textContent = g.lastText || ""; });
       }
       if (fresh.length || gfresh.length) chatDots();
     } catch (e) { /* try again next time */ }
@@ -554,9 +554,9 @@
         (r.phone ? '<a class="btn ad-small" href="tel:' + esc(String(r.phone).replace(/[^\d+]/g, "")) + '">Call</a>' : "") +
         (r.email ? '<a class="btn ad-small" href="mailto:' + esc(encodeURIComponent(r.email).replace(/%40/g, "@")) + '">Email</a>' : "") +
         '<button type="button" class="btn btn-primary ad-small" data-act="req-save" data-id="' + id + '">Update</button>' +
-        (r.uid ? '<button type="button" class="btn ad-small ad-chat-btn" data-act="chat" data-id="' + id + '" aria-expanded="false">💬 Chat</button>' : "") +
+        (r.uid ? '<button type="button" class="btn ad-small ad-chat-btn" data-act="chat" data-id="' + id + '" aria-expanded="false">' + icon(I.chat) + ' Chat</button>' : "") +
         mini("req-del", I.del, "මකන්න", ' data-id="' + id + '"') + "</div>" +
-      (r.uid ? '<p class="ad-chat-note" data-chatnote="' + id + '">' + (S.chats[r.id] ? "💬 " + esc(S.chats[r.id].lastText || "") : "") + '</p><div class="ad-chat" data-chat="' + id + '" hidden></div>'
+      (r.uid ? '<p class="ad-chat-note" data-chatnote="' + id + '">' + (S.chats[r.id] ? esc(S.chats[r.id].lastText || "") : "") + '</p><div class="ad-chat" data-chat="' + id + '" hidden></div>'
         : '<p class="ad-chat-note">Chat කරන්න මේ project එක customer ගේ account එකකට link කරන්න.</p>') +
       (r.message ? "<details><summary>සම්පූර්ණ request එක</summary><pre>" + esc(r.message) + "</pre></details>" : "") + "</div></details>";
   }
@@ -582,8 +582,8 @@
         '<div class="ad-req-head"><div><b>' + esc(g.name || "—") + '</b><small>' + esc(phoneLabel(g.phone)) + " · " + esc(fmtDate(g.createdAt)) + '</small></div>' +
           '<span class="ad-pill' + (acc ? " ok" : "") + '">' + (acc ? "Account: " + esc(acc.name) : maybe ? "Phone එක match (verify කරලා නෑ)" : "Login නැති visitor") + "</span></div>" +
         '<div class="ad-req-meta">' + [g.page ? "Page: " + g.page : "", g.device].filter(Boolean).map(x => "<span>" + esc(x) + "</span>").join("") + "<span>Phone verify කරලා නෑ</span></div>" +
-        '<p class="ad-chat-note" data-gnote="' + esc(id) + '">' + (g.lastText ? "💬 " + esc(g.lastText) : "") + "</p>" +
-        '<div class="ad-req-actions"><button type="button" class="btn btn-primary ad-small ad-chat-btn" data-act="glive" data-id="' + esc(id) + '" aria-expanded="false">💬 Chat <span class="ad-badge" data-adot="' + esc(id) + '"' + (isUnreadG(id) ? "" : " hidden") + ">අලුත්</span></button>" +
+        '<p class="ad-chat-note" data-gnote="' + esc(id) + '">' + (g.lastText ? esc(g.lastText) : "") + "</p>" +
+        '<div class="ad-req-actions"><button type="button" class="btn btn-primary ad-small ad-chat-btn" data-act="glive" data-id="' + esc(id) + '" aria-expanded="false">' + icon(I.chat) + ' Chat <span class="ad-badge" data-adot="' + esc(id) + '"' + (isUnreadG(id) ? "" : " hidden") + ">අලුත්</span></button>" +
           '<a class="btn btn-wa ad-small" href="https://wa.me/' + esc(g.phone) + '" target="_blank" rel="noopener">WhatsApp</a>' +
           '<a class="btn ad-small" href="tel:+' + esc(g.phone) + '">Call</a>' +
           mini("g-del", I.del, "මකන්න", ' data-id="' + esc(id) + '"') + "</div>" +
