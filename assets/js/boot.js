@@ -4,7 +4,7 @@
    and then loads the scripts listed in data-load, in order.
    • A copy is kept in this browser. If it is less than 10 minutes old the page starts with it
      right away, and the fresh copy fetched in the background is used from the next page.
-   • No Firebase set up, offline or slow (> 3 s): the last copy in this browser, or the
+   • No Firebase set up, offline or slow (> 1.5 s): the last copy in this browser, or the
      built-in config.js / services.js, is used. The site never waits on Firebase for long. */
 (function () {
   "use strict";
@@ -12,7 +12,7 @@
   const scripts = ((me && me.getAttribute("data-load")) || "").split(/\s+/).filter(Boolean);
   const base = me && me.src ? me.src.replace(/[^/?#]*([?#].*)?$/, "") : "assets/js/";
   const F = window.HX_FIREBASE || {};
-  const KEY = "hx_content_v1", FRESH = 10 * 60000, WAIT = 3000;
+  const KEY = "hx_content_v1", FRESH = 10 * 60000, WAIT = 1500;
   let started = false;
 
   function readCache() { try { return JSON.parse(localStorage.getItem(KEY)); } catch (e) { return null; } }

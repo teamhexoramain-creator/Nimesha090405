@@ -18,6 +18,19 @@
   const phone = window.matchMedia("(max-width: 900px)");
   const header = $(".site-header"), btn = $(".menu-btn");
   const behavior = smooth => (smooth && !reduce ? "smooth" : "instant");
+  // scrollTo that also works in an older browser that does not know the "instant" option
+  const go = (top, smooth) => { try { window.scrollTo({ top: top, behavior: behavior(smooth) }); } catch (e) { window.scrollTo(0, top); } };
+
+  /* ---------- preloader (only on the first page of a visit) ----------
+     Visible for at least 0.7 s counted from the start of the page load, and gone as soon as the page has loaded, never later than
+     1.8 s. It must not wait for Firebase or any other script (the page content is already in the HTML). */
+  const loader = $(".loader");
+  if (loader) {
+    const finish = () => { loader.classList.add("done"); try { sessionStorage.setItem("hx_seen", "1"); } catch (e) { /* storage blocked */ } };
+    const hide = () => setTimeout(finish, Math.max(0, 700 - performance.now()));
+    if (document.readyState === "complete") hide(); else window.addEventListener("load", hide, { once: true });
+    setTimeout(finish, Math.max(0, 1800 - performance.now()));
+  }
 
   /* ---------- who is logged in (the header must not flash "Login" for a customer) ---------- */
   function applyAuth() {
@@ -97,7 +110,7 @@
   const marginOf = el => parseFloat(getComputedStyle(el).scrollMarginTop) || ((header ? header.getBoundingClientRect().height : 0) + 12);
   function bring(el, smooth) {
     const top = el.getBoundingClientRect().top + window.scrollY - marginOf(el);
-    window.scrollTo({ top: Math.max(0, top), behavior: behavior(smooth) });
+    go(Math.max(0, top), smooth);
   }
   // the page grows while its lists are built: until the visitor scrolls or goes to another link, keep the linked section where it belongs
   let touched = false;
@@ -112,7 +125,7 @@
     const el = target(location.hash, true);
     if (!el) return;
     const d = el.getBoundingClientRect().top - marginOf(el);
-    if (Math.abs(d) > 4) window.scrollTo({ top: window.scrollY + d, behavior: "instant" });
+    if (Math.abs(d) > 4) go(window.scrollY + d, false);
     spy();
   }
   [0, 300, 900, 2000].forEach(t => setTimeout(settle, t));
@@ -137,7 +150,7 @@
     try { const u = new URL(brand.href, location.href); same = u.pathname === location.pathname && u.search === location.search; } catch (err) { same = false; }
     if (!same) return;
     e.preventDefault(); setMenu(false);
-    window.scrollTo({ top: 0, behavior: behavior(true) });
+    go(0, true);
     if (location.hash && history.replaceState) { try { history.replaceState(null, "", location.pathname + location.search); } catch (err) { /* file:// */ } }
   });
 
@@ -172,7 +185,7 @@
   up.type = "button"; up.className = "to-top"; up.setAttribute("aria-label", "පිටුවේ උඩට යන්න");
   up.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
   document.body.appendChild(up);
-  up.addEventListener("click", () => { window.scrollTo({ top: 0, behavior: behavior(true) }); });
+  up.addEventListener("click", () => { go(0, true); });
 
   let ticking = false;
   function onScroll() {

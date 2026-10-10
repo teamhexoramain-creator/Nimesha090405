@@ -8,14 +8,7 @@
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const finePointer = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
 
-  /* ---------- preloader (only on the first page of a visit) ---------- */
-  const loader = $(".loader");
-  if (loader) {
-    const start = performance.now();
-    const hide = () => setTimeout(() => { loader.classList.add("done"); try { sessionStorage.setItem("hx_seen", "1"); } catch (e) { /* storage blocked */ } }, Math.max(0, 700 - (performance.now() - start)));
-    if (document.readyState === "complete") hide(); else window.addEventListener("load", hide);
-    setTimeout(() => loader.classList.add("done"), 2400);
-  }
+  /* the preloader is handled in nav.js (it must not wait for Firebase) */
 
   /* the menu, current page, anchor links and the login state in the header live in nav.js (it loads before this file) */
 
