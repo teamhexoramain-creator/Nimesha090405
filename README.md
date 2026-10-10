@@ -7,7 +7,7 @@ Built with plain **HTML + CSS + JavaScript**. No installs, no build step, no ser
 | File | What it is |
 |---|---|
 | `index.html` | Home page: video hero with a "මොකක්ද ඕන?" picker (App / Website / Logo / Video with their "from" prices), the service index, the 6-step process, tabbed pricing (Mobile Apps ladder · Websites · Design & Video), FAQ, contact |
-| `service.html` | One page per service (`service.html?s=mobile-apps`): animation, what's included, how we work, pricing, FAQ and the other services in the same category. With no `?s=` it lists every service by category. |
+| `service.html` | One page per service (`service.html?s=mobile-apps`): a 3D picture of the service, what's included, how we work, pricing, FAQ and the other services in the same category. With no `?s=` it lists every service by category. |
 | `start-project.html` | Project request form with a live LKR price estimate for apps/websites and for logo, design & video work. Customers send the request to WhatsApp or Email; it is also saved for the admin panel. |
 | `account.html` | **මගේ projects**: customers log in with their phone number and a 6-digit PIN and see each project's stage, % done, latest update and finish date. |
 | `admin.html` | PIN-locked admin panel (see below). |
@@ -28,12 +28,13 @@ hexora-website/
 ├─ firestore.rules       Firebase security rules (paste into the Firebase console)
 ├─ README.md
 └─ assets/
-   ├─ css/style.css        all design + animations (the "LAYOUT v2" block at the end holds the numbered section heads, service index, package ladder, tabs and cut-corner panels)
+   ├─ css/style.css        all design + animations (the "v3 — quiet premium" block near the end sets the current look: rounded shapes, calm colours, the 3D frames)
    ├─ css/admin.css        admin panel design
    ├─ js/config.js         prices, WhatsApp, email, links (starting data; the admin panel edits the live copy)
    ├─ js/pricing.js        USD → LKR rate + price maths
    ├─ js/nav.js            navigation: phone menu, anchor links, current page / section, back to top, login state in the header (loaded straight from the page, not through boot.js)
-   ├─ js/main.js           animations, video, live prices, tabs
+   ├─ js/main.js           animations, video, live prices, tabs, and loading the 3D (only when it is about to be seen)
+   ├─ js/hx3d.js           the 3D scenes (Three.js, built from tools/hx3d — do not edit by hand)
    ├─ js/services.js       service pages text, categories, FAQ (starting data)
    ├─ js/service.js        builds service.html from services.js
    ├─ js/svcui.js          the service index (rows) shared by the home page and service.html
@@ -49,8 +50,9 @@ hexora-website/
    ├─ js/admin.js          admin panel (admin.html)
    ├─ brand/hexora-logo.webp  your logo as the site uses it (the mark, name and tagline are cut from this one file)
    ├─ brand/hexora-logo.png   the original logo (share image / search results only)
-   ├─ fonts/               Michroma, Manrope, JetBrains Mono, Noto Sans Sinhala (woff2, served from the site itself)
-   └─ video/               hexora-intro.mp4 (logo animation)
+   ├─ fonts/               Manrope, JetBrains Mono, Noto Sans Sinhala (woff2, served from the site itself)
+   └─ video/               hexora-intro.mp4 (logo animation; shown where 3D cannot be drawn)
+tools/hx3d/               source of assets/js/hx3d.js: `cd tools/hx3d && npm ci && npm run build` (versions pinned in package.json)
 ```
 
 ## How to change things (`assets/js/config.js`, or the admin panel once Firebase is set up)
@@ -69,7 +71,7 @@ hexora-website/
 - Each service has a `slug` (its link: `service.html?s=<slug>`), a category `cat` (`dev` or `creative`), text (`short` = the one-line text in the service lists, `summary`, `intro`, `includes`) and its own `faq`. `commonFaq` is added to every service.
 - **Prices are not written here.** `prices` points to items in `config.js` (for example `{ type: "android" }` or `{ creative: "logo" }`), so a price changed in `config.js` changes on every page. `featured: true` highlights one card.
 - In text you can write `{support}`, `{advance}`, `{urgent}` or a price like `{creative:photo}`; the page fills in the current value.
-- `anim` picks the built-in animation (`phone`, `browser`, `dashboard`, `backend`, `chat`, `server`, `logo`, `social`, `photo`, `timeline`, `uiux`). To show your own video instead, set `video: "assets/video/your-file.mp4"`.
+- The picture next to the service name is a 3D glass hexagon carrying the service's own `icon` (the same line icon as in the menus). `anim` only has to be one of the listed names (`phone`, `browser`, …); it no longer changes the picture. To show your own video instead, set `video: "assets/video/your-file.mp4"`.
 - New service: copy one block in `list`, give it a new `slug`, and add a row linking to it in the Services list of `index.html` (`<li><a class="svx-row" …>`; the service.html pages build their lists automatically).
 
 ## Navigation (`assets/js/nav.js`)
@@ -82,7 +84,8 @@ hexora-website/
 - One breakpoint (900 px) for the whole header; the header is the same height on every page; breadcrumbs (Home › …) on every inner page.
 
 ## How the pages are put together (design notes)
-- **Cut-corner look**: buttons, cards, the package panel and the process steps share one chamfered corner (like a hexagon's edge) so every page reads as one system. It is `clip-path`, so a thin outline is drawn with an inset layer (`.btn::before`) and a button shows a normal focus ring when focused with the keyboard.
+- **Quiet premium look (v3)**: one confident sans-serif for headings (Manrope, sentence case), rounded corners on every button and card, icons in calm rounded tiles, the brand cyan used for emphasis only. No blinking dots, drifting particles, neon halos, animated gradient text or bobbing cards — the hexagon lives on in the logo and the 3D.
+- **3D** (`assets/js/hx3d.js`, Three.js): the home page hero shows the Hexora mark in 3D (gradient hexagon ring, satin H); every service page shows a 3D glass hexagon with that service's icon. It moves slowly and follows a mouse a little. It loads only after the page has loaded and only when it is about to be seen, draws only while on screen (stops in a hidden tab), runs at ~30 fps on phones, and draws one still frame for "reduce motion". Where it cannot run (no WebGL, data saver, a phone with under 3 GB memory) the hero video and the logo mark show instead.
 - **Whole cards are clickable**: clicking anywhere on a price card (its badge, its price, empty space) follows the card's button. This is one handler in `main.js` (`.price-card`, `[data-card]`).
 - **Tabs** (`[data-tabs]`, `main.js`): pricing on the home page, and the service categories on a phone. Arrow keys / Home / End work.
 - **Package ladder** (`[data-ladder]`): the packages come from `config.js → packages`; click one to open its details.
@@ -92,14 +95,14 @@ hexora-website/
 Lighthouse, mobile profile, median of 3 runs, served gzip like GitHub Pages (before → now):
 | page | score | TBT | CLS | FCP |
 |---|---|---|---|---|
-| home | 42–48 → 90–91 | 1346 → ~16 ms | 0.08 → 0.02 | 3.5 → 1.95 s |
-| service page | 24–26 → 91 | 1021 → ~39 ms | 0.87 → 0.00 | 3.3 → 1.96 s |
-| start-project | 48–54 → 93–94 | 952 → 0 ms | 0.08 → 0.01 | 3.5 → 1.96 s |
+| home | 42–48 → 93 | 1346 → ~10 ms | 0.08 → 0.00 | 3.5 → 1.21 s |
+| service page | 24–26 → 93 | 1021 → ~42 ms | 0.87 → 0.00 | 3.3 → 1.21 s |
+| start-project | 48–54 → 95 | 952 → ~1 ms | 0.08 → 0.01 | 3.5 → 1.21 s |
 Accessibility 100 and SEO 100 on every public page (the customer page is deliberately `noindex`).
 What made the difference, each measured on its own:
-- **Background canvas** (`main.js`): the old one repainted the whole screen ~60×/s (≈100 ms a frame on a mid phone). The still hex grid is now plain CSS (`body::before`); the canvas only draws a few dots and, with a mouse, a small bright patch under the pointer, at ~30 fps.
+- **Background canvas** (`main.js`): the old one repainted the whole screen ~60×/s (≈100 ms a frame on a mid phone). The still hex grid is now plain CSS (`body::before`); the canvas only lights a small patch of grid under a mouse pointer, and draws nothing at all unless the mouse moves (nothing on phones).
 - **Logo**: the one-file logo sprite is WebP (334 KB → 86 KB) and preloaded.
-- **Fonts are served by the site** (`assets/fonts`, no Google request). Each has a metric-matched fallback (`Manrope Fallback`, …) so the swap does not move text.
+- **Fonts are served by the site** (`assets/fonts`, no Google request). Each has a metric-matched fallback (`Manrope Fallback` has a regular and a bold face, …) so the swap does not move text. The Sinhala font is preloaded too: it used to arrive last and re-wrap the Sinhala headline (layout shift up to 0.13 on a slow phone → 0).
 - **Page scripts are `defer`red**; the Firestore host is preconnected.
 - **Layout shift**: `#svc-root:empty` keeps the service page's height until it is filled; the hero glow no longer depends on the hero's height.
 - Tried and **dropped**: removing the font preloads (slower first paint, no gain elsewhere).
@@ -118,8 +121,9 @@ What made the difference, each measured on its own:
 
 ## Browsers and devices that were actually run
 - **Chromium** (Blink): every page on 19 device / screen profiles (iPhone SE/13/14 Pro Max, Pixel 7, Galaxy S8/S9+/A55, iPad Mini/Pro, Galaxy Tab, laptops, 1080p, 1440p, 320 px, phones in landscape): no sideways scroll, no console errors, no CSP violations, no element stuck invisible, every control at least 44 px on touch.
+- **3D**: drawn and checked in Chromium and real WebKit (screenshots), the fallback checked in Firefox without WebGL, "reduce motion" draws one still frame.
 - **Real WebKit** (WebKitGTK 2.52, the engine family Safari uses) and **real Firefox 157**: every page at phone and desktop widths, plus the same click-through (menu, anchors, tabs, package ladder, FAQ, chat, back-to-top, service pages, project form, account form) — 42 / 48 checks each, all passing.
-- Old-browser safety: JavaScript is ES2018 (Chrome 64 / Safari 12 / Firefox 58); the service-page drawings fall back to the logo mark where container units are missing; scroll calls work in browsers that do not know the `instant` option.
+- Old-browser safety: JavaScript is ES2018 (Chrome 64 / Safari 12 / Firefox 58); the 3D falls back to the hero video / logo mark where WebGL is missing (checked in Firefox without WebGL); scroll calls work in browsers that do not know the `instant` option.
 - **Not run here**: a physical iPhone / Android phone, Safari itself, Windows and macOS font rendering. Please open the site once on your own phone as a last look; the hero video, the voice recorder and the camera picker are the parts that depend most on the device.
 
 ## Security notes
@@ -202,7 +206,7 @@ then visit http://localhost:3000 (or :8000).
 **Vercel:** `npx vercel` inside the folder.
 
 ## Notes
-- Fonts (Michroma, Manrope, JetBrains Mono, and Noto Sans Sinhala for Sinhala text) are in `assets/fonts` and load from the site itself.
+- Fonts (Manrope, JetBrains Mono, and Noto Sans Sinhala for Sinhala text) are in `assets/fonts` and load from the site itself.
 - Customer-facing text is Sinhala in Sinhala script, with English words (app, logo, Flutter…) left in English.
 - After the site is online, add a share image: put a 1200×630 image in `assets/brand/` and add
   `<meta property="og:image" content="https://YOUR-DOMAIN/assets/brand/share.jpg">` to every page.

@@ -111,30 +111,14 @@
       '<a class="btn' + (hot ? " btn-primary" : "") + '" href="' + esc(href) + '">Estimate ගන්න</a></article>';
   }
 
-  /* ---------- animations (pure HTML + CSS, see style.css) ---------- */
-  const ANIMS = {
-    phone: '<div class="ph"><span class="ph-notch"></span><div class="ph-screen"><span class="ph-bar"></span><span class="ph-card"></span><span class="ph-card"></span><span class="ph-card"></span><span class="ph-btn"></span></div></div>',
-    browser: '<div class="br"><div class="br-top"><i></i><i></i><i></i><span>oyage-business.lk</span></div><div class="br-body"><span class="br-nav"></span><span class="br-h1"></span><span class="br-p"></span><span class="br-cta"></span><div class="br-row"><span></span><span></span><span></span></div></div><span class="an-cursor"></span></div>',
-    dashboard: '<div class="db"><div class="db-kpis"><div><small>Sales</small><b>LKR 248K</b></div><div><small>Orders</small><b>1,204</b></div><div><small>Users</small><b>36</b></div></div><div class="db-chart"><i style="--h:38%"></i><i style="--h:56%"></i><i style="--h:44%"></i><i style="--h:72%"></i><i style="--h:60%"></i><i style="--h:86%"></i><i style="--h:70%"></i></div></div>',
-    backend: '<div class="be"><div class="be-db"><span></span><span></span><span></span><small>Database</small></div><div class="be-wire"><i></i><i></i><i></i></div><div class="be-panel"><div class="be-head"><span class="be-lock"></span>Admin</div><span class="be-row"></span><span class="be-row"></span><span class="be-row"></span></div></div>',
-    chat: '<div class="ch"><div class="ch-top"><span class="ch-av"></span><b>AI Assistant</b><small>online</small></div><div class="ch-msg me m1">මගේ order එක කොහෙද?</div><div class="ch-msg bot m2"><span class="ch-dots"><i></i><i></i><i></i></span><span class="ch-txt">Order එක අද delivery වෙනවා.</span></div><div class="ch-msg me m3">Thank you!</div></div>',
-    server: '<div class="sv"><div class="sv-rack"><div class="sv-u"><i></i><i></i><span></span></div><div class="sv-u"><i></i><i></i><span></span></div><div class="sv-u"><i></i><i></i><span></span></div><svg class="sv-pulse" viewBox="0 0 160 40"><polyline points="0,20 40,20 48,8 56,32 64,20 96,20 104,5 112,35 120,20 160,20"/></svg></div><ul class="sv-checks"><li>Updates</li><li>Bug fixes</li><li>Domain</li><li>Server checks</li></ul></div>',
-    logo: '<div class="lg"><div class="lg-art"><svg class="lg-svg" viewBox="0 0 64 64"><circle class="lg-guide" cx="32" cy="32" r="30"/><path class="lg-guide" d="M2 32h60M32 2v60"/><path class="lg-hex" d="M32 3l26 15v28L32 61 6 46V18z"/></svg><span class="lg-mark"></span></div><div class="lg-sw"><i></i><i></i><i></i></div></div>',
-    social: '<div class="so">' + '<div class="so-post"><span class="so-img"></span><span class="so-line"></span><span class="so-act"><i class="so-heart"></i><b>1.2K</b></span></div>'.repeat(3) + "</div>",
-    photo: '<div class="pe"><div class="pe-scene pe-before"><i class="pe-clutter c1"></i><i class="pe-clutter c2"></i><i class="pe-prod"></i></div><div class="pe-scene pe-after"><i class="pe-prod"></i></div><span class="pe-line"></span><span class="pe-tag b">Before</span><span class="pe-tag a">After</span></div>',
-    timeline: '<div class="vt"><div class="vt-screen"><span class="vt-play"></span><span class="vt-sub">Subtitles + music</span></div><div class="vt-tracks"><div class="vt-track"><b style="--x:0%;--w:30%"></b><b style="--x:32%;--w:38%"></b><b style="--x:72%;--w:28%"></b></div><div class="vt-track wave"><b style="--x:0%;--w:100%"></b></div><div class="vt-track subs"><b style="--x:6%;--w:18%"></b><b style="--x:30%;--w:22%"></b><b style="--x:58%;--w:16%"></b><b style="--x:80%;--w:14%"></b></div><span class="vt-head"></span></div></div>',
-    uiux: '<div class="ux"><div class="ux-frame"><span class="ux-el ux-top"></span><span class="ux-el ux-img"></span><span class="ux-el ux-t1"></span><span class="ux-el ux-t2"></span><span class="ux-el ux-btn"></span></div><div class="ux-labels"><span class="w">Wireframe</span><span class="d">Design</span></div><span class="an-cursor"></span></div>'
-  };
-  const WITH_CHIPS = ["phone", "browser", "dashboard", "backend", "logo", "social"];
-
+  /* ---------- the picture next to the service name ---------- */
   function stageHtml(s) {
     if (s.video) {
       return '<div class="an an-video"><video autoplay muted loop playsinline preload="metadata" aria-label="' + esc(s.name) + ' example">' +
         '<source src="' + esc(s.video) + '" type="video/mp4"></video></div>';
     }
-    const chips = WITH_CHIPS.indexOf(s.anim) === -1 ? "" :
-      (s.tags || []).slice(0, 3).map((t, i) => '<span class="an-chip k' + (i + 1) + '">' + esc(t) + "</span>").join("");
-    return '<div class="an an-' + esc(s.anim) + '" aria-hidden="true">' + (ANIMS[s.anim] || "") + chips + "</div>";
+    // a 3D glass tile with the service's icon (main.js loads the 3D only where it can be drawn; until then the logo mark shows)
+    return '<div class="an an-3d" data-3d="tile" data-icon="' + esc(SHAPES.test(s.icon || "") ? s.icon || "" : "") + '" aria-hidden="true"></div>';
   }
 
   /* ---------- building blocks ---------- */

@@ -1,0 +1,12 @@
+{
+  "name": "hexora-3d",
+  "private": true,
+  "description": "Builds assets/js/hx3d.js (the site's 3D scenes) from hx3d.src.js",
+  "scripts": {
+    "build": "esbuild hx3d.src.js --bundle --minify --format=iife --global-name=HX3D --target=es2018 --outfile=../../assets/js/hx3d.js"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "three": "0.186.1"
+  }
+}
