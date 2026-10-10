@@ -22,6 +22,8 @@ hexora-website/
 ├─ service.html
 ├─ start-project.html
 ├─ account.html
+├─ privacy.html
+├─ 404.html
 ├─ admin.html
 ├─ firestore.rules       Firebase security rules (paste into the Firebase console)
 ├─ README.md
@@ -45,7 +47,9 @@ hexora-website/
    ├─ js/packages.js       the mobile app package "ladder" (home page, Mobile Apps page)
    ├─ js/boot.js           loads the admin panel's saved data, then the page scripts
    ├─ js/admin.js          admin panel (admin.html)
-   ├─ brand/hexora-logo.png  your original logo (the site cuts the mark, name and tagline from it)
+   ├─ brand/hexora-logo.webp  your logo as the site uses it (the mark, name and tagline are cut from this one file)
+   ├─ brand/hexora-logo.png   the original logo (share image / search results only)
+   ├─ fonts/               Michroma, Manrope, JetBrains Mono, Noto Sans Sinhala (woff2, served from the site itself)
    └─ video/               hexora-intro.mp4 (logo animation)
 ```
 
@@ -83,6 +87,34 @@ hexora-website/
 - **Tabs** (`[data-tabs]`, `main.js`): pricing on the home page, and the service categories on a phone. Arrow keys / Home / End work.
 - **Package ladder** (`[data-ladder]`): the packages come from `config.js → packages`; click one to open its details.
 - Every page is checked on a 390 px phone and a 1280 px screen for horizontal overflow and tap targets of at least ~44 px.
+
+## Speed and stability (what was measured, what was kept)
+Lighthouse, mobile profile, median of 3 runs, served gzip like GitHub Pages (before → now):
+| page | score | TBT | CLS | FCP |
+|---|---|---|---|---|
+| home | 42–48 → 89 | 1346 → ~20 ms | 0.08 → 0.08 | 3.5 → 1.96 s |
+| service page | 24–26 → 81–90 | 1021 → ~25 ms | 0.87 → 0.00 | 3.3 → 1.96 s |
+| start-project | 48–54 → 92 | 952 → 0 ms | 0.08 → 0.08 | 3.5 → 1.95 s |
+What made the difference, each measured on its own:
+- **Background canvas** (`main.js`): the old one repainted the whole screen ~60×/s (≈100 ms a frame on a mid phone). The still hex grid is now plain CSS (`body::before`); the canvas only draws a few dots and, with a mouse, a small bright patch under the pointer, at ~30 fps.
+- **Logo**: the one-file logo sprite is WebP (334 KB → 86 KB) and preloaded.
+- **Fonts are served by the site** (`assets/fonts`, no Google request). Each has a metric-matched fallback (`Manrope Fallback`, …) so the swap does not move text.
+- **Page scripts are `defer`red**; the Firestore host is preconnected.
+- **Layout shift**: `#svc-root:empty` keeps the service page's height until it is filled; the hero glow no longer depends on the hero's height.
+- Tried and **dropped**: removing the font preloads (slower first paint, no gain elsewhere).
+- Hover effects only apply on devices that can hover (`@media (hover: hover) and (pointer: fine)`); touch gets press feedback instead. Taps are instant (`touch-action: manipulation`) and have no grey flash.
+- Not measurable here, kept on reasoning: `preconnect` to Firestore (the sandbox cannot reach it).
+- Still open: LCP is ~3 s on the simulated slow-4G profile because the first-visit loader's logo is the largest paint; repeat visits skip the loader.
+
+## Security notes
+- **Content-Security-Policy** is set with a `<meta>` tag on every page (GitHub Pages cannot send headers): scripts only from this site plus one hashed inline snippet, connections only to Firebase and the exchange-rate API, no frames, no objects. **If you edit the small inline `<script>` in a page's `<head>`** (the one that sets the `js` / `auth-in` classes), its hash changes and the page will stop working: re-compute the `sha256-…` in that page's CSP tag. If you change the exchange-rate API in the admin panel to another host, add that host to `connect-src`.
+- `clickjacking` cannot be blocked from a meta tag; a custom domain behind a CDN (e.g. Cloudflare) can add real headers.
+- **Admin PIN = the Firebase password.** Use 8+ digits that are not a date or a pattern, and never write it down in this repo. A new PIN of fewer than 8 digits is refused in the Security tab.
+- Customers' PINs are stored so the admin can send a forgotten one. **Send it by WhatsApp** (to the account's own phone). "App එකට යවන්න" shows it to whoever typed the right name + phone number, so use it only when you know that customer.
+- A customer's phone number is not verified, so linking a request to an account is always a manual choice in the admin panel.
+- Icons typed in the admin panel may only contain plain `<path> <rect> <circle> <line> <polyline> <polygon> <ellipse>` shapes; links for Facebook / YouTube must be `https://`.
+- `firestore.rules` now also requires document ids to be the random keys the site makes and chat attachments to be a photo or voice type. **Paste the new rules into Firebase → Firestore → Rules → Publish** for this to take effect.
+- Known limits: a script can still send many requests / chat messages (the free plan's daily write quota is the ceiling); Firebase App Check or a proxy in front would close that.
 
 ## Admin panel (`admin.html`) — Firebase
 Open it from the small lock icon in the bottom-right corner of any page's footer (or go to `/admin.html`).
@@ -135,7 +167,7 @@ Good to know:
 - After changing `firestore.rules`, paste it again in Firebase → Firestore Database → Rules → **Publish**.
 
 ## Checks that were run (so you know it is solid)
-- 270 end-to-end checks against the Firebase emulators with the real `firestore.rules` (accounts, requests, chat, voice, security rules, slow / offline network), plus 80 admin-panel checks (every tab, validation, save / conflict / history, PIN change, search, CSV, polling), 50 public-site checks (every page on phone, tablet and desktop, footer, SEO files, shared-computer privacy) and 72 navigation checks (phone menu, anchors on slow connections, Back / Forward, tab addresses, login state, keyboard, no-JavaScript, header layout 901 – 1600 px).
+- 275 end-to-end checks against the Firebase emulators with the real `firestore.rules` (accounts, requests, chat, voice, security rules, slow / offline network), plus 81 admin-panel checks (every tab, validation, save / conflict / history, PIN change, search, CSV, polling), 50 public-site checks (every page on phone, tablet and desktop, footer, SEO files, shared-computer privacy) and 72 navigation checks (phone menu, anchors on slow connections, Back / Forward, tab addresses, login state, keyboard, no-JavaScript, header layout 901 – 1600 px).
 - axe-core accessibility scan: no violations on any page (phone and desktop); every colour pair is at least 4.5:1.
 - Every link, image and `#anchor` on every page resolves.
 
@@ -154,7 +186,7 @@ then visit http://localhost:3000 (or :8000).
 **Vercel:** `npx vercel` inside the folder.
 
 ## Notes
-- Fonts (Michroma, Manrope, JetBrains Mono, and Noto Sans Sinhala for Sinhala text) load from Google Fonts.
+- Fonts (Michroma, Manrope, JetBrains Mono, and Noto Sans Sinhala for Sinhala text) are in `assets/fonts` and load from the site itself.
 - Customer-facing text is Sinhala in Sinhala script, with English words (app, logo, Flutter…) left in English.
 - After the site is online, add a share image: put a 1200×630 image in `assets/brand/` and add
   `<meta property="og:image" content="https://YOUR-DOMAIN/assets/brand/share.jpg">` to every page.
