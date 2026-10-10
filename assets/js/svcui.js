@@ -4,7 +4,9 @@
 (function (root) {
   "use strict";
   const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  const icon = inner => '<svg viewBox="0 0 24 24" aria-hidden="true">' + inner + "</svg>";
+  // icons are small SVG shapes typed in the admin panel: only plain shapes with plain attributes are drawn (no scripts, handlers or links)
+  const SHAPES = /^(?:\s*<(?:path|circle|rect|line|polyline|polygon|ellipse)(?:\s+(?!on|href|xlink)[a-z-]+="[^"<>]*")*\s*\/?>)*\s*$/i;
+  const icon = inner => '<svg viewBox="0 0 24 24" aria-hidden="true">' + (SHAPES.test(inner || "") ? inner : "") + "</svg>";
   const plain = t => esc(String(t || "").replace(/\{[^}]*\}/g, "").replace(/\s+/g, " ").trim());   // {price} placeholders are not shown in a one-line list
 
   // text(service) → HTML for the second line; default: the "short" line, or the summary without its {placeholders}

@@ -101,7 +101,7 @@ The panel saves to **Firebase** (free Spark plan is enough). No GitHub token is 
 ### One-time Firebase setup
 1. https://console.firebase.google.com → **Create a project** (Google Analytics not needed).
 2. **Build → Authentication → Get started → Sign-in method → Email/Password → Enable.**
-   Then **Users → Add user**: your admin email, and the PIN (`090405`) as the password.
+   Then **Users → Add user**: your admin email, and a strong PIN of your own (8+ digits) as the password. Never write the PIN in this repo.
    Keep **Settings → User actions → Enable create (sign-up)** turned **on**: customers make their accounts with it.
 3. **Build → Firestore Database → Create database** → location `asia-south1` (Mumbai) → **production mode**.
    Open the **Rules** tab, paste everything from `firestore.rules` (the admin email is in `isAdmin()`; change it there if you use another one), **Publish**.
