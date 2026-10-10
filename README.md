@@ -92,9 +92,10 @@ hexora-website/
 Lighthouse, mobile profile, median of 3 runs, served gzip like GitHub Pages (before → now):
 | page | score | TBT | CLS | FCP |
 |---|---|---|---|---|
-| home | 42–48 → 89 | 1346 → ~20 ms | 0.08 → 0.08 | 3.5 → 1.96 s |
-| service page | 24–26 → 81–90 | 1021 → ~25 ms | 0.87 → 0.00 | 3.3 → 1.96 s |
-| start-project | 48–54 → 92 | 952 → 0 ms | 0.08 → 0.08 | 3.5 → 1.95 s |
+| home | 42–48 → 90–91 | 1346 → ~16 ms | 0.08 → 0.02 | 3.5 → 1.95 s |
+| service page | 24–26 → 91 | 1021 → ~39 ms | 0.87 → 0.00 | 3.3 → 1.96 s |
+| start-project | 48–54 → 93–94 | 952 → 0 ms | 0.08 → 0.01 | 3.5 → 1.96 s |
+Accessibility 100 and SEO 100 on every public page (the customer page is deliberately `noindex`).
 What made the difference, each measured on its own:
 - **Background canvas** (`main.js`): the old one repainted the whole screen ~60×/s (≈100 ms a frame on a mid phone). The still hex grid is now plain CSS (`body::before`); the canvas only draws a few dots and, with a mouse, a small bright patch under the pointer, at ~30 fps.
 - **Logo**: the one-file logo sprite is WebP (334 KB → 86 KB) and preloaded.
@@ -104,7 +105,15 @@ What made the difference, each measured on its own:
 - Tried and **dropped**: removing the font preloads (slower first paint, no gain elsewhere).
 - Hover effects only apply on devices that can hover (`@media (hover: hover) and (pointer: fine)`); touch gets press feedback instead. Taps are instant (`touch-action: manipulation`) and have no grey flash.
 - Not measurable here, kept on reasoning: `preconnect` to Firestore (the sandbox cannot reach it).
+- The first-visit loader (home page only) no longer waits for Firebase; the page waits at most 1.5 s for the saved site data, then uses the built-in copy.
+- The hero video has a poster image, so the frame is never empty (iPhone low-power mode, data saver).
 - Still open: LCP is ~3 s on the simulated slow-4G profile because the first-visit loader's logo is the largest paint; repeat visits skip the loader.
+
+## Browsers and devices that were actually run
+- **Chromium** (Blink): every page on 19 device / screen profiles (iPhone SE/13/14 Pro Max, Pixel 7, Galaxy S8/S9+/A55, iPad Mini/Pro, Galaxy Tab, laptops, 1080p, 1440p, 320 px, phones in landscape): no sideways scroll, no console errors, no CSP violations, no element stuck invisible, every control at least 44 px on touch.
+- **Real WebKit** (WebKitGTK 2.52, the engine family Safari uses) and **real Firefox 157**: every page at phone and desktop widths, plus the same click-through (menu, anchors, tabs, package ladder, FAQ, chat, back-to-top, service pages, project form, account form) — 42 / 48 checks each, all passing.
+- Old-browser safety: JavaScript is ES2018 (Chrome 64 / Safari 12 / Firefox 58); the service-page drawings fall back to the logo mark where container units are missing; scroll calls work in browsers that do not know the `instant` option.
+- **Not run here**: a physical iPhone / Android phone, Safari itself, Windows and macOS font rendering. Please open the site once on your own phone as a last look; the hero video, the voice recorder and the camera picker are the parts that depend most on the device.
 
 ## Security notes
 - **Content-Security-Policy** is set with a `<meta>` tag on every page (GitHub Pages cannot send headers): scripts only from this site plus one hashed inline snippet, connections only to Firebase and the exchange-rate API, no frames, no objects. **If you edit the small inline `<script>` in a page's `<head>`** (the one that sets the `js` / `auth-in` classes), its hash changes and the page will stop working: re-compute the `sha256-…` in that page's CSP tag. If you change the exchange-rate API in the admin panel to another host, add that host to `connect-src`.
