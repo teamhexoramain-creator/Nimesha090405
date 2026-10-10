@@ -97,7 +97,7 @@ main, footer, header { position: relative; z-index: 1; }
 .loader {
   position: fixed; inset: 0; z-index: 100; display: grid; place-items: center;
   background: var(--bg);
-  animation: loader-auto-hide .5s ease 2.6s forwards; /* safety net if JS never runs */
+  animation: loader-auto-hide .5s ease 2.2s forwards; /* safety net if JS never runs */
 }
 .loader-inner { display: grid; justify-items: center; gap: 22px; }
 .loader .loader-mark { --s: .1905; filter: drop-shadow(0 0 24px rgba(37, 99, 255, .7)); animation: loader-pulse 1.2s var(--ease) infinite alternate; }
@@ -1471,6 +1471,28 @@ html:not(.js) .nav-cta-mini { display: none !important; }
   .menu-btn { flex: none; }
 }
 @media (max-width: 380px) { .nav { gap: 8px; } .nav-cta-mini { padding: 0 12px; font-size: .8rem; margin-right: 4px; } }
+
+/* a browser older than Chrome 105 / Safari 16 / Firefox 110 cannot size the service drawings (container units): show the logo mark instead of a broken picture */
+@supports not (width: 1cqw) {
+  .svc-stage .an:not(.an-video) > * { display: none; }
+  .svc-stage .an:not(.an-video)::after { content: ""; width: 26%; aspect-ratio: 441 / 417; background: url("../brand/hexora-logo.webp") no-repeat 49.94% 31.9% / 284.35% auto; filter: drop-shadow(0 0 18px rgba(37, 99, 255, .6)); }
+}
+
+/* the customer page is filled by script: its footer always starts below the first screen, so it cannot jump when the content arrives */
+body.account-page > main { min-height: 100vh; min-height: 100svh; }
+
+@media (max-width: 380px) { .tabs-bar .tab { padding-inline: 7px; font-size: .82rem; } }
+
+/* touch targets: every control is at least 44 x 44 px on a phone / touch screen */
+@media (pointer: coarse), (max-width: 700px) {
+  .brand { min-height: 44px; display: inline-flex; align-items: center; }
+  .qty button { width: 44px; height: 44px; }
+  .qty input { width: 44px; height: 44px; }
+  .video-toggle { width: 44px; height: 44px; }
+  .cat-tab, .pk-badge, .acc-link { min-height: 44px; }
+  .acc-link { display: inline-flex; align-items: center; padding: 0 2px; }
+  .site-footer ul a, .crumbs a { min-width: 44px; }
+}
 
 /* Sinhala in tracked labels (class set by nav.js) */
 .si { letter-spacing: 0 !important; }
