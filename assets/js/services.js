@@ -277,7 +277,7 @@ window.HX_SERVICES = {
       ]
     },
     {
-      slug: "motion-graphics", cat: "creative", name: "Motion Graphics", video: "assets/video/hexora-intro.mp4",
+      slug: "motion-graphics", cat: "creative", name: "Motion Graphics", anim: "timeline",
       icon: '<circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l6-3.5z"/>',
       short: "Logo animations, intros, video ads",
       summary: "Logo animations, intros, video ads, promo videos. මේ site එකේ video එක වගේ animations.",
