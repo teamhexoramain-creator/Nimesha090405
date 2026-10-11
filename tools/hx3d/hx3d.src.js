@@ -41,21 +41,28 @@ const bevel = (depth, size) => ({ depth, bevelEnabled: true, bevelThickness: siz
 const glossy = extra => new MeshPhysicalMaterial(Object.assign({ vertexColors: true, metalness: .55, roughness: .22, clearcoat: 1, clearcoatRoughness: .12, envMapIntensity: 1.1 }, extra));
 
 // the Hexora mark as a clear 3D "H": the logo's hexagon outline (slanted pillar tops and feet) with a straight crossbar, solid and bevelled.
-// The front is the brand gradient (light red top left -> deep red bottom right); the thick sides are darker red so the depth reads.
+// Colours follow the logo: brand-gradient front, WHITE-to-grey walls on the faces that look to the right (the pale inner walls in the logo),
+// DARK-red undersides on the faces that look down (the feet in the logo), deep red on the remaining sides.
 const H_PTS = [[-1.1, -.78], [-.4, -1.18], [-.4, -.17], [.4, -.17], [.4, -1.18], [1.1, -.78], [1.1, .78], [.4, 1.18], [.4, .17], [-.4, .17], [-.4, 1.18], [-1.1, .78]];
 function mark() {
   const g = new Group(), D = .5;
   const sh = new Shape(); H_PTS.forEach(([x, y], i) => (i ? sh.lineTo(x, y) : sh.moveTo(x, y))); sh.closePath();
   const geo = new ExtrudeGeometry(sh, bevel(D, .035)); geo.translate(0, 0, -D / 2);
-  const pos = geo.attributes.position, nor = geo.attributes.normal, col = new Float32Array(pos.count * 3), c = new Color(), dark = new Color("#5a0a12");
+  const pos = geo.attributes.position, nor = geo.attributes.normal, col = new Float32Array(pos.count * 3);
+  const c = new Color(), white = new Color("#ffffff"), grey = new Color("#b9b9bd"), foot = new Color("#3a0409"), deep = new Color("#7a0d17");
   for (let i = 0; i < pos.count; i++) {
-    gradAt((pos.getX(i) / 2.2 - pos.getY(i) / 2.4 + 1) / 2, c);
-    const side = 1 - Math.min(1, Math.abs(nor.getZ(i)) * 1.15);   // 0 on the front/back faces, 1 on the thick sides
-    c.lerp(dark, side * .55);
+    const nx = nor.getX(i), ny = nor.getY(i), nz = Math.abs(nor.getZ(i));
+    if (nz > .85) gradAt((pos.getX(i) / 2.2 - pos.getY(i) / 2.4 + 1) / 2, c);      // front and back faces: the brand gradient
+    else if (nx > .55) c.copy(white).lerp(grey, Math.min(1, Math.max(0, (.9 - pos.getY(i)) / 2.2)));   // right-looking walls: white, greying downwards
+    else if (ny < -.55) c.copy(foot).lerp(deep, (pos.getX(i) + 1.1) / 2.2 * .5);    // undersides: deep red
+    else c.copy(deep);                                                               // left / top walls and the bevels
     col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
   }
   geo.setAttribute("color", new BufferAttribute(col, 3));
-  g.add(new Mesh(geo, glossy({ metalness: .1, roughness: .4, clearcoat: .5, clearcoatRoughness: .2, envMapIntensity: .22 })));
+  const front = glossy({ metalness: .1, roughness: .4, clearcoat: .5, clearcoatRoughness: .2, envMapIntensity: .22 });
+  const side = new MeshPhysicalMaterial({ vertexColors: true, metalness: 0, roughness: .85, envMapIntensity: .05 });   // the walls are matte so the white stays white and the feet stay dark
+  const mesh = new Mesh(geo, [front, side]);   // group 0 = front/back faces, group 1 = the walls
+  g.add(mesh);
   return g;
 }
 // a dark glass hex tile with a gradient rim and a glowing line icon on its face
@@ -104,8 +111,8 @@ export function mount(el, opts) {
   const draw = t => {
     const s = (t - t0) / 1000;
     px += (tx - px) * .06; py += (ty - py) * .06;
-    obj.rotation.y = (reduce ? .32 : Math.sin(s * .45) * .42) + px * .3 + sy * .5;   // sy: the logo turns a little as the page scrolls past it
-    obj.rotation.x = -.1 + (reduce ? 0 : Math.sin(s * .5) * .05) + py * .18;
+    obj.rotation.y = (reduce ? -.42 : -.5 + Math.sin(s * .45) * .3) + px * .3 + sy * .5;   // sy: the logo turns a little as the page scrolls past it
+    obj.rotation.x = -.24 + (reduce ? 0 : Math.sin(s * .5) * .05) + py * .18;
     obj.position.y = reduce ? 0 : Math.sin(s * .8) * .045;
     const k = Math.min(1, s / .9), e = 1 - Math.pow(1 - k, 3);   // entrance: scale .94 → 1 with a strong ease-out
     obj.scale.setScalar(reduce ? 1 : .94 + .06 * e);
