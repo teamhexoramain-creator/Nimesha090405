@@ -25,7 +25,12 @@
 
   const faq = S.home && S.home.faq, fq = $("home-faq");
   if (fq && Array.isArray(faq)) {
-    if (faq.length) fq.innerHTML = faq.map((f, i) => "<details" + (i ? "" : " open") + "><summary>" + esc(f.q) + '</summary><div class="ans"><div><p>' + tok(f.a) + "</p></div></div></details>").join("");
-    else gone("faq");
+    const SHOW = 5;   // the first questions are enough for most people; the rest sit behind one button
+    const one = (f, i) => "<details" + (i ? "" : " open") + (i >= SHOW ? ' class="faq-more" hidden' : "") + "><summary>" + esc(f.q) + '</summary><div class="ans"><div><p>' + tok(f.a) + "</p></div></div></details>";
+    if (faq.length) {
+      fq.innerHTML = faq.map(one).join("") + (faq.length > SHOW ? '<button type="button" class="btn faq-toggle" aria-expanded="false">තව ප්‍රශ්න ' + (faq.length - SHOW) + ' ක් බලන්න</button>' : "");
+      const t = fq.querySelector(".faq-toggle");
+      if (t) t.addEventListener("click", () => { const open = t.getAttribute("aria-expanded") !== "true"; fq.querySelectorAll(".faq-more").forEach(d => { d.hidden = !open; }); t.setAttribute("aria-expanded", String(open)); t.textContent = open ? "ඉතිරි ප්‍රශ්න හංගන්න" : "තව ප්‍රශ්න " + (faq.length - SHOW) + " ක් බලන්න"; });
+    } else gone("faq");
   }
 })();
