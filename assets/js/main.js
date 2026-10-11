@@ -242,7 +242,7 @@
     function hexGrid() {
       grid = document.createElement("canvas"); grid.width = cv.width; grid.height = cv.height;
       const g = grid.getContext("2d"); g.scale(dpr, dpr);
-      g.strokeStyle = "rgba(100,140,255,0.07)"; g.lineWidth = 1;
+      g.strokeStyle = "rgba(255, 255, 255, 0.055)"; g.lineWidth = 1;
       const r = 32, w = Math.sqrt(3) * r;
       g.beginPath();
       for (let row = -1; row < H / (r * 1.5) + 1; row++)
@@ -267,7 +267,7 @@
         spot = document.createElement("canvas"); spot.width = spot.height = Math.round(SZ * dpr);
         sctx = spot.getContext("2d");
         mask = sctx.createRadialGradient(R * dpr, R * dpr, 0, R * dpr, R * dpr, R * dpr);
-        mask.addColorStop(0, "rgba(0,0,0,1)"); mask.addColorStop(1, "rgba(0,0,0,0)");
+        mask.addColorStop(0, "rgba(0, 0, 0, 1)"); mask.addColorStop(1, "rgba(0, 0, 0, 0)");
       }
       sctx.globalCompositeOperation = "source-over";
       sctx.clearRect(0, 0, spot.width, spot.height);

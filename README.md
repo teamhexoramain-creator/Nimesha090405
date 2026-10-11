@@ -48,10 +48,10 @@ hexora-website/
    ├─ js/packages.js       the mobile app package "ladder" (home page, Mobile Apps page)
    ├─ js/boot.js           loads the admin panel's saved data, then the page scripts
    ├─ js/admin.js          admin panel (admin.html)
-   ├─ brand/hexora-logo.webp  your logo as the site uses it (the mark, name and tagline are cut from this one file)
+   ├─ brand/hexora-logo.webp  your logo as the site uses it (the mark, name and tagline are cut from this one transparent sprite; the original lockups are hexora-lockup-dark.png / -light.png and hexora-mark.png)
    ├─ brand/hexora-logo.png   the original logo (share image / search results only)
    ├─ fonts/               Manrope, JetBrains Mono, Noto Sans Sinhala (woff2, served from the site itself)
-   └─ video/               hexora-intro.mp4 (logo animation; shown where 3D cannot be drawn)
+   └─ video/               hexora-intro-poster.webp (the mark picture shown where 3D cannot be drawn)
 tools/hx3d/               source of assets/js/hx3d.js: `cd tools/hx3d && npm ci && npm run build` (versions pinned in package.json)
 ```
 
@@ -168,6 +168,9 @@ Good to know:
 - `config.js` / `services.js` are only the starting data and the backup. After the first Save, edit from the admin panel; editing those files will not change the live site.
 - A new service appears on the service pages **and** in the home page's service list (both are built from the same data). For a nice look give it a **Short line** and an icon.
 - Two admin windows: if one saves while the other still shows an older version, the second Save is refused ("මේ අතරේ වෙන තැනකින් data වෙනස් වෙලා"), so nothing is overwritten by accident. Reload and try again.
+
+## Brand colours (the red logo)
+The whole site uses the colours of the red Hexora logo: near-black background `#0A0A0B`, light red `#FF5A4A` → red `#E5252A` → deep red `#A3121E` for accents, white and grey for text. They are CSS variables at the top of `assets/css/style.css` (`--bg`, `--cyan` = light red accent, `--blue` = red, `--violet` = deep red, `--grad`, `--grad-ink` for buttons); the 3D mark uses the same reds in `tools/hx3d/hx3d.src.js`. To change the logo again: replace `assets/brand/hexora-logo.webp` (the sprite) and the favicon in each page head, then adjust the three `.lp-*` coordinates in the CSS.
 
 ## Kept simple for customers
 - **Header**: Services · Pricing · FAQ · Login · "Project එක පටන් ගන්න" (Register is the second tab on the Login page and is in the footer).
