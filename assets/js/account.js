@@ -5,6 +5,7 @@
    automatically (planner.js keeps a claim for each); other projects are linked from the admin panel. */
 (function () {
   "use strict";
+  if (window.top !== window.self) { document.documentElement.textContent = ""; return; }   // never run inside another site's frame (clickjacking)
   // a PIN anyone would try first: one repeated digit, a run (123456 / 654321), pairs (121212, 112233) and a few famous ones
   const weakPin = p => /^(\d)\1+$/.test(p) || "0123456789".indexOf(p) !== -1 || "9876543210".indexOf(p) !== -1 || /^(\d\d)\1\1$/.test(p) || /^(\d)\1(\d)\2(\d)\3$/.test(p) || ["696969", "159753", "147258", "123321", "100000", "010203", "202020"].indexOf(p) !== -1;
   const FB = window.HXFB, C = window.HEXORA || {};
@@ -64,6 +65,7 @@
           '<div class="field"><label for="a-phone">Phone number <span class="hint">(WhatsApp)</span></label><input class="input" id="a-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="07X XXX XXXX"></div>' +
           '<div class="field"><label for="a-pin">PIN <span class="hint">(digits 6' + (up ? ", ඔයාම තෝරගන්න" : "") + ')</span></label><input class="input acc-pin" id="a-pin" type="password" inputmode="numeric" maxlength="6" autocomplete="' + (up ? "new-password" : "current-password") + '"></div>' +
           (up ? '<div class="field"><label for="a-pin2">PIN එක ආයෙත් ගහන්න</label><input class="input acc-pin" id="a-pin2" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>' : "") +
+          (up ? '<label class="acc-agree"><input type="checkbox" id="a-agree"> <span>මම <a href="terms.html" target="_blank" rel="noopener">Terms</a> සහ <a href="privacy.html" target="_blank" rel="noopener">Privacy</a> කියවලා එකඟයි.</span></label>' : "") +
           '<p class="acc-msg" id="acc-msg" role="alert"></p>' +
           '<button class="btn btn-primary btn-block" type="submit">' + (up ? "Account එක හදන්න" : "Login") + "</button>" +
         "</form>" +
@@ -100,26 +102,11 @@
   }
   function waitScreen() {
     root.innerHTML = '<section class="acc-card acc-gate"><span class="eyebrow">PIN request</span><h1 class="display">ඔයාගේ <span class="grad-text">PIN</span></h1>' +
-      '<div id="pin-box"><p class="acc-msg ok">✓ Request එක ගියා.</p><p class="muted">අපි check කරලා PIN එක මෙතනට එවනවා. මේ page එක open කරගෙන ඉන්න (හරි පස්සේ මේ phone එකෙන්ම ආයෙත් එන්න).</p></div>' +
-      '<div class="acc-actions"><button class="btn" type="button" data-act="pin-check">Refresh</button><button class="btn" type="button" data-act="pin-new">අලුත් request එකක්</button></div>' +
+      '<div id="pin-box"><p class="acc-msg ok">✓ Request එක ගියා.</p><p class="muted">අපි ඔයාව තහවුරු කරගෙන PIN එක ඔයාගේ phone number එකට WhatsApp එකෙන් එවනවා. </p></div>' +
+      '<div class="acc-actions"><button class="btn" type="button" data-act="pin-new">අලුත් request එකක්</button></div>' +
       '<p class="acc-help">ඉක්මනට ඕන නම් <a href="' + esc(wa("Hi Hexora! මගේ account එකේ PIN එක අමතක උනා.")) + '" target="_blank" rel="noopener">WhatsApp එකෙන් කියන්න</a>.<br><button type="button" class="acc-link" data-mode="login">← Login එකට</button></p></section>';
     clearInterval(poll);
-    poll = setInterval(() => { if (!$("#pin-box")) clearInterval(poll); else checkPin(); }, 8000);
-    checkPin();
   }
-  async function checkPin() {
-    const r = readPR(); if (!r || !$("#pin-box")) return;
-    try {
-      const d = await FB.get("/pinRequests/" + encodeURIComponent(r.id));
-      if (d && d.pin && $("#pin-box")) {
-        clearInterval(poll);
-        const extra = $(".acc-actions"); if (extra) extra.remove();
-        $("#pin-box").innerHTML = '<p class="acc-msg ok">✓ ඔයාගේ PIN එක:</p><p class="acc-bigpin">' + esc(d.pin) + '</p><p class="muted">මේ PIN එකෙන් login වෙන්න. මේක වෙන කාටවත් කියන්න එපා.</p>' +
-          '<button class="btn btn-primary btn-block" type="button" data-act="pin-login">Login වෙන්න</button>';
-      }
-    } catch (e) { /* not approved yet (or offline): try again later */ }
-  }
-
   async function submit(form) {
     const up = mode === "signup", btn = form.querySelector("button[type=submit]");
     const name = up ? $("#a-name").value.trim() : "", phone = FB.phoneId($("#a-phone").value), pin = $("#a-pin").value;
@@ -128,6 +115,7 @@
     if (!/^\d{6}$/.test(pin)) return msg("PIN එක digits 6ක් වෙන්න ඕන.", false, "a-pin");
     if (up && weakPin(pin)) return msg("මේ PIN එක ඉතා පහසුවෙන් අනුමාන කරන්න පුළුවන් (111111, 123456 වගේ). වෙන එකක් තෝරන්න.", false, "a-pin");
     if (up && pin !== $("#a-pin2").value) return msg("PIN දෙක සමාන නෑ.", false, "a-pin2");
+    if (up && !$("#a-agree").checked) return msg("Terms සහ Privacy වලට එකඟ වෙන්න (tick එක දාන්න).", false, "a-agree");
     btn.disabled = true; msg(up ? "Account එක හදනවා…" : "Login වෙනවා…", true);
     try {
       if (up) {
@@ -255,6 +243,8 @@
         '<div class="field"><label for="s-pin2">ආයෙත් ගහන්න</label><input class="input acc-pin" id="s-pin2" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>' +
         '<button class="btn" type="submit">PIN එක මාරු කරන්න</button></form></section>' +
       '<p class="acc-msg" id="acc-msg" role="status"></p>' +
+      '<section class="acc-card"><h2>ඔයාගේ data</h2><p class="muted">ඔයාගේ account එකේ, projects වල විස්තර JSON file එකක් විදියට බාගන්න. Account එක මකන්නත් පුළුවන් (login එකයි profile එකයි මැකෙනවා).</p>' +
+        '<div class="acc-actions"><button class="btn" type="button" data-act="export">Data බාගන්න</button><button class="btn" type="button" data-act="delete">Account එක මකන්න</button></div></section>' +
       '<section class="acc-card"><h2>Logout</h2><p class="muted">මේ phone / browser එකෙන් logout වෙන්න.</p><div><button class="btn" type="button" data-act="logout">Logout</button></div></section>';
   }
   function paint() {
@@ -274,6 +264,25 @@
     updateDots();
   }
 
+  // "download my data": the profile and every project linked to the account, as one JSON file made in the browser
+  function exportData() {
+    const me = FB.user(), out = { exportedAt: new Date().toISOString(), account: { phone: me.phone, name: (profile && profile.name) || me.name || "" },
+      projects: (projects || []).map(r => ({ ref: r.ref, title: r.title, status: r.status, track: r.track, estimate: r.estimate, message: r.message, createdAt: r.createdAt })) };
+    const url = URL.createObjectURL(new Blob([JSON.stringify(out, null, 2)], { type: "application/json" })), a = document.createElement("a");
+    a.href = url; a.download = "hexora-my-data.json"; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000); msg("Data file එක බාගත වුණා ✓", true);
+  }
+  // delete the profile document, then the login. Project records stay with Hexora as business records until the customer asks (see Privacy).
+  async function deleteAccount(btn) {
+    if (btn.dataset.armed !== "1") { btn.dataset.armed = "1"; btn.textContent = "ඇත්තටම මකන්නද? ආයෙත් ඔබන්න"; setTimeout(() => { btn.dataset.armed = ""; btn.textContent = "Account එක මකන්න"; }, 6000); return; }
+    btn.disabled = true; msg("මකනවා…", true);
+    try {
+      const me = FB.user();
+      try { await FB.fs("DELETE", "/customers/" + encodeURIComponent(me.uid)); } catch (e) { if (e.status !== 404) throw e; }
+      await FB.deleteAccount();
+      root.innerHTML = '<section class="acc-card acc-gate"><span class="eyebrow">Account</span><h1 class="display">Account එක <span class="grad-text">මැකුවා</span></h1><p class="muted">ඔයාගේ login එකයි profile එකයි මැකුවා. Project වාර්තා අපි business වාර්තා විදියට තියාගන්නවා, ඒවාත් මකන්න ඕන නම් WhatsApp එකෙන් කියන්න.</p><a class="btn btn-primary" href="index.html">Home එකට</a></section>';
+    } catch (e) { btn.disabled = false; msg(FB.errText(e)); }
+  }
   async function saveName(form) {
     const name = $("#s-name").value.trim(), me = FB.user(), btn = form.querySelector(".btn");
     if (name.length < 2) return msg("නම අකුරු 2කට වඩා වෙන්න ඕන.", false, "s-name");
@@ -312,7 +321,8 @@
     }
     if (t.dataset.act === "chat") toggleChat(t.dataset.id);
     if (t.dataset.act === "reload") portal();
-    if (t.dataset.act === "pin-check") checkPin();
+    if (t.dataset.act === "export") exportData();
+    if (t.dataset.act === "delete") deleteAccount(t);
     if (t.dataset.act === "pin-new") { clearPR(); forgotScreen(); }
     if (t.dataset.act === "pin-login") { clearPR(); mode = "login"; gate(); }
   });

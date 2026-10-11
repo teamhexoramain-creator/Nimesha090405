@@ -1299,6 +1299,12 @@ input, textarea { caret-color: var(--cyan); }
 .nav-links a:active, .foot-grid a:active { opacity: .7; }
 .btn:active { filter: brightness(.94); }
 
+/* terms tick box (sign-up and project form) */
+.acc-agree { display: flex; align-items: flex-start; gap: 12px; min-height: 44px; cursor: pointer; color: var(--muted); font-size: .92rem; line-height: 1.5; }
+.acc-agree input { flex: none; width: 22px; height: 22px; margin-top: 1px; accent-color: var(--cyan); }
+.acc-agree a { color: var(--cyan); font-weight: 700; text-underline-offset: 3px; }
+.acc-agree .req { color: var(--danger); }
+
 /* =====================================================================================================
    v3 — quiet premium. Same layout and brand colours; calmer surfaces:
    one confident sans for headings (Manrope, sentence case), rounded corners instead of chamfers and hexagons,

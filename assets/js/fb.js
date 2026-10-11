@@ -69,6 +69,8 @@
     }
     return S.id;
   }
+  // deletes the login (the profile document is removed first by the caller); signs out on success
+  async function deleteAccount() { await auth("delete", { idToken: await token() }); signOut(); }
   async function changePin(pin) { keep(await auth("update", { idToken: await token(), password: pin, returnSecureToken: true })); }
   function setName(name) { if (S) { S.name = name; store.set(KEY, S); tell(); } }
 
@@ -131,7 +133,7 @@
   window.HXFB = {
     ready: ready, stages: stages, phoneId: phoneId, phoneLabel: phoneLabel,
     user: () => (S ? { uid: S.uid, phone: S.phone, name: S.name || "" } : null),
-    signUp: signUp, signIn: signIn, signOut: signOut, changePin: changePin, setName: setName, token: token,
+    signUp: signUp, signIn: signIn, signOut: signOut, deleteAccount: deleteAccount, changePin: changePin, setName: setName, token: token,
     fs: fs, db: DB, create: create, patch: patch, get: get, where: where, newId: newId, errText: errText
   };
 })();

@@ -16,6 +16,9 @@
   const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const clone = o => JSON.parse(JSON.stringify(o));
   const KEYS = { tries: "hx_admin_tries_v1" };
+  if (window.top !== window.self) { document.documentElement.textContent = ""; return; }   // never run inside another site's frame (clickjacking)
+  const SHAPES = /^(?:\s*<(?:path|circle|rect|line|polyline|polygon|ellipse)(?:\s+(?!on|href|xlink)[a-z-]+="[^"<>]*")*\s*\/?>)*\s*$/i;   // an icon is only drawn once it is plain shapes
+  const safeIcon = x => (SHAPES.test(x || "") ? x : "");
   const PIN_MIN = 6, PIN_MAX = 12, MAX_TRIES = 5, LOCK_MS = 60000, IDLE_MS = 30 * 60000;
   KEYS.len = "hx_admin_len_v1";   // how long this admin's PIN is (only a hint for the dots; the PIN itself is never stored)
   const pinLen = () => { const n = Number(store.get(KEYS.len)); return n >= PIN_MIN && n <= PIN_MAX ? n : PIN_MIN; };
@@ -603,8 +606,8 @@
         (c ? '<div class="ad-req-meta"><span>Account: ' + esc(c.name) + "</span><span>" + (norm(c.name) === norm(r.name) ? "✓ නම ගැලපෙනවා" : "⚠ නම වෙනස්") + "</span></div>" +
             (c.pin ? '<p class="ad-pinline">PIN: <code class="ad-pin">' + esc(c.pin) + "</code></p>" : '<p class="ad-hint">මේ account එකේ PIN එක save වෙලා නෑ (පරණ account එකක්). Firebase → Authentication එකෙන් ඒ user ව delete කරන්න, customer ට අලුත් account එකක් හදන්න කියන්න.</p>')
           : '<p class="ad-hint">මේ phone number එකට account එකක් නෑ.</p>') +
-        (c && c.pin ? '<p class="ad-hint"><b>ආරක්ෂිතම විදිය: WhatsApp</b> (account එකේ phone number එකටම යනවා). <b>App එකට යවන්න</b> පාවිච්චි කරන්න ඔයා දන්න customer කෙනෙක් නම් විතරයි: නම + phone number දන්න ඕනම කෙනෙකුට request එකක් යවන්න පුළුවන්, ඒ නිසා නම ගැලපෙනවා කියන්නේ ඒ customer ම කියලා සාක්ෂියක් නෙවෙයි.</p>' : "") +
-        '<div class="ad-req-actions">' + (c && c.pin ? '<button type="button" class="btn btn-primary ad-small" data-act="pin-send" data-id="' + esc(r.id) + '">' + (r.sentAt ? "ආයෙත් App එකට යවන්න" : "App එකට PIN එක යවන්න") + "</button>" + (r.sentAt ? '<span class="ad-pill ok">App එකට යැව්වා ' + esc(fmtDate(r.sentAt)) + "</span>" : "") + '<a class="btn btn-wa ad-small" href="' + esc(wa) + '" target="_blank" rel="noopener">PIN එක WhatsApp කරන්න</a>' : "") +
+        (c && c.pin ? '<p class="ad-hint">PIN එක යවන්නේ <b>account එකේ phone number එකට WhatsApp</b> කරලා විතරයි. නම + phone number දන්න ඕනම කෙනෙකුට request එකක් යවන්න පුළුවන්, ඒ නිසා request එකේ නම ගැලපෙනවා කියන්නේ ඒ customer ම කියලා සාක්ෂියක් නෙවෙයි. Customer ව දන්නේ නැත්නම් call එකකින් තහවුරු කරගන්න.</p>' : "") +
+        '<div class="ad-req-actions">' + (c && c.pin ? '<a class="btn btn-wa ad-small" href="' + esc(wa) + '" target="_blank" rel="noopener">PIN එක WhatsApp කරන්න</a>' : "") +
         '<button type="button" class="btn ad-small" data-act="pin-done" data-id="' + esc(r.id) + '">එව්වා ✓ (list එකෙන් අයින් කරන්න)</button></div></article>';
     });
     const list = S.customers.map(c => '<div class="ad-hist"><div><b>' + esc(c.name || "—") + "</b><small>" + esc(phoneLabel(c.phone)) + " · " + esc(fmtDate(c.createdAt)) + "</small></div>" +
@@ -729,7 +732,7 @@
     const side = '<nav class="ad-svc-list" aria-label="Services">' + cats.map(ck =>
       '<span class="ad-svc-cat">' + esc(sv.categories[ck].label) + "</span>" +
       list.map((x, j) => x.cat !== ck ? "" : '<button type="button" data-act="pick-svc" data-i="' + j + '"' + (j === i ? ' aria-current="true"' : "") + ">" +
-        '<svg class="ad-ico" viewBox="0 0 24 24" aria-hidden="true">' + (x.icon || "") + '</svg><span data-live="services.list.' + j + '.name">' + esc(x.name || "(නමක් නෑ)") + "</span></button>").join("")).join("") +
+        '<svg class="ad-ico" viewBox="0 0 24 24" aria-hidden="true">' + safeIcon(x.icon) + '</svg><span data-live="services.list.' + j + '.name">' + esc(x.name || "(නමක් නෑ)") + "</span></button>").join("")).join("") +
       '<button type="button" class="btn ad-small" data-act="add-svc">' + icon(I.plus) + " අලුත් service</button></nav>";
     const form = !s ? "<p>Service එකක් නෑ.</p>" :
       '<div class="ad-svc-form">' +
@@ -745,7 +748,7 @@
             field(base + ".summary", "Summary (card එකේ)", { type: "area", rows: 2, wide: true }) +
             field(base + ".intro", "Intro (page එකේ උඩ)", { type: "area", rows: 3, wide: true }) +
             field(base + ".includes", "මොකද ලැබෙන්නේ (line එකකට එකක්)", { type: "lines", rows: 5, wide: true }) +
-            '<div class="ad-field wide"><label for="f-icon">Icon (SVG paths)</label><div class="ad-icon-row"><textarea class="input" id="f-icon" data-path="' + base + '.icon" data-type="text" rows="2">' + esc(s.icon || "") + '</textarea><svg class="ad-icon-prev" viewBox="0 0 24 24" aria-hidden="true" data-live-svg="' + base + '.icon">' + (s.icon || "") + "</svg></div></div>"),
+            '<div class="ad-field wide"><label for="f-icon">Icon (SVG paths)</label><div class="ad-icon-row"><textarea class="input" id="f-icon" data-path="' + base + '.icon" data-type="text" rows="2">' + esc(s.icon || "") + '</textarea><svg class="ad-icon-prev" viewBox="0 0 24 24" aria-hidden="true" data-live-svg="' + base + '.icon">' + safeIcon(s.icon) + "</svg></div></div>"),
           'Text එකේ {support}, {advance}, {urgent} හරි {creative:photo} වගේ price එකක් දාන්න පුළුවන්. <a href="service.html?s=' + esc(s.slug) + '" target="_blank" rel="noopener">දැන් තියෙන page එක බලන්න ↗</a>') +
         card("Prices", arrayEditor(base + ".prices", priceRef, "Price එකක් add කරන්න", { type: Object.keys(S.data.config.types)[0] }), "Prices ගන්නේ Prices tab එකෙන්. මෙතන තෝරන්නේ මේ page එකේ පෙන්නන ඒවා විතරයි.") +
         card("FAQ", arrayEditor(base + ".faq", faqItem, "ප්‍රශ්නයක් add කරන්න", { q: "", a: "" })) +
@@ -813,7 +816,7 @@
     $$("[data-lkr]").forEach(el => { el.textContent = "≈ " + lkr(get(el.dataset.lkr)); });
     $$("[data-lkrnow]").forEach(el => { const c = S.data.config; el.textContent = "අද rate එකට (" + (Number(c.fallbackRate) || 0) + "): ≈ " + P.formatLKR(P.packageLKR(c, Number(get(el.dataset.lkrnow)) || 0, Number(c.fallbackRate) || 0)); });
     $$("[data-live]").forEach(el => { const v = get(el.dataset.live); el.textContent = v || (el.dataset.live.endsWith("linkText") ? "බලන්න →" : el.dataset.live.endsWith(".name") ? "(නමක් නෑ)" : ""); });
-    $$("[data-live-svg]").forEach(el => { el.innerHTML = get(el.dataset.liveSvg) || ""; });
+    $$("[data-live-svg]").forEach(el => { el.innerHTML = safeIcon(get(el.dataset.liveSvg)); });
   }
 
   /* ---------- save bar + checks ---------- */
@@ -1000,15 +1003,6 @@
         catch (err) { toast(errText(err), true); }
         break;
       case "pin-show": S.show[d.id] = !S.show[d.id]; renderTab(); break;
-      case "pin-send": {
-        const r = S.pinReqs.find(x => x.id === d.id), c = r && S.customers.find(x => x.phone === r.phone);
-        if (!c || !c.pin) return;
-        if (!armed(b, "මේ customer ම බව දන්නවාද? ආයෙත් ඔබන්න")) return;
-        const at = new Date();
-        try { await fs("PATCH", "/pinRequests/" + encodeURIComponent(r.id), { fields: toFields({ pin: c.pin, sentAt: at }) }, mask(["pin", "sentAt"])); r.pin = c.pin; r.sentAt = at.toISOString(); renderTab(); toast("App එකට යැව්වා ✓ Customer ගේ page එකේ පැයක් ඇතුළත PIN එක පේනවා."); }
-        catch (err) { toast(errText(err), true); }
-        break;
-      }
       case "pin-done":
         try { await fs("DELETE", "/pinRequests/" + encodeURIComponent(d.id)); S.pinReqs = S.pinReqs.filter(r => r.id !== d.id); paintTabs(); renderTab(); toast("List එකෙන් අයින් කළා."); }
         catch (err) { toast(errText(err), true); }
