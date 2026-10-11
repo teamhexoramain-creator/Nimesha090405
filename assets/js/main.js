@@ -115,6 +115,33 @@
     });
   }
 
+  /* ---------- tab bars: one underline slides to the chosen tab (transform only) ---------- */
+  $$(".tabs-bar").forEach(bar => {
+    const ind = document.createElement("span"); ind.className = "tabs-ind"; ind.setAttribute("aria-hidden", "true"); bar.appendChild(ind);
+    let first = true;
+    const place = () => {
+      const sel = bar.querySelector('[aria-selected="true"]'); if (!sel) return;
+      const br = bar.getBoundingClientRect(), sr = sel.getBoundingClientRect();
+      ind.style.width = Math.round(sr.width) + "px";
+      if (first) { ind.style.transition = "none"; }
+      ind.style.transform = "translateX(" + Math.round(sr.left - br.left + bar.scrollLeft) + "px)";
+      if (first) { void ind.offsetWidth; ind.style.transition = ""; first = false; bar.classList.add("has-ind"); }
+    };
+    new MutationObserver(place).observe(bar, { attributes: true, attributeFilter: ["aria-selected"], subtree: true });
+    window.addEventListener("resize", place);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { first = true; place(); });
+    place();
+  });
+
+  /* ---------- buttons: the light of the glass follows the pointer (mouse only) ---------- */
+  if (finePointer) {
+    document.addEventListener("pointermove", e => {
+      const b = e.target.closest && e.target.closest(".btn"); if (!b) return;
+      const r = b.getBoundingClientRect();
+      b.style.setProperty("--mx", (e.clientX - r.left) + "px"); b.style.setProperty("--my", (e.clientY - r.top) + "px");
+    }, { passive: true });
+  }
+
   /* ---------- 3D (hero mark, service tiles) ----------
      Loaded only when a 3D spot is about to be seen, after the page has loaded, and only where it can be drawn
      (WebGL, not "save data", not a very low-memory phone). Elsewhere the picture fallback simply stays. */

@@ -1367,6 +1367,76 @@ h1.display { font-size: clamp(2.3rem, 5.4vw, 4.4rem); letter-spacing: -0.035em; 
 .svc-stage .an.an-3d.hx3d-on::after { opacity: 0; }
 .svc-stage .an.an-3d .hx3d-canvas { z-index: 1; }
 
+
+
+/* ---------- home page: shorter on a phone ---------- */
+@media (max-width: 700px) {
+  section { --sec-pad: 52px; padding-block: 52px; }
+  .hero { padding-block: 24px 44px; }
+  .section-head { margin-bottom: 22px; }
+  .tl-body { padding: 30px 18px 18px; }
+  .faq-side .btn { width: 100%; }
+  /* the six steps and the package list swipe sideways instead of stacking (the next card peeks in as the hint) */
+  .timeline, .ladder-list { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; margin-inline: calc(var(--gutter) * -1); padding-inline: var(--gutter); }
+  .timeline::-webkit-scrollbar, .ladder-list::-webkit-scrollbar { display: none; }
+  .timeline { padding-top: 28px; padding-bottom: 6px; }
+  .timeline::before, .tl-fill { display: none; }
+  .tl-item { flex: 0 0 80%; scroll-snap-align: start; grid-template-columns: 1fr; gap: 0; }
+  .tl-dot { position: absolute; z-index: 2; left: 16px; top: -24px; width: 48px; height: 48px; font-size: .84rem; }
+  .tl-body { height: 100%; align-content: start; padding: 32px 18px 18px; }
+  .ladder-list { padding-bottom: 6px; }
+  .rung { flex: 0 0 150px; scroll-snap-align: start; min-height: 96px; }
+}
+
+
+/* the sliding underline of the tab bars (main.js adds .tabs-ind) */
+.tabs-bar { position: relative; }
+.tabs-ind { position: absolute; left: 0; bottom: -1px; height: 3px; width: 0; background: var(--grad); border-radius: 3px 3px 0 0; pointer-events: none; transition: transform .42s cubic-bezier(.23, 1, .32, 1), width .42s cubic-bezier(.23, 1, .32, 1); }
+.tabs-bar.has-ind .tab::after { display: none; }
+@media (prefers-reduced-motion: reduce) { .tabs-ind { transition: none; } }
+
+/* =====================================================================================================
+   v4 — liquid glass buttons. Primary: the logo gradient as a glossy liquid with a light that follows the pointer.
+   Everything else: frosted glass with a soft white rim. Text stays dark navy on the cyan/blue (contrast 5+ : 1).
+   ===================================================================================================== */
+.btn {
+  border: 1px solid rgba(255, 255, 255, .16);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .11), rgba(255, 255, 255, .03));
+  -webkit-backdrop-filter: blur(14px) saturate(1.5); backdrop-filter: blur(14px) saturate(1.5);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .24), inset 0 -1px 0 rgba(0, 0, 0, .28), 0 10px 26px -14px rgba(0, 0, 0, .7);
+  transition: transform .35s var(--spring), box-shadow .35s ease, border-color .25s ease, filter .2s ease;
+}
+.btn::before { display: none; }
+.btn::after {   /* the specular light: sits under the pointer (set by main.js), fades in on hover */
+  content: ""; position: absolute; inset: 0; z-index: -1; opacity: 0; transform: none;
+  background: radial-gradient(130px circle at var(--mx, 50%) var(--my, 0%), rgba(255, 255, 255, .30), rgba(255, 255, 255, 0) 65%);
+  transition: opacity .3s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover { background: linear-gradient(180deg, rgba(255, 255, 255, .15), rgba(255, 255, 255, .05)); border-color: rgba(120, 220, 255, .45); transform: translateY(-2px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), inset 0 -1px 0 rgba(0, 0, 0, .28), 0 16px 34px -14px rgba(22, 160, 255, .45); }
+  .btn:hover::after { opacity: 1; transform: none; }
+}
+.btn:active { transform: translateY(0) scale(.97); filter: none; }
+.btn-primary {
+  color: #04112E; border-color: rgba(255, 255, 255, .4);
+  background: linear-gradient(135deg, #14D4FC 0%, #1B8CFB 52%, #3E6DFC 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6), inset 0 -12px 20px -10px rgba(0, 24, 120, .5), 0 12px 32px -12px rgba(22, 160, 255, .7);
+}
+.btn-primary::before {   /* the glossy top half */
+  display: block; content: ""; position: absolute; inset: 0 0 48% 0; z-index: -1; border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .38), rgba(255, 255, 255, 0));
+}
+@media (hover: hover) and (pointer: fine) {
+  .btn-primary:hover { background: linear-gradient(135deg, #3CE0FF 0%, #2E9BFF 52%, #5580FF 100%); border-color: rgba(255, 255, 255, .6);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7), inset 0 -12px 20px -10px rgba(0, 24, 120, .5), 0 18px 40px -12px rgba(22, 180, 255, .8); }
+}
+.btn-wa { color: #fff; border-color: rgba(255, 255, 255, .25); background: linear-gradient(180deg, #1B9A47, #15803D);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), inset 0 -10px 16px -10px rgba(0, 40, 10, .5), 0 10px 26px -12px rgba(22, 128, 61, .7); }
+.btn-wa::before { display: block; content: ""; position: absolute; inset: 0 0 50% 0; z-index: -1; border-radius: inherit; background: linear-gradient(180deg, rgba(255, 255, 255, .22), rgba(255, 255, 255, 0)); }
+@media (hover: hover) and (pointer: fine) { .btn-wa:hover { background: linear-gradient(180deg, #1FA64E, #16883F); } }
+.btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .btn, .btn::after { transition-duration: .001ms; } }
+
 @media (forced-colors: active) {
   .btn, .rung, .price-card, .pk-panel, .tl-body, .term, .cta-band, .picker, .legal-sec, .acc-card, .acc-proj, .form-step, .summary, .estimate, .svc-box, .faq details, .to-top, .skip-link, .ad-card { clip-path: none; border: 1px solid CanvasText; }
   .btn::before, .btn::after, body::before { display: none; }

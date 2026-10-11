@@ -17,6 +17,7 @@
   const gone = id => { const el = $(id); if (el) el.hidden = true; };
   const steps = S.home && S.home.steps, tl = $("home-steps");
   if (tl && Array.isArray(steps)) {
+    tl.tabIndex = 0; tl.setAttribute("aria-label", "වැඩ කරන පියවර");   // a sideways-scrolling list on a phone must be reachable with the keyboard
     if (steps.length) tl.innerHTML = '<li class="tl-fill" aria-hidden="true"></li>' + steps.map((st, i) =>
       '<li class="tl-item rv"><span class="tl-dot">' + pad(i + 1) + '</span><div class="tl-body"><span class="tl-time">' + esc(st.time) + "</span><h3>" + esc(st.t) + "</h3><p>" + tok(st.d) + "</p></div></li>").join("");
     else gone("process");

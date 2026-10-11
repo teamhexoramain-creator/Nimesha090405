@@ -28,7 +28,7 @@
         '<ul class="pk-list">' + (p.includes || []).map(x => "<li>" + esc(x) + "</li>").join("") + "</ul>" +
         '<a class="btn btn-primary" href="' + href + '">මේක තෝරගන්න</a></div>';
     });
-    return '<div class="ladder" data-ladder><div class="ladder-list" role="tablist" aria-label="App packages" aria-orientation="vertical">' + rungs + '</div><div class="ladder-panel">' + panels + "</div></div>";
+    return '<div class="ladder" data-ladder><div class="ladder-list" tabindex="0" role="tablist" aria-label="App packages" aria-orientation="vertical">' + rungs + '</div><div class="ladder-panel">' + panels + "</div></div>";
   }
   root.HXPkg = { html: html };
 })(window);

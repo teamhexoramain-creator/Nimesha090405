@@ -401,16 +401,37 @@
       "</div>";
     paintTabs(); renderTab(); updateSaveBar();
   }
+  const TAB_ICONS = {
+    home: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+    requests: '<path d="M4 13l2-8h12l2 8v6H4z"/><path d="M4 13h5l1 2h4l1-2h5"/>', live: I.chat, customers: I.user,
+    content: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 9h16M9 9v11"/>', notice: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 8-3 8h18s-3-1-3-8M10 21h4"/>',
+    contact: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 8l9 6 9-6"/>', prices: '<path d="M12 3v18M16 7H10a3 3 0 0 0 0 6h4a3 3 0 0 1 0 6H8"/>',
+    services: '<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>', history: '<path d="M4 12a8 8 0 1 0 2.3-5.7M4 4v5h5M12 8v5l3 2"/>', security: I.lock
+  };
   function paintTabs() {
     const nav = $("#ad-tabs"); if (!nav) return;
     const n = newCount();
-    nav.innerHTML = TAB_GROUPS.map(([label, tabs]) => '<div class="ad-tabgroup"' + (label ? ' role="group" aria-label="' + label + '"' : "") + ">" + (label ? '<span class="ad-tabgroup-l" aria-hidden="true">' + label + "</span>" : "") +
-      tabs.map(([k, t]) => '<button type="button" role="tab" data-act="tab" data-tab="' + k + '" aria-selected="' + (k === S.tab) + '">' + t +
+    nav.innerHTML = '<span class="ad-pill-ind" aria-hidden="true"></span>' + TAB_GROUPS.map(([label, tabs]) => '<div class="ad-tabgroup"' + (label ? ' role="group" aria-label="' + label + '"' : "") + ">" + (label ? '<span class="ad-tabgroup-l" aria-hidden="true">' + label + "</span>" : "") +
+      tabs.map(([k, t]) => '<button type="button" role="tab" data-act="tab" data-tab="' + k + '" aria-selected="' + (k === S.tab) + '">' + icon(TAB_ICONS[k] || "") + '<span class="ad-tab-t">' + t + "</span>" +
       (k === "requests" && (n + unreadCount()) ? ' <span class="ad-badge">' + (n + unreadCount()) + "</span>" : "") +
       (k === "live" && unreadGuests() ? ' <span class="ad-badge">' + unreadGuests() + "</span>" : "") +
       (k === "customers" && S.pinReqs.length ? ' <span class="ad-badge">' + S.pinReqs.length + "</span>" : "") + "</button>").join("") + "</div>").join("");
+    movePill(false);
     const total = n + unreadCount() + unreadGuests() + S.pinReqs.length;   // the browser tab says how much is waiting
     document.title = (total ? "(" + total + ") " : "") + "Admin | Hexora";
+  }
+  // the highlight under the current tab slides to the new one (transform only; it starts from where it was when the list is redrawn)
+  function movePill(animate) {
+    const nav = $("#ad-tabs"), ind = nav && $(".ad-pill-ind", nav), sel = nav && $('[aria-selected="true"]', nav);
+    if (!ind || !sel) return;
+    const nr = nav.getBoundingClientRect(), sr = sel.getBoundingClientRect();   // measured against the list itself (the groups are positioned too)
+    const x = Math.round(sr.left - nr.left + nav.scrollLeft), y = Math.round(sr.top - nr.top + nav.scrollTop);
+    const to = "translate(" + x + "px," + y + "px)";
+    ind.style.width = Math.round(sr.width) + "px"; ind.style.height = Math.round(sr.height) + "px";
+    if (!animate && S.pillAt) { ind.style.transition = "none"; ind.style.transform = S.pillAt; void ind.offsetWidth; ind.style.transition = ""; }
+    ind.style.transform = to; S.pillAt = to;
+    const left = x - nav.clientWidth / 2 + sr.width / 2;   // a sideways tab bar keeps the current tab in view
+    if (nav.scrollWidth > nav.clientWidth && nav.clientHeight < 140) nav.scrollTo({ left: left, behavior: animate ? "smooth" : "auto" });
   }
   const tabFromHash = () => { let h = ""; try { h = decodeURIComponent((location.hash || "").slice(1)); } catch (e) { h = ""; } return TABS.some(t => t[0] === h) ? h : ""; };
   function setTab(t) {
@@ -422,6 +443,7 @@
     const y = window.scrollY;
     main.innerHTML = VIEWS[S.tab]();
     $$("#ad-tabs [data-tab]").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === S.tab)));
+    movePill(true);
     if (S.tab === "history") loadHistory();
     stopChat();
     if (S.tab === "requests" && S.chatOpen && $('[data-chat="' + S.chatOpen + '"]')) openChatBox(S.chatOpen);
@@ -1080,6 +1102,7 @@
     }
   });
 
+  window.addEventListener("resize", () => movePill(false));
   window.addEventListener("hashchange", () => {   // Back / Forward between tabs
     if (!S.auth || !$("#ad-main")) return;
     const t = tabFromHash() || "home";
