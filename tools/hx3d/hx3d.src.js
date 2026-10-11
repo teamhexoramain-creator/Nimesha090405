@@ -6,7 +6,7 @@
    Each scene draws only while it is on screen, pauses when the tab is hidden, and draws one still frame for "reduce motion". */
 import {
   WebGLRenderer, Scene, PerspectiveCamera, Group, Shape, Path, ExtrudeGeometry, Mesh, MeshPhysicalMaterial, MeshBasicMaterial,
-  PlaneGeometry, CanvasTexture, SRGBColorSpace, ACESFilmicToneMapping, PMREMGenerator, DirectionalLight, AmbientLight, Color, BufferAttribute
+  PlaneGeometry, CanvasTexture, SRGBColorSpace, ACESFilmicToneMapping, NoToneMapping, PMREMGenerator, DirectionalLight, AmbientLight, Color, BufferAttribute
 } from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
@@ -104,13 +104,13 @@ export function mount(el, opts) {
   try { renderer = new WebGLRenderer({ antialias: true, alpha: true, powerPreference: "low-power" }); } catch (e) { return null; }
   const small = Math.min(innerWidth, innerHeight) < 700;
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, small ? 1.25 : 1.5));
-  renderer.toneMapping = ACESFilmicToneMapping; renderer.toneMappingExposure = opts.kind === "tile" ? 1.05 : .95; renderer.outputColorSpace = SRGBColorSpace;
+  renderer.toneMapping = opts.kind === "tile" ? ACESFilmicToneMapping : NoToneMapping;   // the logo keeps its exact brand colours renderer.toneMappingExposure = opts.kind === "tile" ? 1.05 : .95; renderer.outputColorSpace = SRGBColorSpace;
   const cv = renderer.domElement; cv.className = "hx3d-canvas"; cv.setAttribute("aria-hidden", "true");
   el.appendChild(cv);
 
   const scene = new Scene();
   const pmrem = new PMREMGenerator(renderer); scene.environment = pmrem.fromScene(new RoomEnvironment(), .04).texture; pmrem.dispose();
-  scene.add(new AmbientLight(0x8fa6ff, .35));
+  scene.add(new AmbientLight(0xffffff, opts.kind === "tile" ? .35 : .75));
   const key = new DirectionalLight(0xffffff, opts.kind === "tile" ? 1.6 : .9); key.position.set(2.5, 3, 4); scene.add(key);
   const rimL = new DirectionalLight(0x16d9ff, 2.2); rimL.position.set(-3.5, 1.5, -2); scene.add(rimL);
   const rimR = new DirectionalLight(0x7b3bff, 1.6); rimR.position.set(3.5, -2, -2.5); scene.add(rimR);
@@ -121,11 +121,11 @@ export function mount(el, opts) {
 
   function size() { const w = el.clientWidth || 1, h = el.clientHeight || 1; renderer.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); }
   size();
-  let px = 0, py = 0, tx = 0, ty = 0, on = false, raf = 0, t0 = performance.now(), last = 0, shown = false;
+  let px = 0, py = 0, tx = 0, ty = 0, sy = 0, on = false, raf = 0, t0 = performance.now(), last = 0, shown = false;
   const draw = t => {
     const s = (t - t0) / 1000;
     px += (tx - px) * .06; py += (ty - py) * .06;
-    obj.rotation.y = (reduce ? .3 : .28 + Math.sin(s * .35) * .26) + px * .3;
+    obj.rotation.y = (reduce ? .3 : .28 + Math.sin(s * .35) * .26) + px * .3 + sy * .9;   // sy: the logo turns a little as the page scrolls past it
     obj.rotation.x = -.1 + (reduce ? 0 : Math.sin(s * .5) * .05) + py * .18;
     obj.position.y = reduce ? 0 : Math.sin(s * .8) * .045;
     const k = Math.min(1, s / .9), e = 1 - Math.pow(1 - k, 3);   // entrance: scale .94 → 1 with a strong ease-out
@@ -140,6 +140,7 @@ export function mount(el, opts) {
   const io = new IntersectionObserver(es => es.forEach(e => (e.isIntersecting && !document.hidden ? start() : stop())), { rootMargin: "80px" });
   io.observe(el);
   document.addEventListener("visibilitychange", () => { if (document.hidden) stop(); else if (el.getBoundingClientRect().bottom > 0 && el.getBoundingClientRect().top < innerHeight) start(); });
+  if (!reduce) addEventListener("scroll", () => { const r = el.getBoundingClientRect(); sy = Math.max(-1, Math.min(1, (r.top + r.height / 2 - innerHeight / 2) / innerHeight)); }, { passive: true });
   if (fine && !reduce) addEventListener("pointermove", e => { tx = e.clientX / innerWidth * 2 - 1; ty = e.clientY / innerHeight * 2 - 1; }, { passive: true });
   if ("ResizeObserver" in window) new ResizeObserver(() => { size(); if (reduce) draw(performance.now()); }).observe(el);
   cv.addEventListener("webglcontextlost", e => { e.preventDefault(); stop(); el.classList.remove("hx3d-on"); cv.remove(); });
