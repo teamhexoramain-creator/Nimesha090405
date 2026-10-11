@@ -1500,3 +1500,16 @@ html.numpad-open body { padding-bottom: 300px; }
   .form-step, .summary, .price-card, .legal-sec, .estimate { background: #fff !important; border: 1px solid #999 !important; clip-path: none !important; break-inside: avoid; }
   a { text-decoration: underline; }
 }
+
+/* ---- Shorter page: tighter sections, services picker lives in #services, one-line terms ---- */
+section { --sec-pad: clamp(44px, 5.5vw, 76px); padding-block: var(--sec-pad); }
+@media (min-width: 1100px) { section { --sec-pad: clamp(60px, 6vw, 84px); } }
+@media (max-width: 760px) { section { --sec-pad: 38px; padding-block: 38px; } }
+.section-head { margin-bottom: clamp(22px, 3.5vw, 36px); }
+#services .picker-wrap { margin-top: 0; }
+.terms-line { margin: 22px 0 0; text-align: center; color: var(--muted); font-size: .92rem; line-height: 1.7; }
+.terms-line b { color: var(--fg); font-weight: 700; }
+@media (max-width: 760px) {
+  .ladder-intro, .hero-points, .faq-left .lead { display: none; }
+  .cta-band .lead { font-size: .95rem; }
+}

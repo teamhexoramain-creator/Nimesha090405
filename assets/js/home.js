@@ -25,8 +25,8 @@
 
   const faq = S.home && S.home.faq, fq = $("home-faq");
   if (fq && Array.isArray(faq)) {
-    const SHOW = 5;   // the first questions are enough for most people; the rest sit behind one button
-    const one = (f, i) => "<details" + (i ? "" : " open") + (i >= SHOW ? ' class="faq-more" hidden' : "") + "><summary>" + esc(f.q) + '</summary><div class="ans"><div><p>' + tok(f.a) + "</p></div></div></details>";
+    const SHOW = 4;   // the first questions are enough for most people; the rest sit behind one button
+    const one = (f, i) => "<details" + (i >= SHOW ? ' class="faq-more" hidden' : "") + "><summary>" + esc(f.q) + '</summary><div class="ans"><div><p>' + tok(f.a) + "</p></div></div></details>";
     if (faq.length) {
       fq.innerHTML = faq.map(one).join("") + (faq.length > SHOW ? '<button type="button" class="btn faq-toggle" aria-expanded="false">තව ප්‍රශ්න ' + (faq.length - SHOW) + ' ක් බලන්න</button>' : "");
       const t = fq.querySelector(".faq-toggle");
