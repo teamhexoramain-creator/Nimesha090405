@@ -169,6 +169,12 @@ Good to know:
 - A new service appears on the service pages **and** in the home page's service list (both are built from the same data). For a nice look give it a **Short line** and an icon.
 - Two admin windows: if one saves while the other still shows an older version, the second Save is refused ("මේ අතරේ වෙන තැනකින් data වෙනස් වෙලා"), so nothing is overwritten by accident. Reload and try again.
 
+## Kept simple for customers
+- **Header**: Services · Pricing · FAQ · Login · "Project එක පටන් ගන්න" (Register is the second tab on the Login page and is in the footer).
+- **Home page**: no tech-logo strip; the FAQ shows the first 5 questions and one button for the rest; on a phone the steps and the package list swipe sideways.
+- **Project form**: three steps — 01 Service (with its price), 02 Idea, 03 About you. Features, design, speed, deadline, budget and contact method sit in one optional "තව විස්තර දෙන්න" row (they have defaults, the estimate still works); a customer who skips it gets a call to talk it through.
+- PIN boxes open an on-screen number pad on phones (no keyboard).
+
 ## Terms, privacy and data rights
 - `terms.html` (quotes, advance, revisions, files, refund, liability) and `privacy.html` (what is stored, no cookies / trackers, retention, rights, font licences) are linked in every footer. **Read the Terms once and edit anything that is not how you work** (the refund paragraph is a neutral placeholder: decide your real policy).
 - Sign-up and the project form need a tick on "I agree to Terms and Privacy".

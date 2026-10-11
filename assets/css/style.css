@@ -1438,6 +1438,10 @@ h1.display { font-size: clamp(2.3rem, 5.4vw, 4.4rem); letter-spacing: -0.035em; 
 .btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) { .btn, .btn::after { transition-duration: .001ms; } }
 
+/* FAQ: the extra questions sit behind a button */
+.faq-toggle { justify-self: start; margin-top: 12px; }
+.faq details[hidden] { display: none; }
+
 /* ---------- hover is stable: nothing moves out from under the pointer ----------
    A control that lifts on hover leaves the pointer when it is touched on its lower edge, drops back, is hovered again ... and shakes.
    So hover changes only light, border and shadow; the press (:active) is what moves. */
@@ -1464,6 +1468,21 @@ h1.display { font-size: clamp(2.3rem, 5.4vw, 4.4rem); letter-spacing: -0.035em; 
 .numpad svg { width: 22px; height: 22px; }
 html.numpad-open body { padding-bottom: 300px; }
 @media (prefers-reduced-motion: reduce) { .numpad { transition-duration: .001ms; } }
+
+
+/* project form: the optional steps (features, design, timeline, budget) sit behind one "more details" row */
+.more-opts { border: 1px dashed var(--line-strong); border-radius: var(--r-card); background: rgba(255, 255, 255, .02); overflow: hidden; }
+.more-opts > summary { list-style: none; display: grid; gap: 4px; padding: 16px 52px 16px 20px; cursor: pointer; position: relative; min-height: 44px; }
+.more-opts > summary::-webkit-details-marker { display: none; }
+.more-opts > summary::after { content: "+"; position: absolute; right: 18px; top: 50%; width: 28px; height: 28px; margin-top: -14px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--line-strong); color: var(--cyan); font-weight: 800; transition: transform .3s cubic-bezier(.23, 1, .32, 1); }
+.more-opts[open] > summary::after { transform: rotate(45deg); }
+.mo-t { font-weight: 800; }
+.mo-t small { color: var(--faint); font-weight: 600; }
+.mo-s { color: var(--muted); font-size: .86rem; line-height: 1.5; }
+.mo-body { display: grid; gap: 22px; padding: 4px 20px 22px; }
+.more-opts .form-step { border: 0; background: none; box-shadow: none; padding: 0; }
+.more-opts .step-head .n { display: none; }
+.more-opts .step-head { margin-bottom: 8px; }
 
 @media (forced-colors: active) {
   .btn, .rung, .price-card, .pk-panel, .tl-body, .term, .cta-band, .picker, .legal-sec, .acc-card, .acc-proj, .form-step, .summary, .estimate, .svc-box, .faq details, .to-top, .skip-link, .ad-card { clip-path: none; border: 1px solid CanvasText; }

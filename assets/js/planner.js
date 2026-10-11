@@ -98,7 +98,8 @@
     let n = 0;
     $$("[data-stepper]").forEach(li => { if (!li.hidden) li.textContent = li.textContent.replace(/^\d+/, ++n); });
     n = 0;
-    $$("fieldset.form-step", form).forEach(fs => { const h = fs.querySelector(".step-head .n"); if (!fs.hidden && h) h.textContent = String(++n).padStart(2, "0"); });
+    // only the steps outside "more details" are numbered (01 service, 02 idea, 03 you)
+    $$("fieldset.form-step", form).forEach(fs => { const h = fs.querySelector(".step-head .n"); if (!fs.hidden && h && !fs.closest(".more-opts")) h.textContent = String(++n).padStart(2, "0"); });
     const mb = $("#est-maint-box"); if (mb) mb.hidden = t !== "dev";
     const note = $(".estimate .est-note");
     if (note) note.textContent = t === "dev"

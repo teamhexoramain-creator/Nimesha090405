@@ -34,11 +34,9 @@
     <button class="menu-btn" type="button" aria-label="Menu එක අරින්න" aria-expanded="false" aria-controls="nav-links"><span></span></button>
     <ul class="nav-links" id="nav-links">
       <li><a href="index.html#services">Services</a></li>
-      <li><a href="index.html#process">වැඩ කරන විදිය</a></li>
       <li><a href="index.html#pricing">Pricing</a></li>
       <li><a href="index.html#faq">FAQ</a></li>
       <li data-auth-out><a href="account.html">Login</a></li>
-      <li data-auth-out><a class="btn nav-reg" href="account.html?new=1">Register</a></li>
       <li data-auth-in><a href="account.html">මගේ projects</a></li>
       <li><a class="btn btn-primary nav-cta" href="start-project.html" aria-current="page">Project එක පටන් ගන්න</a></li>
     </ul>
@@ -56,11 +54,8 @@
       <p class="auth-hint fade-up" style="--d:650ms" data-auth-in><svg class="ic-inline" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg> <b data-user-name></b> විදියට login වෙලා ඉන්නේ. Project එක යැව්වම <a href="account.html">මගේ projects</a> එකේ status එක බලන්න පුළුවන්.</p>
       <ol class="stepper fade-up" style="--d:700ms" role="list" aria-label="Form එකේ කොටස්">
         <li data-stepper="3">1 · Service එක</li>
-        <li data-stepper="4" data-tracks="dev pkg">2 · Features</li>
-        <li data-stepper="5" data-tracks="dev">3 · Design &amp; launch</li>
-        <li data-stepper="6">4 · Timeline</li>
-        <li data-stepper="2">5 · Idea එක</li>
-        <li data-stepper="1">6 · ඔයා ගැන</li>
+        <li data-stepper="2">2 · Idea එක</li>
+        <li data-stepper="1">3 · ඔයා ගැන</li>
       </ol>
     </div>
   </div>
@@ -106,6 +101,10 @@
             </div>
           </fieldset>
 
+          <!-- optional details: features, design, timeline. Everything in here has a sensible default, so a customer can skip it. -->
+          <details class="more-opts" id="more-opts">
+            <summary><span class="mo-t">තව විස්තර දෙන්න <small>(optional)</small></span><span class="mo-s">Features, design, කවද්ද ඕන ද, budget — දන්නේ නැත්නම් මේක මග හරින්න, අපි call එකෙන් අහනවා.</span></summary>
+            <div class="mo-body">
           <!-- 4 -->
           <fieldset class="form-step" data-step="4" data-track="dev pkg">
             <legend class="sr-only">Features</legend>
@@ -169,6 +168,9 @@
               </div>
             </div>
           </fieldset>
+
+            </div>
+          </details>
 
           <!-- 2 -->
           <fieldset class="form-step" data-step="2">
