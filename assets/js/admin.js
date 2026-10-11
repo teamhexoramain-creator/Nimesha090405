@@ -19,6 +19,11 @@
   if (window.top !== window.self) { document.documentElement.textContent = ""; return; }   // never run inside another site's frame (clickjacking)
   const SHAPES = /^(?:\s*<(?:path|circle|rect|line|polyline|polygon|ellipse)(?:\s+(?!on|href|xlink)[a-z-]+="[^"<>]*")*\s*\/?>)*\s*$/i;   // an icon is only drawn once it is plain shapes
   const safeIcon = x => (SHAPES.test(x || "") ? x : "");
+  // "add to home screen": the admin panel can live on the phone / PC as its own app (own icon + name, no browser bars)
+  let installEv = null;
+  const standalone = () => (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
+  window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEv = e; if (S && S.tab === "home" && $("#ad-main")) renderTab(); });
+  window.addEventListener("appinstalled", () => { installEv = null; if (S && $("#ad-main")) renderTab(); });
   // the glass buttons light up under the mouse, as on the site (the site's main.js is not loaded here)
   if (matchMedia("(hover: hover) and (pointer: fine)").matches) {
     document.addEventListener("pointermove", e => {
@@ -191,6 +196,7 @@
       '<button class="btn btn-primary btn-block" type="button" id="pin-go" disabled>Login</button>' +
       '<a class="ad-back" href="index.html">← Site එකට</a>');
     let entry = "", busy = false;
+    const touch = matchMedia("(pointer: coarse)").matches;   // on a phone / tablet the on-screen pad is used and the keyboard stays closed
     const input = $("#pin-input"), dotBox = $("#pin-dots"), msgEl = $("#pin-msg"), go = $("#pin-go"), hint = pinLen();
     const paint = () => {
       const n = Math.max(hint, entry.length);
@@ -198,6 +204,7 @@
       Array.from(dotBox.children).forEach((d, i) => d.classList.toggle("on", i < entry.length));
       go.disabled = busy || entry.length < PIN_MIN;
     };
+    if (touch) { input.setAttribute("inputmode", "none"); input.readOnly = true; input.tabIndex = -1; }
     paint();
     async function check() {
       const tries = store.get(KEYS.tries) || { n: 0, until: 0 };
@@ -226,11 +233,11 @@
       input.value = entry; paint();
       if (entry.length === hint) check();   // the usual length: no extra tap
     }
-    root.querySelector(".pin-pad").addEventListener("click", e => { const b = e.target.closest("[data-key]"); if (b) press(b.dataset.key); input.focus({ preventScroll: true }); });
+    root.querySelector(".pin-pad").addEventListener("click", e => { const b = e.target.closest("[data-key]"); if (b) press(b.dataset.key); if (!touch) input.focus({ preventScroll: true }); });
     input.addEventListener("input", () => { if (busy) { input.value = entry; return; } entry = input.value.replace(/\D/g, "").slice(0, PIN_MAX); input.value = entry; paint(); if (entry.length === hint) check(); });
     input.addEventListener("keydown", e => { if (e.key === "Enter" && entry.length >= PIN_MIN && !busy) { e.preventDefault(); check(); } });
     go.addEventListener("click", () => { if (entry.length >= PIN_MIN && !busy) check(); });
-    input.focus({ preventScroll: true });
+    if (!touch) input.focus({ preventScroll: true });
   }
 
   /* ==================== 2. load content ==================== */
@@ -511,7 +518,14 @@
     const latest = (S.reqs || []).slice(0, 5);
     const latestCard = card("අලුත්ම requests", latest.length ? '<div class="ad-history">' + latest.map(r => '<button type="button" class="ad-hist ad-hist-btn" data-act="goto-req" data-id="' + esc(r.id) + '"><div><b>' + esc(r.title || r.name || "—") + "</b><small>" + (r.title ? esc(r.name) + " · " : "") + esc(fmtDate(r.createdAt)) + '</small></div><span class="ad-pill">' + esc(STAGE_EN[r.status] || r.status) + " · " + pctOf(r) + "%</span></button>").join("") + "</div>"
       : '<p class="muted">' + (S.reqs ? "තාම requests නෑ." : "Requests ගන්නවා…") + "</p>");
-    return first + todoCard + latestCard + card("Hexora admin",
+    const installCard = standalone() ? "" : card("Admin ව වෙනම App එකක් විදියට add කරගන්න",
+      '<p class="ad-note">Phone එකේ / PC එකේ Hexora Admin වෙනම app එකක් විදියට (තමන්ගේම icon එකත් නමත් එක්ක, browser bar නැතුව) open කරන්න පුළුවන්.</p>' +
+      (installEv ? '<button type="button" class="btn btn-primary ad-small" data-act="install">App එක add කරන්න</button>' :
+        '<ol class="ad-steps"><li><b>Android (Chrome):</b> උඩ දකුණේ ⋮ menu එක → <b>Add to Home screen</b> / <b>Install app</b>.</li>' +
+        '<li><b>iPhone (Safari):</b> Share බටන් එක → <b>Add to Home Screen</b>.</li>' +
+        '<li><b>PC (Chrome / Edge):</b> address bar එකේ දකුණේ install icon එක, නැත්නම් ⋮ → <b>Install Hexora Admin</b>.</li></ol>'),
+      "ඒක add කළාට පස්සේ site එකේ අනිත් පිටු වලට නෙවෙයි, admin එකට විතරයි open වෙන්නේ.");
+    return first + todoCard + latestCard + installCard + card("Hexora admin",
       '<div class="ad-stats">' + stat(S.reqs ? newCount() : "…", "අලුත් requests", "requests") + stat(S.reqs ? S.reqs.filter(r => inFilter(r, "active")).length : "…", "දැන් කරන projects", "requests") +
         stat(S.reqs ? unreadGuests() : "…", "Live chat (අලුත්)", "live") +
         stat(s.list.length, "Services", "services") +
@@ -834,8 +848,8 @@
 
   VIEWS.security = () => card("PIN එක මාරු කරන්න",
       '<form id="pin-form" class="ad-grid">' +
-        '<div class="ad-field"><label for="pin-new">අලුත් PIN (digits 8 – ' + PIN_MAX + ', අනුමාන කරන්න අමාරු එකක්)</label><input class="input" id="pin-new" type="password" inputmode="numeric" maxlength="' + PIN_MAX + '" autocomplete="new-password"><small class="ad-hint">දිග PIN එකක් (digits 8ක් හරි වැඩි) ආරක්ෂාවට හොඳයි. 123456, 111111 වගේ පහසු ඒවා බෑ.</small></div>' +
-        '<div class="ad-field"><label for="pin-new2">ආයෙත් ගහන්න</label><input class="input" id="pin-new2" type="password" inputmode="numeric" maxlength="' + PIN_MAX + '" autocomplete="new-password"></div>' +
+        '<div class="ad-field"><label for="pin-new">අලුත් PIN (digits 8 – ' + PIN_MAX + ', අනුමාන කරන්න අමාරු එකක්)</label><input class="input" data-numpad id="pin-new" type="password" inputmode="numeric" maxlength="' + PIN_MAX + '" autocomplete="new-password"><small class="ad-hint">දිග PIN එකක් (digits 8ක් හරි වැඩි) ආරක්ෂාවට හොඳයි. 123456, 111111 වගේ පහසු ඒවා බෑ.</small></div>' +
+        '<div class="ad-field"><label for="pin-new2">ආයෙත් ගහන්න</label><input class="input" data-numpad id="pin-new2" type="password" inputmode="numeric" maxlength="' + PIN_MAX + '" autocomplete="new-password"></div>' +
         '<div class="ad-field wide"><button class="btn btn-primary" type="submit">PIN එක save කරන්න</button></div></form>',
       "PIN එක Firebase එකේ admin account එකේ password එක. මාරු කළාම ඊළඟ පාර අලුත් PIN එකෙන් log වෙන්න.") +
     card("Account",
@@ -1042,6 +1056,9 @@
         if (!armed(b, "මකන්නද?")) return;
         try { await deleteGuest(d.id); delete S.guests[d.id]; if (S.guestOpen === d.id) S.guestOpen = null; paintTabs(); renderTab(); toast("Chat එක මැකුවා."); }
         catch (err) { toast(errText(err), true); }
+        break;
+      case "install":
+        if (installEv) { installEv.prompt(); try { await installEv.userChoice; } catch (err) { /* closed */ } installEv = null; renderTab(); }
         break;
       case "pin-show": S.show[d.id] = !S.show[d.id]; renderTab(); break;
       case "pin-done":
