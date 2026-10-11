@@ -247,6 +247,7 @@
       phone: !phoneOk($("#f-phone").value),
       email: emailBad($("#f-email").value.trim()),
       desc: $("#f-desc").value.trim().length < 15,
+      agree: !$("#f-agree").checked,
       type: dev && !val("type"),
       size: dev && !val("size"),
       pkg: pkg && !val("pkg"),

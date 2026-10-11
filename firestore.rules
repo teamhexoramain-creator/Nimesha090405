@@ -49,20 +49,19 @@ service cloud.firestore {
         && data().diff(resource.data).affectedKeys().hasOnly(['name', 'pin'])
         && text('name', 100) && data().name.size() > 1
         && (!('pin' in data()) || (data().pin is string && data().pin.matches('[0-9]{6}')));
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() || (signedIn() && request.auth.uid == uid);   // a customer can delete their own profile (Settings → Account එක මකන්න)
     }
 
-    // "PIN එක අමතක උනා" requests. Anyone can send one. The document id is a long random key that only the
-    // browser that sent it knows. When the admin approves, the PIN is written into the document and that
-    // browser (and only a reader who has the id) can read it for one hour. Everything else is admin only.
+    // "PIN එක අමතක උනා" requests. Anyone can send one; only the admin can read them. The PIN is never put in this document:
+    // anyone can file a request with someone else's name + phone, so the admin sends the PIN by WhatsApp to the phone number on the account.
     match /pinRequests/{id} {
       allow create: if id.matches('[A-Za-z0-9]{30,64}')
         && data().keys().hasOnly(['name', 'phone', 'createdAt'])
         && text('name', 100) && data().name.size() > 1
         && data().phone is string && data().phone.matches('[0-9]{10,15}')
         && data().createdAt == request.time;
-      allow get: if resource.data.get('pin', '') != '' && request.time < resource.data.sentAt + duration.value(1, 'h');
-      allow get, list, update, delete: if isAdmin();
+      allow get, list, delete: if isAdmin();
+      allow update: if isAdmin() && !('pin' in request.resource.data);
     }
 
     // Project requests and projects.
@@ -104,7 +103,7 @@ service cloud.firestore {
           && data().kind in ['text', 'image', 'audio']
           && text('text', 1000)
           && ((data().kind == 'text' && data().text.size() > 0 && !('data' in data()))
-              || (data().kind != 'text' && data().data is string && data().data.size() > 100 && data().data.size() <= 700000
+              || (data().kind != 'text' && data().data is string && data().data.size() > 100 && data().data.size() <= 480000
                   && data().mime in ['image/jpeg', 'image/png', 'image/webp', 'audio/webm', 'audio/mp4', 'audio/ogg', 'audio/mpeg']))
           && (!('dur' in data()) || data().dur is int)
           && (!('wave' in data()) || (data().wave is string && data().wave.size() <= 80))
@@ -177,7 +176,7 @@ service cloud.firestore {
           && data().kind in ['text', 'image', 'audio']
           && text('text', 1000)
           && ((data().kind == 'text' && data().text.size() > 0 && !('data' in data()))
-              || (data().kind != 'text' && data().data is string && data().data.size() > 100 && data().data.size() <= 700000
+              || (data().kind != 'text' && data().data is string && data().data.size() > 100 && data().data.size() <= 480000
                   && data().mime in ['image/jpeg', 'image/png', 'image/webp', 'audio/webm', 'audio/mp4', 'audio/ogg', 'audio/mpeg']))
           && (!('dur' in data()) || data().dur is int)
           && (!('wave' in data()) || (data().wave is string && data().wave.size() <= 80))
