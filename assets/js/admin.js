@@ -39,7 +39,7 @@
     if (navigator.connection && navigator.connection.saveData) return;
     if (navigator.deviceMemory && navigator.deviceMemory < 3) return;
     try { const gl = document.createElement("canvas").getContext("webgl"); if (!gl) return; const x = gl.getExtension("WEBGL_lose_context"); if (x) x.loseContext(); } catch (e) { return; }
-    lib3d = lib3d || new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = "assets/js/hx3d.js?v=20261012a"; sc.onload = () => (window.HX3D ? res(window.HX3D) : rej()); sc.onerror = rej; document.head.appendChild(sc); });
+    lib3d = lib3d || new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = "assets/js/hx3d.js?v=20261012b"; sc.onload = () => (window.HX3D ? res(window.HX3D) : rej()); sc.onerror = rej; document.head.appendChild(sc); });
     lib3d.then(H => { if (document.body.contains(el) && H.mount(el, { kind: "mark" })) el.classList.add("hx3d-live"); }).catch(() => {});
   }
   new MutationObserver(() => mount3d()).observe(document.getElementById("admin-root") || document.body, { childList: true });

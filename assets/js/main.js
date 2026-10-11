@@ -63,6 +63,7 @@
     addEventListener("load", () => place(true));
     tabset(tabs, t => document.getElementById(t.getAttribute("aria-controls")), t => {
       const i = tabs.indexOf(t); root.dataset.dir = i >= prev ? "next" : "prev"; prev = i; place(false);
+      if (list.scrollWidth > list.clientWidth + 2) list.scrollTo({ left: t.offsetLeft - (list.clientWidth - t.offsetWidth) / 2, behavior: reduce ? "auto" : "smooth" });   // the chosen package glides to the middle of the swipe list
       // on a phone the details sit under the list: make sure they come into view
       if (window.matchMedia("(max-width: 899px)").matches) {
         const p = document.getElementById(t.getAttribute("aria-controls")), r = p && p.getBoundingClientRect();
@@ -70,6 +71,32 @@
       }
     });
   });
+
+  /* ---------- sideways swipe lists (phone): the cards fading and shrinking towards the edges, like the iPhone's own swipe lists ---------- */
+  // each card gets --vis (how much of it is on screen, eased) and the list gets --fl / --fr (soft edge fades, only on the side that has more to scroll)
+  const swipeFx = (box, sel) => {
+    if (!box || reduce) return;
+    const items = $$(sel, box); let raf = 0;
+    const run = () => {
+      raf = 0;
+      const b = box.getBoundingClientRect(), more = box.scrollWidth > box.clientWidth + 2;
+      items.forEach(it => {
+        let v = 1;
+        if (more) { const r = it.getBoundingClientRect(); v = Math.max(0, Math.min(1, (Math.min(r.right, b.right) - Math.max(r.left, b.left)) / (r.width || 1))); }
+        it.style.setProperty("--vis", String(v * v * (3 - 2 * v)));   // smoothstep
+      });
+      box.classList.toggle("hs", more);
+      box.style.setProperty("--fl", more && box.scrollLeft > 6 ? "34px" : "0px");
+      box.style.setProperty("--fr", more && box.scrollLeft < box.scrollWidth - box.clientWidth - 6 ? "34px" : "0px");
+    };
+    const queue = () => { if (!raf) raf = requestAnimationFrame(run); };
+    box.addEventListener("scroll", queue, { passive: true });
+    addEventListener("resize", queue); addEventListener("load", queue);
+    run();
+  };
+  $$(".timeline").forEach(box => swipeFx(box, ".tl-body"));
+  $$(".ladder-list").forEach(box => swipeFx(box, ".rung"));
+  $$(".tabs-bar").forEach(box => swipeFx(box, ".tab"));
 
   /* ---------- a whole price card is a button: clicking its badge, price or empty space opens the card's link ---------- */
   document.addEventListener("click", e => {
@@ -173,7 +200,7 @@
   })();
   if (can3d) {
     let lib = null;
-    const load3d = () => lib || (lib = new Promise((res, rej) => { const s = document.createElement("script"); s.src = "assets/js/hx3d.js?v=20261012a"; s.onload = () => (window.HX3D ? res(window.HX3D) : rej()); s.onerror = rej; document.head.appendChild(s); }));
+    const load3d = () => lib || (lib = new Promise((res, rej) => { const s = document.createElement("script"); s.src = "assets/js/hx3d.js?v=20261012b"; s.onload = () => (window.HX3D ? res(window.HX3D) : rej()); s.onerror = rej; document.head.appendChild(s); }));
     const idle = cb => (window.requestIdleCallback ? requestIdleCallback(cb, { timeout: 1500 }) : setTimeout(cb, 200));
     const begin = () => idle(() => {
       const io = new IntersectionObserver(es => es.forEach(e => {
