@@ -176,6 +176,10 @@ Good to know:
 - No analytics, ads or tracking cookies, so no cookie banner is needed. Fonts are SIL Open Font License.
 - A forgotten PIN is sent **only by WhatsApp to the phone number on the account** (the old "send to the app" button was removed: anyone could file a request with someone else's name and number).
 
+## PIN number pad and the admin as its own app
+- On a phone / tablet, tapping a PIN box (customer login, sign-up, change PIN, admin PIN) does **not** open the phone's keyboard; a number pad slides up from the bottom instead (`assets/js/numpad.js`, the admin PIN screen has its own pad). With a mouse / keyboard nothing changes.
+- The admin panel can be added to the phone or PC as **its own app** (own icon "Hexora Admin", no browser bars): open `admin.html`, then Android Chrome ⋮ → *Add to Home screen / Install app*, iPhone Safari Share → *Add to Home Screen*, PC Chrome/Edge install icon in the address bar. The Dashboard shows these steps (or an "App එක add කරන්න" button where the browser allows it). Files: `admin.webmanifest`, `assets/brand/admin-*.png`.
+
 ## Customer accounts (`account.html`, "මගේ projects")
 - A customer makes an account with their **name, phone number and a 6-digit PIN** they choose, then logs in with the phone number and PIN. Firebase keeps it as a login `c<phone>@hexora-admin-panel.firebaseapp.com` (for example `c94771234567@…`); no email is sent to it.
 - A request sent from the same phone/browser before making the account is added to the account automatically. Anything else (another phone, a WhatsApp customer, a project you made with **New project**) you link from the admin panel.
