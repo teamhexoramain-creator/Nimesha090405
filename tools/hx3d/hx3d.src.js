@@ -40,34 +40,22 @@ function paint(geo) {
 const bevel = (depth, size) => ({ depth, bevelEnabled: true, bevelThickness: size, bevelSize: size, bevelSegments: 5, curveSegments: 6 });
 const glossy = extra => new MeshPhysicalMaterial(Object.assign({ vertexColors: true, metalness: .55, roughness: .22, clearcoat: 1, clearcoatRoughness: .12, envMapIntensity: 1.1 }, extra));
 
-// the Hexora mark, rebuilt from the logo file: red front faces (left bar, right bar, crossbar), the white inner walls and the dark-red undersides.
-// Corner points are measured on the 1200 px mark picture (centre 600,587; y grows downwards).
-const LOGO = {
-  left: [[265, 393], [480, 272], [480, 400], [368, 458], [368, 625], [480, 575], [480, 853], [368, 743], [265, 782]],
-  right: [[717, 272], [934, 393], [827, 452], [827, 745], [717, 830]],
-  bar: [[480, 572], [717, 458], [717, 590], [480, 700]],
-  wallL: [[368, 458], [480, 400], [480, 575], [368, 625]], wallR: [[827, 452], [934, 393], [934, 782], [827, 745]],
-  footL: [[265, 782], [368, 743], [480, 853], [480, 903]], footR: [[717, 830], [827, 745], [934, 782], [717, 903]]
-};
-function logoShape(pts) {
-  const sh = new Shape();
-  pts.forEach(([x, y], i) => { const X = (x - 600) / 320, Y = -(y - 587) / 320; i ? sh.lineTo(X, Y) : sh.moveTo(X, Y); });
-  sh.closePath(); return sh;
-}
+// the Hexora mark as a clear 3D "H": the logo's hexagon outline (slanted pillar tops and feet) with a straight crossbar, solid and bevelled.
+// The front is the brand gradient (light red top left -> deep red bottom right); the thick sides are darker red so the depth reads.
+const H_PTS = [[-1.1, -.78], [-.4, -1.18], [-.4, -.17], [.4, -.17], [.4, -1.18], [1.1, -.78], [1.1, .78], [.4, 1.18], [.4, .17], [-.4, .17], [-.4, 1.18], [-1.1, .78]];
 function mark() {
-  const g = new Group(), D = .3;
-  const front = glossy({ metalness: 0, roughness: .5, clearcoat: .45, clearcoatRoughness: .2, envMapIntensity: .25 });
-  // red faces, with a thin bevel: the gradient runs light (top left) to deep (bottom right) over the whole logo
-  for (const k of ["left", "right", "bar"]) {
-    const geo = new ExtrudeGeometry(logoShape(LOGO[k]), bevel(D, .016)); geo.translate(0, 0, -D / 2);
-    g.add(new Mesh(paintBy(geo, (x, y, c) => gradAt((x * .55 - y * .6 + 1) / 2, c)), front));
+  const g = new Group(), D = .5;
+  const sh = new Shape(); H_PTS.forEach(([x, y], i) => (i ? sh.lineTo(x, y) : sh.moveTo(x, y))); sh.closePath();
+  const geo = new ExtrudeGeometry(sh, bevel(D, .035)); geo.translate(0, 0, -D / 2);
+  const pos = geo.attributes.position, nor = geo.attributes.normal, col = new Float32Array(pos.count * 3), c = new Color(), dark = new Color("#5a0a12");
+  for (let i = 0; i < pos.count; i++) {
+    gradAt((pos.getX(i) / 2.2 - pos.getY(i) / 2.4 + 1) / 2, c);
+    const side = 1 - Math.min(1, Math.abs(nor.getZ(i)) * 1.15);   // 0 on the front/back faces, 1 on the thick sides
+    c.lerp(dark, side * .55);
+    col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
   }
-  // the inner walls and undersides sit just behind the front plane, so they show through the notches like in the logo
-  const flat = (k, fn) => { const geo = new ShapeGeometry(logoShape(LOGO[k])); geo.translate(0, 0, -D / 2 + .02); return new Mesh(paintBy(geo, fn), new MeshBasicMaterial({ vertexColors: true })); };
-  const wall = (x, y, c) => c.set("#ffffff").lerp(new Color("#bdbdbd"), Math.min(1, Math.max(0, (.45 - y) / 1.0)));
-  g.add(flat("wallL", wall)); g.add(flat("wallR", wall));
-  g.add(flat("footL", (x, y, c) => c.set("#6a0713").lerp(new Color("#4a050d"), (x + 1) / 2)));
-  g.add(flat("footR", (x, y, c) => c.set("#7a0c16").lerp(new Color("#5a0810"), (x + 1) / 2)));
+  geo.setAttribute("color", new BufferAttribute(col, 3));
+  g.add(new Mesh(geo, glossy({ metalness: .1, roughness: .4, clearcoat: .5, clearcoatRoughness: .2, envMapIntensity: .22 })));
   return g;
 }
 // a dark glass hex tile with a gradient rim and a glowing line icon on its face
@@ -94,20 +82,21 @@ export function mount(el, opts) {
   try { renderer = new WebGLRenderer({ antialias: true, alpha: true, powerPreference: "low-power" }); } catch (e) { return null; }
   const small = Math.min(innerWidth, innerHeight) < 700;
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, small ? 1.25 : 1.5));
-  renderer.toneMapping = opts.kind === "tile" ? ACESFilmicToneMapping : NoToneMapping;   // the logo keeps its exact brand colours renderer.toneMappingExposure = opts.kind === "tile" ? 1.05 : .95; renderer.outputColorSpace = SRGBColorSpace;
+  renderer.toneMapping = opts.kind === "tile" ? ACESFilmicToneMapping : NoToneMapping;     // the logo keeps its exact brand colours
+  renderer.toneMappingExposure = opts.kind === "tile" ? 1.05 : .95; renderer.outputColorSpace = SRGBColorSpace;
   const cv = renderer.domElement; cv.className = "hx3d-canvas"; cv.setAttribute("aria-hidden", "true");
   el.appendChild(cv);
 
   const scene = new Scene();
   const pmrem = new PMREMGenerator(renderer); scene.environment = pmrem.fromScene(new RoomEnvironment(), .04).texture; pmrem.dispose();
-  scene.add(new AmbientLight(0xffffff, opts.kind === "tile" ? .35 : .75));
-  const key = new DirectionalLight(0xffffff, opts.kind === "tile" ? 1.6 : .9); key.position.set(2.5, 3, 4); scene.add(key);
+  scene.add(new AmbientLight(0xffffff, opts.kind === "tile" ? .35 : .5));
+  const key = new DirectionalLight(0xffffff, opts.kind === "tile" ? 1.6 : .65); key.position.set(2.5, 3, 4); scene.add(key);
   const rimL = new DirectionalLight(0xff5a4a, 2.2); rimL.position.set(-3.5, 1.5, -2); scene.add(rimL);
   const rimR = new DirectionalLight(0xb3121e, 1.6); rimR.position.set(3.5, -2, -2.5); scene.add(rimR);
 
   const obj = opts.kind === "tile" ? tile(opts.icon) : mark();
   scene.add(obj);
-  const cam = new PerspectiveCamera(30, 1, .1, 50); cam.position.set(0, 0, opts.kind === "tile" ? 6 : 5.4);
+  const cam = new PerspectiveCamera(30, 1, .1, 50); cam.position.set(0, 0, opts.kind === "tile" ? 6 : 6.3);
 
   function size() { const w = el.clientWidth || 1, h = el.clientHeight || 1; renderer.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); }
   size();
@@ -115,7 +104,7 @@ export function mount(el, opts) {
   const draw = t => {
     const s = (t - t0) / 1000;
     px += (tx - px) * .06; py += (ty - py) * .06;
-    obj.rotation.y = (reduce ? .3 : .28 + Math.sin(s * .35) * .26) + px * .3 + sy * .9;   // sy: the logo turns a little as the page scrolls past it
+    obj.rotation.y = (reduce ? .32 : Math.sin(s * .45) * .42) + px * .3 + sy * .5;   // sy: the logo turns a little as the page scrolls past it
     obj.rotation.x = -.1 + (reduce ? 0 : Math.sin(s * .5) * .05) + py * .18;
     obj.position.y = reduce ? 0 : Math.sin(s * .8) * .045;
     const k = Math.min(1, s / .9), e = 1 - Math.pow(1 - k, 3);   // entrance: scale .94 → 1 with a strong ease-out

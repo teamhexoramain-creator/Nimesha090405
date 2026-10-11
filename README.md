@@ -10,7 +10,7 @@ Built with plain **HTML + CSS + JavaScript**. No installs, no build step, no ser
 | `service.html` | One page per service (`service.html?s=mobile-apps`): a 3D picture of the service, what's included, how we work, pricing, FAQ and the other services in the same category. With no `?s=` it lists every service by category. |
 | `start-project.html` | Project request form with a live LKR price estimate for apps/websites and for logo, design & video work. Customers send the request to WhatsApp or Email; it is also saved for the admin panel. |
 | `account.html` | **මගේ projects**: customers log in with their phone number and a 6-digit PIN and see each project's stage, % done, latest update and finish date. |
-| `admin.html` | PIN-locked admin panel (see below). |
+| `admin.html` | PIN-locked admin panel (see below). It is not linked from the public pages (like a normal admin panel): open `…/admin.html` or `…/admin/` directly, and add it to the phone's home screen. |
 | `privacy.html` | What data the site keeps (form, account/PIN copy, chat), where, who sees it, how to ask for deletion. Linked from every footer. |
 | `404.html` | "Page එක හම්බුනේ නෑ" page (GitHub Pages shows it for a wrong link). |
 | `robots.txt`, `sitemap.xml` | For Google: the admin page is excluded and every page / service is listed. The addresses in them are the GitHub Pages address — change them if you get your own domain (also `og:url`, `og:image` and the JSON-LD block in `index.html`). |
@@ -38,7 +38,7 @@ hexora-website/
    ├─ js/services.js       service pages text, categories, FAQ (starting data)
    ├─ js/service.js        builds service.html from services.js
    ├─ js/svcui.js          the service index (rows) shared by the home page and service.html
-   ├─ js/home.js           builds the home page's service list, process steps and FAQ from services.js / the admin panel
+   ├─ js/home.js           builds the home page's process steps and FAQ from services.js / the admin panel
    ├─ js/planner.js        project form + estimate + WhatsApp/Email message (+ saves the request to Firebase)
    ├─ js/firebase-config.js  ← Firebase apiKey, projectId, admin email
    ├─ js/fb.js             Firebase login + database helper for the customer pages
@@ -86,7 +86,7 @@ tools/hx3d/               source of assets/js/hx3d.js: `cd tools/hx3d && npm ci 
 ## How the pages are put together (design notes)
 - **Quiet premium look (v3)**: one confident sans-serif for headings (Manrope, sentence case), rounded corners on every button and card, icons in calm rounded tiles, the brand cyan used for emphasis only. No blinking dots, drifting particles, neon halos, animated gradient text or bobbing cards — the hexagon lives on in the logo and the 3D.
 - **Liquid glass buttons (v4)**: the main button is the logo gradient as a glossy liquid with a light that follows the mouse; every other button is frosted glass with a soft white rim. Tab bars have one underline that slides to the chosen tab.
-- **3D** (`assets/js/hx3d.js`, Three.js): the home page hero shows the Hexora mark in 3D, rebuilt from the logo file itself (two slanted bars and the diagonal crossbar, colours sampled from the logo; it turns a little as the page scrolls); every service page shows a 3D glass hexagon with that service's icon. It moves slowly and follows a mouse a little. It loads only after the page has loaded and only when it is about to be seen, draws only while on screen (stops in a hidden tab), runs at ~30 fps on phones, and draws one still frame for "reduce motion". Where it cannot run (no WebGL, data saver, a phone with under 3 GB memory) the hero video and the logo mark show instead.
+- **3D** (`assets/js/hx3d.js`, Three.js): the home page hero shows the Hexora mark in 3D, as a solid, clearly readable H (the logo's hexagon outline with a straight crossbar, colours sampled from the logo; it sways gently and turns a little as the page scrolls); every service page shows a 3D glass hexagon with that service's icon. It moves slowly and follows a mouse a little. It loads only after the page has loaded and only when it is about to be seen, draws only while on screen (stops in a hidden tab), runs at ~30 fps on phones, and draws one still frame for "reduce motion". Where it cannot run (no WebGL, data saver, a phone with under 3 GB memory) the hero picture shows instead.
 - **Whole cards are clickable**: clicking anywhere on a price card (its badge, its price, empty space) follows the card's button. This is one handler in `main.js` (`.price-card`, `[data-card]`).
 - **Tabs** (`[data-tabs]`, `main.js`): pricing on the home page, and the service categories on a phone. Arrow keys / Home / End work.
 - **Package ladder** (`[data-ladder]`): the packages come from `config.js → packages`; click one to open its details.
