@@ -19,6 +19,25 @@
   if (window.top !== window.self) { document.documentElement.textContent = ""; return; }   // never run inside another site's frame (clickjacking)
   const SHAPES = /^(?:\s*<(?:path|circle|rect|line|polyline|polygon|ellipse)(?:\s+(?!on|href|xlink)[a-z-]+="[^"<>]*")*\s*\/?>)*\s*$/i;   // an icon is only drawn once it is plain shapes
   const safeIcon = x => (SHAPES.test(x || "") ? x : "");
+  // the glass buttons light up under the mouse, as on the site (the site's main.js is not loaded here)
+  if (matchMedia("(hover: hover) and (pointer: fine)").matches) {
+    document.addEventListener("pointermove", e => {
+      const b = e.target.closest && e.target.closest(".btn"); if (!b) return;
+      const r = b.getBoundingClientRect();
+      b.style.setProperty("--mx", (e.clientX - r.left) + "px"); b.style.setProperty("--my", (e.clientY - r.top) + "px");
+    }, { passive: true });
+  }
+  // the 3D Hexora mark on the PIN screen (same gate as the site: WebGL, no data saver, enough memory)
+  let lib3d = null;
+  function mount3d() {
+    const el = document.querySelector(".ad-gate-3d"); if (!el || el.classList.contains("hx3d-live")) return;
+    if (navigator.connection && navigator.connection.saveData) return;
+    if (navigator.deviceMemory && navigator.deviceMemory < 3) return;
+    try { const gl = document.createElement("canvas").getContext("webgl"); if (!gl) return; const x = gl.getExtension("WEBGL_lose_context"); if (x) x.loseContext(); } catch (e) { return; }
+    lib3d = lib3d || new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = "assets/js/hx3d.js"; sc.onload = () => (window.HX3D ? res(window.HX3D) : rej()); sc.onerror = rej; document.head.appendChild(sc); });
+    lib3d.then(H => { if (document.body.contains(el) && H.mount(el, { kind: "mark" })) el.classList.add("hx3d-live"); }).catch(() => {});
+  }
+  new MutationObserver(() => mount3d()).observe(document.getElementById("admin-root") || document.body, { childList: true });
   const PIN_MIN = 6, PIN_MAX = 12, MAX_TRIES = 5, LOCK_MS = 60000, IDLE_MS = 30 * 60000;
   KEYS.len = "hx_admin_len_v1";   // how long this admin's PIN is (only a hint for the dots; the PIN itself is never stored)
   const pinLen = () => { const n = Number(store.get(KEYS.len)); return n >= PIN_MIN && n <= PIN_MAX ? n : PIN_MIN; };
@@ -162,7 +181,7 @@
       return;
     }
     root.innerHTML = gate(
-      '<span class="logo-part lp-mark ad-gate-mark" aria-hidden="true"></span>' +
+      '<div class="ad-gate-3d" data-3d="mark"><span class="logo-part lp-mark ad-gate-mark" aria-hidden="true"></span></div>' +
       '<h1>Admin</h1><p class="muted">PIN එක ගහන්න</p>' +
       '<div class="pin-dots" id="pin-dots" aria-hidden="true"></div>' +
       '<input class="pin-input" id="pin-input" type="password" inputmode="numeric" autocomplete="off" maxlength="' + PIN_MAX + '" aria-label="PIN">' +
