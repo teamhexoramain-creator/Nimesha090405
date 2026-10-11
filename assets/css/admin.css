@@ -277,3 +277,22 @@ details.ad-req > summary.ad-req-head > div { flex: 1; }
 .ad-gate-mark { transition: opacity .5s ease; }
 .pin-pad button { transition: transform .2s cubic-bezier(.23, 1, .32, 1), background-color .2s ease, box-shadow .2s ease; }
 .pin-pad button:active { transform: scale(.94); }
+
+/* ---- Elastic motion (like the curved side-menu and "bin eats the label" examples) ---- */
+.ad-pill-ind { transition: transform .55s cubic-bezier(.175, .885, .32, 1.1), width .55s cubic-bezier(.175, .885, .32, 1.1), height .55s cubic-bezier(.175, .885, .32, 1.1); }
+@media (min-width: 960px) {
+  /* the active side-menu tab is the page colour, runs out to the page and has curved corners that flow into the menu edge */
+  .ad-tabs { border-right: 0; box-shadow: inset -1px 0 0 var(--line); }
+  .ad-pill-ind { border: 0; border-left: 3px solid var(--cyan); border-radius: 14px 0 0 14px; background: var(--bg); box-shadow: none; }
+  .ad-pill-ind::before, .ad-pill-ind::after { content: ""; position: absolute; right: 0; width: 16px; height: 16px; pointer-events: none; }
+  .ad-pill-ind::before { top: -16px; background: radial-gradient(circle at 0 0, transparent 15.5px, var(--bg) 16px); }
+  .ad-pill-ind::after { bottom: -16px; background: radial-gradient(circle at 0 100%, transparent 15.5px, var(--bg) 16px); }
+}
+/* delete: the bin button grows a "sure?" beside the bin (the lid lifts and wobbles), then folds back */
+.ad-mini { transition: padding .35s cubic-bezier(.175, .885, .32, 1.1), color .2s ease, border-color .2s ease, background-color .2s ease; }
+.ad-mini.armed { display: inline-flex; align-items: center; gap: 6px; background: rgba(255, 90, 74, .12); }
+.ad-mini .arm-t { display: inline-block; white-space: nowrap; overflow: hidden; max-width: 0; animation: arm-in .45s cubic-bezier(.175, .885, .32, 1.1) forwards; }
+.ad-mini.armed svg { animation: bin-wobble .5s ease .05s both; transform-origin: 50% 100%; }
+@keyframes arm-in { from { max-width: 0; opacity: 0; } to { max-width: 12em; opacity: 1; } }
+@keyframes bin-wobble { 0% { transform: rotate(0); } 30% { transform: rotate(-14deg); } 60% { transform: rotate(10deg); } 100% { transform: rotate(0); } }
+@media (prefers-reduced-motion: reduce) { .ad-pill-ind, .ad-mini { transition: none; } .ad-mini .arm-t { animation: none; max-width: 12em; } .ad-mini.armed svg { animation: none; } }

@@ -1513,3 +1513,27 @@ section { --sec-pad: clamp(44px, 5.5vw, 76px); padding-block: var(--sec-pad); }
   .ladder-intro, .hero-points, .faq-left .lead { display: none; }
   .cta-band .lead { font-size: .95rem; }
 }
+
+/* ---- Elastic motion (a slide that overshoots a little and settles): package list, tab bars, details panel ---- */
+:root { --ease-elastic: cubic-bezier(.175, .885, .32, 1.1); }
+.ladder-list { position: relative; }
+.rung-ind { position: absolute; left: 0; top: 0; z-index: 0; pointer-events: none; border-radius: var(--r-card); border: 1px solid var(--cyan);
+  background: linear-gradient(120deg, rgba(255, 90, 74, .2), rgba(229, 37, 42, .26)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .2), 0 12px 28px -14px rgba(255, 90, 74, .85);
+  transition: transform .55s var(--ease-elastic), width .55s var(--ease-elastic), height .55s var(--ease-elastic); }
+.rung { z-index: 1; }
+.rung[aria-selected="true"] { background: transparent; border-color: transparent; box-shadow: none; transform: none; }
+.tabs-ind { transition: transform .55s var(--ease-elastic), width .55s var(--ease-elastic); }
+/* the details slide in from the side the choice moved to (phone: left/right along the list; desktop: out of the list, a little up or down) */
+@keyframes pk-in { from { opacity: 0; transform: translate(var(--dx, -28px), var(--dy, 0)); } to { opacity: 1; transform: none; } }
+.pk-panel.on { animation: pk-in .55s var(--ease-elastic) both; --dx: -30px; --dy: 12px; }
+.ladder[data-dir="prev"] .pk-panel.on { --dy: -12px; }
+@media (max-width: 899px) {
+  .pk-panel.on { --dx: 38px; --dy: 0px; }
+  .ladder[data-dir="prev"] .pk-panel.on { --dx: -38px; --dy: 0px; }
+}
+.pk-panel.on > * { animation: fade-up .45s var(--ease) both; }
+.pk-panel.on > :nth-child(2) { animation-delay: .06s; } .pk-panel.on > :nth-child(3) { animation-delay: .12s; } .pk-panel.on > :nth-child(4) { animation-delay: .18s; }
+@media (prefers-reduced-motion: reduce) {
+  .rung-ind, .tabs-ind { transition: none; }
+  .pk-panel.on, .pk-panel.on > * { animation: none; }
+}

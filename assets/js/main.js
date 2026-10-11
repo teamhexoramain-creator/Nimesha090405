@@ -45,8 +45,24 @@
     tabset(tabs, t => document.getElementById(t.getAttribute("aria-controls")));
   });
   $$("[data-ladder]").forEach(root => {
-    const tabs = $$(".rung", root);
+    const tabs = $$(".rung", root), list = $(".ladder-list", root);
+    // a highlight that slides (with a little overshoot) from the old package to the new one, and the details slide in from that side
+    const ind = document.createElement("span"); ind.className = "rung-ind"; ind.setAttribute("aria-hidden", "true"); list.insertBefore(ind, list.firstChild);
+    const cur = () => tabs.findIndex(x => x.getAttribute("aria-selected") === "true");
+    let prev = cur();
+    const place = fast => {
+      const sel = tabs[cur()]; if (!sel) return;
+      if (fast) ind.style.transition = "none";
+      ind.style.width = sel.offsetWidth + "px"; ind.style.height = sel.offsetHeight + "px";
+      ind.style.transform = "translate(" + sel.offsetLeft + "px," + sel.offsetTop + "px)";
+      if (fast) { void ind.offsetWidth; ind.style.transition = ""; }
+    };
+    place(true);
+    addEventListener("resize", () => place(true));
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => place(true));
+    addEventListener("load", () => place(true));
     tabset(tabs, t => document.getElementById(t.getAttribute("aria-controls")), t => {
+      const i = tabs.indexOf(t); root.dataset.dir = i >= prev ? "next" : "prev"; prev = i; place(false);
       // on a phone the details sit under the list: make sure they come into view
       if (window.matchMedia("(max-width: 899px)").matches) {
         const p = document.getElementById(t.getAttribute("aria-controls")), r = p && p.getBoundingClientRect();
@@ -157,7 +173,7 @@
   })();
   if (can3d) {
     let lib = null;
-    const load3d = () => lib || (lib = new Promise((res, rej) => { const s = document.createElement("script"); s.src = "assets/js/hx3d.js?v=20261011b"; s.onload = () => (window.HX3D ? res(window.HX3D) : rej()); s.onerror = rej; document.head.appendChild(s); }));
+    const load3d = () => lib || (lib = new Promise((res, rej) => { const s = document.createElement("script"); s.src = "assets/js/hx3d.js?v=20261012a"; s.onload = () => (window.HX3D ? res(window.HX3D) : rej()); s.onerror = rej; document.head.appendChild(s); }));
     const idle = cb => (window.requestIdleCallback ? requestIdleCallback(cb, { timeout: 1500 }) : setTimeout(cb, 200));
     const begin = () => idle(() => {
       const io = new IntersectionObserver(es => es.forEach(e => {

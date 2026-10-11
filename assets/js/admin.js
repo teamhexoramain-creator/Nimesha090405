@@ -39,7 +39,7 @@
     if (navigator.connection && navigator.connection.saveData) return;
     if (navigator.deviceMemory && navigator.deviceMemory < 3) return;
     try { const gl = document.createElement("canvas").getContext("webgl"); if (!gl) return; const x = gl.getExtension("WEBGL_lose_context"); if (x) x.loseContext(); } catch (e) { return; }
-    lib3d = lib3d || new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = "assets/js/hx3d.js?v=20261011b"; sc.onload = () => (window.HX3D ? res(window.HX3D) : rej()); sc.onerror = rej; document.head.appendChild(sc); });
+    lib3d = lib3d || new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = "assets/js/hx3d.js?v=20261012a"; sc.onload = () => (window.HX3D ? res(window.HX3D) : rej()); sc.onerror = rej; document.head.appendChild(sc); });
     lib3d.then(H => { if (document.body.contains(el) && H.mount(el, { kind: "mark" })) el.classList.add("hx3d-live"); }).catch(() => {});
   }
   new MutationObserver(() => mount3d()).observe(document.getElementById("admin-root") || document.body, { childList: true });
@@ -154,7 +154,9 @@
   // two-step confirm on the same button (no browser dialogs)
   function armed(btn, text) {
     if (btn.dataset.armed) return true;
-    btn.dataset.armed = "1"; btn.dataset.label = btn.innerHTML; btn.textContent = text; btn.classList.add("armed");
+    btn.dataset.armed = "1"; btn.dataset.label = btn.innerHTML; btn.classList.add("armed");
+    const ico = btn.querySelector("svg");   // the bin stays, the question grows out beside it (admin.css)
+    if (ico) { btn.textContent = ""; btn.appendChild(ico); const t = document.createElement("span"); t.className = "arm-t"; t.textContent = text; btn.appendChild(t); } else btn.textContent = text;
     setTimeout(() => { if (btn.isConnected) { delete btn.dataset.armed; btn.innerHTML = btn.dataset.label; btn.classList.remove("armed"); } }, 3500);
     return false;
   }
@@ -453,7 +455,9 @@
     const nr = nav.getBoundingClientRect(), sr = sel.getBoundingClientRect();   // measured against the list itself (the groups are positioned too)
     const x = Math.round(sr.left - nr.left + nav.scrollLeft), y = Math.round(sr.top - nr.top + nav.scrollTop);
     const to = "translate(" + x + "px," + y + "px)";
-    ind.style.width = Math.round(sr.width) + "px"; ind.style.height = Math.round(sr.height) + "px";
+    // in the side menu the highlight runs out to the edge of the menu (the page-coloured tab with curved corners, see admin.css)
+    const ext = matchMedia("(min-width: 960px)").matches ? parseFloat(getComputedStyle(nav).paddingRight) || 0 : 0;
+    ind.style.width = Math.round(sr.width + ext) + "px"; ind.style.height = Math.round(sr.height) + "px";
     if (!animate && S.pillAt) { ind.style.transition = "none"; ind.style.transform = S.pillAt; void ind.offsetWidth; ind.style.transition = ""; }
     ind.style.transform = to; S.pillAt = to;
     const left = x - nav.clientWidth / 2 + sr.width / 2;   // a sideways tab bar keeps the current tab in view
