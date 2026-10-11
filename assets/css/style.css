@@ -1395,6 +1395,7 @@ h1.display { font-size: clamp(2.3rem, 5.4vw, 4.4rem); letter-spacing: -0.035em; 
 .tabs-bar.has-ind .tab::after { display: none; }
 @media (prefers-reduced-motion: reduce) { .tabs-ind { transition: none; } }
 
+
 /* =====================================================================================================
    v4 — liquid glass buttons. Primary: the logo gradient as a glossy liquid with a light that follows the pointer.
    Everything else: frosted glass with a soft white rim. Text stays dark navy on the cyan/blue (contrast 5+ : 1).
@@ -1436,6 +1437,19 @@ h1.display { font-size: clamp(2.3rem, 5.4vw, 4.4rem); letter-spacing: -0.035em; 
 @media (hover: hover) and (pointer: fine) { .btn-wa:hover { background: linear-gradient(180deg, #1FA64E, #16883F); } }
 .btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) { .btn, .btn::after { transition-duration: .001ms; } }
+
+/* ---------- hover is stable: nothing moves out from under the pointer ----------
+   A control that lifts on hover leaves the pointer when it is touched on its lower edge, drops back, is hovered again ... and shakes.
+   So hover changes only light, border and shadow; the press (:active) is what moves. */
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover, .btn-primary:hover, .btn-wa:hover { transform: none; }
+  .service:hover, .price-card:hover, .rung:hover, .video-toggle:hover, .wa-float:hover { transform: none; }
+  .service:hover, .price-card:hover { box-shadow: var(--edge), 0 22px 44px -22px rgba(22, 160, 255, .45); }
+  .rung:hover { box-shadow: 0 0 0 1px rgba(120, 220, 255, .35), 0 12px 28px -16px rgba(22, 160, 255, .5); }
+  .wa-float:hover { filter: brightness(1.08); }
+  .video-toggle:hover { filter: brightness(1.15); }
+}
+
 
 @media (forced-colors: active) {
   .btn, .rung, .price-card, .pk-panel, .tl-body, .term, .cta-band, .picker, .legal-sec, .acc-card, .acc-proj, .form-step, .summary, .estimate, .svc-box, .faq details, .to-top, .skip-link, .ad-card { clip-path: none; border: 1px solid CanvasText; }

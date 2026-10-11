@@ -265,3 +265,15 @@ details.ad-req > summary.ad-req-head > div { flex: 1; }
   .ad-main { grid-column: 2; grid-row: 2; max-width: 1080px; padding: 28px clamp(20px, 3vw, 40px) 140px; }
   .ad-savebar { left: 252px; }
 }
+
+
+/* glass cards and the PIN screen, in the site's look */
+.ad-card, .ad-gate-card { background: linear-gradient(180deg, rgba(255, 255, 255, .055), rgba(255, 255, 255, .02)), rgba(9, 15, 43, .72);
+  border: 1px solid rgba(255, 255, 255, .09); border-radius: 20px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1), 0 24px 50px -30px rgba(0, 0, 0, .8); }
+.ad-item, .ad-list-item, .ad-stat { border-radius: 16px; }
+.ad-gate-3d { position: relative; width: 150px; height: 150px; display: grid; place-items: center; margin-bottom: -6px; }
+.ad-gate-3d .hx3d-canvas { inset: 0; width: 100%; height: 100%; background: none; }
+.ad-gate-3d.hx3d-on .ad-gate-mark { opacity: 0; }
+.ad-gate-mark { transition: opacity .5s ease; }
+.pin-pad button { transition: transform .2s cubic-bezier(.23, 1, .32, 1), background-color .2s ease, box-shadow .2s ease; }
+.pin-pad button:active { transform: scale(.94); }
