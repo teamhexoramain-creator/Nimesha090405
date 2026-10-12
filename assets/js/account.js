@@ -47,7 +47,31 @@
   }
 
   /* ---------- login / sign up ---------- */
+  // switching between Login and Register (and the forgot / admin screens) is animated: the highlight slides across, the card grows or shrinks to
+  // its new height, and the form slides in from the side the choice moved to, field by field
+  const reduceMotion = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const RANK = { login: 0, signup: 1, forgot: 2, admin: 2 };
+  let lastMode = null;
   function gate() {
+    const prev = lastMode, old = root.firstElementChild && root.firstElementChild.classList.contains("acc-gate") ? root.firstElementChild.offsetHeight : 0;
+    lastMode = mode;
+    gateRender();
+    const card = root.firstElementChild;
+    if (reduceMotion || !prev || prev === mode || !card || !card.classList.contains("acc-gate")) return;
+    card.dataset.dir = (RANK[mode] || 0) >= (RANK[prev] || 0) ? "next" : "prev";
+    card.classList.remove("acc-swap"); void card.offsetWidth; card.classList.add("acc-swap");
+    const tabs = card.querySelector(".acc-tabs");
+    if (tabs && (prev === "login" || prev === "signup")) { tabs.dataset.i = prev === "signup" ? "1" : "0"; void tabs.offsetWidth; tabs.dataset.i = mode === "signup" ? "1" : "0"; }
+    if (old) {   // the card eases from its old height to the new one
+      card.style.height = "auto"; const h = card.offsetHeight;
+      if (Math.abs(h - old) > 2) {
+        card.style.height = old + "px"; card.style.overflow = "hidden"; void card.offsetHeight;
+        card.style.transition = "height .55s cubic-bezier(.175, .885, .32, 1.1)"; card.style.height = h + "px";
+        setTimeout(() => { card.style.height = ""; card.style.overflow = ""; card.style.transition = ""; }, 600);
+      } else card.style.height = "";
+    }
+  }
+  function gateRender() {
     if (!FB.ready) {
       root.innerHTML = '<section class="acc-card acc-gate"><span class="eyebrow">Customer account</span><h1 class="display">මගේ projects</h1>' +
         '<p class="muted">Customer accounts තාම on කරලා නෑ. Project එක ගැන දැනගන්න WhatsApp එකෙන් අපිට message කරන්න.</p>' +
@@ -63,7 +87,7 @@
       '<section class="acc-card acc-gate">' +
         '<span class="eyebrow">Customer account</span><h1 class="display">මගේ <span class="grad-text">projects</span></h1>' +
         '<p class="muted">ඔයාගේ project එක කොච්චර දුරට ඉවරද, අපේ අලුත්ම updates මොනවද කියලා මෙතනින් බලන්න.</p>' +
-        '<div class="acc-tabs" role="tablist">' +
+        '<div class="acc-tabs" role="tablist" data-i="' + (up ? 1 : 0) + '"><span class="acc-tab-ind" aria-hidden="true"></span>' +
           '<button type="button" role="tab" data-mode="login" aria-selected="' + !up + '">Login</button>' +
           '<button type="button" role="tab" data-mode="signup" aria-selected="' + up + '">Account එකක් හදන්න</button></div>' +
         '<form id="acc-form" class="acc-form" novalidate>' +

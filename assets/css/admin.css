@@ -362,3 +362,5 @@ details.ad-req > summary.ad-req-head > div { flex: 1; }
 .pg-edit textarea { resize: vertical; min-height: 44px; line-height: 1.5; }
 .pg-was { color: var(--faint); font-size: .76rem; overflow-wrap: anywhere; }
 .pg-dynnote { margin-bottom: 10px; }
+.pg-det > summary { cursor: pointer; font-weight: 700; padding: 6px 0 12px; color: var(--muted); }
+.pg-det[open] > summary { color: var(--fg); }

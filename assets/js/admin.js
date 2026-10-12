@@ -39,7 +39,7 @@
     if (navigator.connection && navigator.connection.saveData) return;
     if (navigator.deviceMemory && navigator.deviceMemory < 3) return;
     try { const gl = document.createElement("canvas").getContext("webgl"); if (!gl) return; const x = gl.getExtension("WEBGL_lose_context"); if (x) x.loseContext(); } catch (e) { return; }
-    lib3d = lib3d || new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = "assets/js/hx3d.js?v=20261013a"; sc.onload = () => (window.HX3D ? res(window.HX3D) : rej()); sc.onerror = rej; document.head.appendChild(sc); });
+    lib3d = lib3d || new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = "assets/js/hx3d.js?v=20261013b"; sc.onload = () => (window.HX3D ? res(window.HX3D) : rej()); sc.onerror = rej; document.head.appendChild(sc); });
     lib3d.then(H => { if (document.body.contains(el) && H.mount(el, { kind: "mark" })) el.classList.add("hx3d-live"); }).catch(() => {});
   }
   new MutationObserver(() => mount3d()).observe(document.getElementById("admin-root") || document.body, { childList: true });
@@ -869,12 +869,12 @@
   VIEWS.pages = () => {
     S.pgFile = S.pgFile || "index.html"; S.pgDev = S.pgDev || (innerWidth < 700 ? "phone" : "desktop");
     return card("Pages",
-      '<p class="ad-note">Page එකක් තෝරන්න. Preview එකේ text එකක් <b>click</b> කළොත් ඒකේ box එක පහළින් open වෙනවා; නැත්නම් පහළ list එකේම edit කරන්න. එක text එකක් වෙනස් කළාම <b>ඒ text එක තියෙන හැම තැනම (හැම page එකකම)</b> වෙනස් වෙනවා. පස්සේ <b>Save කරන්න</b>.</p>' +
+      '<p class="ad-note">Page එකක් තෝරන්න. Preview එකේ <b>ඕන text එකක් click කරලා එතනම type කරන්න</b> (Enter = හරි, Esc = අයින් කරන්න). එක text එකක් වෙනස් කළාම <b>ඒ text එක තියෙන හැම තැනම (හැම page එකකම)</b> වෙනස් වෙනවා. පස්සේ <b>Save කරන්න</b>.</p>' +
       '<div class="pg-bar"><select class="input" id="pg-page" aria-label="Page">' + PAGES.map(p => '<option value="' + p[0] + '"' + (p[0] === S.pgFile ? " selected" : "") + ">" + p[1] + "</option>").join("") + "</select>" +
       '<span class="pg-dev" role="group" aria-label="Preview size"><button type="button" class="btn ad-small" data-act="pg-dev" data-dev="desktop" aria-pressed="' + (S.pgDev === "desktop") + '">Desktop</button><button type="button" class="btn ad-small" data-act="pg-dev" data-dev="phone" aria-pressed="' + (S.pgDev === "phone") + '">Phone</button></span>' +
       '<button class="btn ad-small" type="button" data-act="pg-reload">Reload</button></div>' +
       '<div class="pg-wrap" id="pg-wrap"><iframe class="pg-frame" id="pg-frame" title="Page preview" src="' + S.pgFile + '?hxedit=1"></iframe></div>', "Preview එකේ පේන්නේ site එකේ ඇත්තම page එක; ඒකේ buttons / links වැඩ කරන්නේ නෑ.") +
-      card("Texts", '<div id="pg-dyn"></div><div class="pg-tools"><input class="input" id="pg-q" type="search" placeholder="Text එකක් හොයන්න…" aria-label="Search texts"><span class="ad-pill" id="pg-count"></span><button class="btn ad-small" type="button" data-act="pg-resetall">Reset (මේ page එකේ)</button></div><div class="pg-list" id="pg-list"><p class="muted">Preview එක load වෙනකන් ඉන්න…</p></div>',
+      card("Texts", '<div id="pg-dyn"></div><details class="pg-det" id="pg-det"><summary>List එකෙන් edit කරන්න (search, page title, Google description)</summary><div class="pg-tools"><input class="input" id="pg-q" type="search" placeholder="Text එකක් හොයන්න…" aria-label="Search texts"><span class="ad-pill" id="pg-count"></span><button class="btn ad-small" type="button" data-act="pg-resetall">Reset (මේ page එකේ)</button></div><div class="pg-list" id="pg-list"><p class="muted">Preview එක load වෙනකන් ඉන්න…</p></div></details>',
         "මේවා text විතරයි. Prices, contact, FAQ, packages, services වලට ඒවාගෙම tab තියෙනවා.");
   };
   const pgFrame = () => $("#pg-frame");
@@ -924,7 +924,17 @@
     }).join("") || '<p class="muted">මොකවත් හම්බුනේ නෑ.</p>';
     pgCount();
   }
+  // a text typed straight into the preview: it is stored, shown in the list (if open) and counted as a change
+  function pgSet(key, v) {
+    if (!S.data.texts) S.data.texts = {};
+    const r = (S.pgRows || []).find(x => x.key === key), orig = r ? r.orig : key;
+    if (v === "" || v === orig) delete S.data.texts[key]; else S.data.texts[key] = v.slice(0, 2000);
+    const i = (S.pgRows || []).findIndex(x => x.key === key), ta = i >= 0 && $('[data-pgi="' + i + '"]');
+    if (ta) { ta.value = typeof S.data.texts[key] === "string" ? S.data.texts[key] : orig; const row = ta.closest(".pg-row"); if (row) row.classList.toggle("changed", typeof S.data.texts[key] === "string"); }
+    pgCount(); updateSaveBar();
+  }
   function pgFocus(key) {
+    const det = $("#pg-det"); if (det) det.open = true;
     const q = $("#pg-q"); if (q && q.value) { q.value = ""; paintPgList(); }
     const i = (S.pgRows || []).findIndex(r => r.key === key); if (i < 0) return;
     const row = $('[data-row="' + i + '"]'), ta = $('[data-pgi="' + i + '"]'); if (!row || !ta) return;
@@ -940,6 +950,7 @@
       paintPgList(); pgSend();
     } else if (d.type === "ready") pgSend();
     else if (d.type === "focus" && typeof d.key === "string") pgFocus(d.key);
+    else if (d.type === "edit" && typeof d.key === "string") pgSet(d.key, typeof d.value === "string" ? d.value : "");
   });
   root.addEventListener("input", e => {
     const t = e.target;
