@@ -52,6 +52,7 @@
     clearInterval(poll); clearInterval(chatPoll);
     if (chatCtl) { chatCtl.destroy(); chatCtl = null; }
     if (mode === "forgot") return forgotScreen();
+    if (mode === "admin") return adminScreen();
     const up = mode === "signup";
     root.innerHTML =
       '<section class="acc-card acc-gate">' +
@@ -70,9 +71,50 @@
           '<button class="btn btn-primary btn-block" type="submit">' + (up ? "Account එක හදන්න" : "Login") + "</button>" +
         "</form>" +
         '<p class="acc-help">' + (up ? "Project request එක එව්වේ මේ phone එකෙන් නම්, account එක හැදුවම ඒක එකපාරම මෙතන පේනවා.<br>⚠ මේ PIN එක බැංකු / phone PIN එකක් නෙවෙයි, මේ site එකට විතරක් අලුතෙන් හදපු එකක් වෙන්න ඕන."
-          : '<button type="button" class="acc-link" data-mode="forgot">PIN එක අමතක උනාද?</button>') + "</p>" +
+          : '<button type="button" class="acc-link" data-mode="forgot">PIN එක අමතක උනාද?</button> · <button type="button" class="acc-link" data-mode="admin">Admin login</button>') + "</p>" +
       "</section>";
     $("#a-phone").focus({ preventScroll: true });
+  }
+
+  /* ---------- admin login: the same login page; the admin's PIN goes to Firebase, and the admin panel opens signed in ---------- */
+  const AD_TRIES = "hx_admin_tries_v1", AD_LEN = "hx_admin_len_v1", AD_HAND = "hx_admin_handoff_v1";   // the same keys as admin.js (shared lock-out, remembered PIN length)
+  function adminScreen() {
+    root.innerHTML = '<section class="acc-card acc-gate"><span class="eyebrow">Admin</span><h1 class="display">Admin <span class="grad-text">login</span></h1>' +
+      '<p class="muted">Hexora admin panel එකට යන්න admin PIN එක ගහන්න (digits 6 – 12).</p>' +
+      '<form id="admin-form" class="acc-form" novalidate><div class="field"><label for="ad-pin">Admin PIN</label>' +
+      '<input class="input" id="ad-pin" data-numpad type="password" inputmode="numeric" maxlength="12" autocomplete="current-password"></div>' +
+      '<p class="acc-msg" id="acc-msg" role="alert"></p><button class="btn btn-primary btn-block" type="submit">Admin panel එකට</button></form>' +
+      '<p class="acc-help"><button type="button" class="acc-link" data-mode="login">← Customer login එකට</button></p></section>';
+    $("#ad-pin").focus({ preventScroll: true });
+  }
+  async function adminLogin(form) {
+    const F = window.HX_FIREBASE || {}, pin = $("#ad-pin").value.replace(/\D/g, ""), btn = form.querySelector("button[type=submit]");
+    if (!F.apiKey || !F.adminEmail) return msg("Admin login තාම set කරලා නෑ.");
+    if (pin.length < 6 || pin.length > 12) return msg("PIN එක digits 6 – 12 අතර වෙන්න ඕන.", false, "ad-pin");
+    let tries = { n: 0, until: 0 };
+    try { tries = JSON.parse(localStorage.getItem(AD_TRIES)) || tries; } catch (e) { /* storage blocked */ }
+    if (Date.now() < tries.until) return msg("Lock එක ඇරෙන්න තත්පර " + Math.ceil((tries.until - Date.now()) / 1000) + "ක් ඉන්න.");
+    btn.disabled = true; msg("Check කරනවා…", true);
+    try {
+      const r = await fetch("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=" + encodeURIComponent(F.apiKey),
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: F.adminEmail, password: pin, returnSecureToken: true }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.idToken) { const m = (j.error && j.error.message) || ""; const e = new Error(m); e.wrong = /INVALID_LOGIN_CREDENTIALS|INVALID_PASSWORD|EMAIL_NOT_FOUND/.test(m); e.locked = /TOO_MANY_ATTEMPTS/.test(m); throw e; }
+      // hand the signed-in session to the admin panel for this tab only (it takes it and deletes it at once); the PIN itself is never stored
+      try {
+        sessionStorage.setItem(AD_HAND, JSON.stringify({ id: j.idToken, refresh: j.refreshToken, exp: Date.now() + (Number(j.expiresIn) || 3600) * 1000, email: j.email }));
+        localStorage.removeItem(AD_TRIES); localStorage.setItem(AD_LEN, JSON.stringify(pin.length));
+      } catch (e) { /* storage blocked: the admin panel will ask for the PIN itself */ }
+      location.href = "admin.html";
+    } catch (e) {
+      btn.disabled = false;
+      if (e.wrong) {
+        tries.n = (tries.n || 0) + 1;
+        if (tries.n >= 5) { tries.n = 0; tries.until = Date.now() + 60000; }
+        try { localStorage.setItem(AD_TRIES, JSON.stringify(tries)); } catch (x) { /* storage blocked */ }
+        msg(tries.until > Date.now() ? "වැරදි PIN 5ක්. තත්පර 60ක් ඉන්න." : "PIN එක වැරදියි. (" + (5 - tries.n) + " පාරක් ඉතුරුයි)", false, "ad-pin");
+      } else msg(e.locked ? "වැරදි PIN ගොඩක් ගැහුව නිසා Firebase එක ටික වෙලාවකට lock කරලා. පස්සේ try කරන්න." : "Login වෙන්න බෑ. Internet එක බලලා ආයෙත් try කරන්න.");
+    }
   }
 
   /* ---------- forgot PIN: the request goes to the admin panel; once approved, the PIN shows up here ---------- */
@@ -329,11 +371,13 @@
   root.addEventListener("submit", e => {
     e.preventDefault();
     if (e.target.id === "acc-form") submit(e.target);
+    else if (e.target.id === "admin-form") adminLogin(e.target);
     else if (e.target.id === "forgot-form") forgot(e.target);
     else if (e.target.id === "name-form") saveName(e.target);
     else if (e.target.id === "pin-form") savePin(e.target);
   });
   root.addEventListener("input", e => { if (e.target.classList.contains("acc-pin")) e.target.value = e.target.value.replace(/\D/g, "").slice(0, 6); });
+  root.addEventListener("input", e => { if (e.target.id === "ad-pin") e.target.value = e.target.value.replace(/\D/g, "").slice(0, 12); });
 
   window.addEventListener("hashchange", () => { const t = tabOfHash(); if (t !== tab && root.querySelector(".acc-tabs2")) { tab = t; paint(); } });   // Back / Forward
   if (FB.user()) portal(); else { mode = new URLSearchParams(location.search).get("new") ? "signup" : "login"; gate(); }
