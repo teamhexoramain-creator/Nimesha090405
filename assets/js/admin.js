@@ -39,7 +39,7 @@
     if (navigator.connection && navigator.connection.saveData) return;
     if (navigator.deviceMemory && navigator.deviceMemory < 3) return;
     try { const gl = document.createElement("canvas").getContext("webgl"); if (!gl) return; const x = gl.getExtension("WEBGL_lose_context"); if (x) x.loseContext(); } catch (e) { return; }
-    lib3d = lib3d || new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = "assets/js/hx3d.js?v=20261012e"; sc.onload = () => (window.HX3D ? res(window.HX3D) : rej()); sc.onerror = rej; document.head.appendChild(sc); });
+    lib3d = lib3d || new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = "assets/js/hx3d.js?v=20261012f"; sc.onload = () => (window.HX3D ? res(window.HX3D) : rej()); sc.onerror = rej; document.head.appendChild(sc); });
     lib3d.then(H => { if (document.body.contains(el) && H.mount(el, { kind: "mark" })) el.classList.add("hx3d-live"); }).catch(() => {});
   }
   new MutationObserver(() => mount3d()).observe(document.getElementById("admin-root") || document.body, { childList: true });
@@ -1190,5 +1190,14 @@
   ["pointerdown", "keydown"].forEach(ev => window.addEventListener(ev, () => { S.last = Date.now(); }, { passive: true }));
   setInterval(() => { if (S.auth && !anyDirty() && Date.now() - S.last > IDLE_MS) lockScreen("විනාඩි 30ක් use නොකළ නිසා lock උනා."); }, 30000);
 
-  lockScreen();
+  // signed in on the site's login page ("Admin login"): that page leaves the session for this tab; take it and delete it at once
+  function takeHandoff() {
+    let h = null;
+    try { h = JSON.parse(sessionStorage.getItem("hx_admin_handoff_v1")); sessionStorage.removeItem("hx_admin_handoff_v1"); } catch (e) { return false; }
+    if (!h || !h.id || !h.refresh || !(Number(h.exp) > Date.now() - 60000) || String(h.email || "").toLowerCase() !== String(F.adminEmail || "").toLowerCase()) return false;
+    S.auth = { id: h.id, refresh: h.refresh, exp: Number(h.exp), email: h.email };
+    S.last = Date.now(); loadAll();
+    return true;
+  }
+  if (!ready || !takeHandoff()) lockScreen();
 })();
