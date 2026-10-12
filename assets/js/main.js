@@ -42,7 +42,9 @@
   }
   $$("[data-tabs]").forEach(root => {
     const tabs = $$(":scope > [role='tablist'] > [role='tab']", root);
-    tabset(tabs, t => document.getElementById(t.getAttribute("aria-controls")));
+    let prev = tabs.findIndex(x => x.getAttribute("aria-selected") === "true");
+    // the new tab's content slides in from the side the choice moved to
+    tabset(tabs, t => document.getElementById(t.getAttribute("aria-controls")), t => { const i = tabs.indexOf(t); root.dataset.dir = i >= prev ? "next" : "prev"; prev = i; });
   });
   $$("[data-ladder]").forEach(root => {
     const tabs = $$(".rung", root), list = $(".ladder-list", root);
@@ -200,7 +202,7 @@
   })();
   if (can3d) {
     let lib = null;
-    const load3d = () => lib || (lib = new Promise((res, rej) => { const s = document.createElement("script"); s.src = "assets/js/hx3d.js?v=20261012b"; s.onload = () => (window.HX3D ? res(window.HX3D) : rej()); s.onerror = rej; document.head.appendChild(s); }));
+    const load3d = () => lib || (lib = new Promise((res, rej) => { const s = document.createElement("script"); s.src = "assets/js/hx3d.js?v=20261012c"; s.onload = () => (window.HX3D ? res(window.HX3D) : rej()); s.onerror = rej; document.head.appendChild(s); }));
     const idle = cb => (window.requestIdleCallback ? requestIdleCallback(cb, { timeout: 1500 }) : setTimeout(cb, 200));
     const begin = () => idle(() => {
       const io = new IntersectionObserver(es => es.forEach(e => {

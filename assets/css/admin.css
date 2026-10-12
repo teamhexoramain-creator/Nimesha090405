@@ -296,3 +296,44 @@ details.ad-req > summary.ad-req-head > div { flex: 1; }
 @keyframes arm-in { from { max-width: 0; opacity: 0; } to { max-width: 12em; opacity: 1; } }
 @keyframes bin-wobble { 0% { transform: rotate(0); } 30% { transform: rotate(-14deg); } 60% { transform: rotate(10deg); } 100% { transform: rotate(0); } }
 @media (prefers-reduced-motion: reduce) { .ad-pill-ind, .ad-mini { transition: none; } .ad-mini .arm-t { animation: none; max-width: 12em; } .ad-mini.armed svg { animation: none; } }
+
+/* ---- Phone: the menu is a drawer that slides in from the left (elastic), with the same curved active tab ---- */
+.ad-menu, .ad-cur, .ad-scrim { display: none; }
+@media (max-width: 959px) {
+  .ad-menu { display: inline-grid; align-content: center; gap: 5px; width: 44px; height: 44px; margin-left: -6px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; flex: none; }
+  .ad-menu span { display: block; height: 2px; border-radius: 2px; background: var(--fg); transition: transform .5s cubic-bezier(.175, .885, .32, 1.1), opacity .25s ease; }
+  .ad-nav-open .ad-menu span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .ad-nav-open .ad-menu span:nth-child(2) { opacity: 0; transform: scaleX(.2); }
+  .ad-nav-open .ad-menu span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+  .ad-pill { display: none; }
+  .ad-cur { display: inline-block; font-family: var(--f-mono); font-size: .74rem; letter-spacing: .06em; color: var(--cyan); padding: 5px 10px; border-radius: 999px; border: 1px solid rgba(255, 90, 74, .4); background: rgba(255, 90, 74, .08); white-space: nowrap; }
+  .ad-top { flex-wrap: nowrap; gap: 8px 10px; }
+  .ad-top-end .btn { padding: 0 11px; }
+  .ad-scrim { display: block; position: fixed; inset: 0; z-index: 38; background: rgba(0, 0, 0, .6); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); opacity: 0; pointer-events: none; transition: opacity .35s ease; }
+  .ad-nav-open .ad-scrim { opacity: 1; pointer-events: auto; }
+  .ad-nav-open { overflow: hidden; }
+  .ad-tabs { position: fixed; z-index: 40; top: 0; bottom: 0; left: 0; width: min(84vw, 310px); display: flex; flex-direction: column; align-items: stretch; gap: 4px; overflow: hidden auto; overscroll-behavior: contain;
+    padding: calc(env(safe-area-inset-top, 0px) + 22px) 14px 28px; border: 0; background: #151213; box-shadow: inset -1px 0 0 var(--line), 24px 0 60px -20px rgba(0, 0, 0, .8);
+    transform: translateX(-104%); visibility: hidden; transition: transform .55s cubic-bezier(.175, .885, .32, 1.1), visibility 0s linear .55s; }
+  .ad-nav-open .ad-tabs { transform: none; visibility: visible; transition: transform .55s cubic-bezier(.175, .885, .32, 1.1), visibility 0s; }
+  .ad-tabgroup { flex-direction: column; align-items: stretch; gap: 4px; padding: 0; border-left: 0; margin-bottom: 8px; }
+  .ad-tabgroup-l { position: static; display: block; padding: 10px 14px 6px; }
+  .ad-tabs button { justify-content: flex-start; min-height: 48px; padding: 0 14px; font-size: .95rem; }
+  .ad-tabs button .ad-badge { margin-left: auto; }
+  /* the drawer's active tab: a solid tab that runs out to the drawer edge with curved corners (same shape as the wide-screen menu) */
+  .ad-pill-ind { border: 0; border-left: 3px solid var(--cyan); border-radius: 14px 0 0 14px; background: #2b1619; box-shadow: none; }
+  .ad-pill-ind::before, .ad-pill-ind::after { content: ""; position: absolute; right: 0; width: 16px; height: 16px; pointer-events: none; }
+  .ad-pill-ind::before { top: -16px; background: radial-gradient(circle at 0 0, transparent 15.5px, #2b1619 16px); }
+  .ad-pill-ind::after { bottom: -16px; background: radial-gradient(circle at 0 100%, transparent 15.5px, #2b1619 16px); }
+  .ad-nav-open .ad-tabs button { animation: ad-tab-in .5s cubic-bezier(.175, .885, .32, 1.1) both; }
+  .ad-nav-open .ad-tabs button:nth-child(n) { animation-delay: calc(var(--i, 0) * 22ms); }
+}
+@keyframes ad-tab-in { from { opacity: 0; translate: -18px 0; } to { opacity: 1; translate: 0 0; } }
+
+/* a new section slides in: from below when it is lower in the menu, from above when higher (first blocks one after another) */
+@keyframes ad-in { from { opacity: 0; translate: 0 var(--ty, 26px); } to { opacity: 1; translate: 0 0; } }
+.ad-main.swap > * { animation: ad-in .55s cubic-bezier(.175, .885, .32, 1.1) both; --ty: 26px; }
+.ad-main.swap[data-dir="up"] > * { --ty: -26px; }
+.ad-main.swap > :nth-child(2) { animation-delay: .05s; } .ad-main.swap > :nth-child(3) { animation-delay: .1s; } .ad-main.swap > :nth-child(4) { animation-delay: .15s; } .ad-main.swap > :nth-child(n + 5) { animation-delay: .2s; }
+@media (prefers-reduced-motion: reduce) { .ad-main.swap > *, .ad-nav-open .ad-tabs button { animation: none; } .ad-tabs, .ad-menu span, .ad-scrim { transition: none; } }
+@media (max-width: 959px) { .ad-top-end a.btn { display: none; } .ad-top-end { margin-left: auto; } .ad-brand b { font-size: .9rem; } }

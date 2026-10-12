@@ -39,7 +39,7 @@
     if (navigator.connection && navigator.connection.saveData) return;
     if (navigator.deviceMemory && navigator.deviceMemory < 3) return;
     try { const gl = document.createElement("canvas").getContext("webgl"); if (!gl) return; const x = gl.getExtension("WEBGL_lose_context"); if (x) x.loseContext(); } catch (e) { return; }
-    lib3d = lib3d || new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = "assets/js/hx3d.js?v=20261012b"; sc.onload = () => (window.HX3D ? res(window.HX3D) : rej()); sc.onerror = rej; document.head.appendChild(sc); });
+    lib3d = lib3d || new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = "assets/js/hx3d.js?v=20261012c"; sc.onload = () => (window.HX3D ? res(window.HX3D) : rej()); sc.onerror = rej; document.head.appendChild(sc); });
     lib3d.then(H => { if (document.body.contains(el) && H.mount(el, { kind: "mark" })) el.classList.add("hx3d-live"); }).catch(() => {});
   }
   new MutationObserver(() => mount3d()).observe(document.getElementById("admin-root") || document.body, { childList: true });
@@ -412,13 +412,23 @@
     ["Site", [["content", "Home page"], ["notice", "Notice"], ["contact", "Contact"], ["prices", "Prices"], ["services", "Services"]]], ["System", [["history", "History"], ["security", "Security"]]]];
   const TABS = TAB_GROUPS.reduce((a, g) => a.concat(g[1]), []);
   const newCount = () => (S.reqs || []).filter(r => r.status === "new").length;
+  // phone: the menu is a drawer that slides in from the left (same curved-tab highlight as the wide-screen side menu)
+  const isDrawer = () => matchMedia("(max-width: 959px)").matches;
+  function setMenu(open) {
+    open = !!open && isDrawer();
+    document.documentElement.classList.toggle("ad-nav-open", open);
+    const btn = $(".ad-menu"); if (btn) btn.setAttribute("aria-expanded", String(open));
+    const nav = $("#ad-tabs"); if (nav) { if (open) { nav.removeAttribute("inert"); movePill(false); const sel = $('[aria-selected="true"]', nav); if (sel) sel.focus({ preventScroll: true }); } else if (isDrawer()) nav.setAttribute("inert", ""); }
+  }
+  function syncDrawer() { const nav = $("#ad-tabs"); if (!nav) return; if (isDrawer() && !document.documentElement.classList.contains("ad-nav-open")) nav.setAttribute("inert", ""); else nav.removeAttribute("inert"); if (!isDrawer()) document.documentElement.classList.remove("ad-nav-open"); movePill(false); }
   function panel() {
     root.innerHTML =
       '<div class="ad-shell">' +
-        '<header class="ad-top"><a class="ad-brand" href="index.html" target="_blank" rel="noopener"><span class="logo-part lp-mark ad-brand-mark" aria-hidden="true"></span><b>Admin</b></a>' +
-          '<span class="ad-pill" title="Firebase project">' + esc(F.projectId) + "</span>" +
+        '<header class="ad-top"><button class="ad-menu" type="button" data-act="menu" aria-label="Menu" aria-expanded="false" aria-controls="ad-tabs"><span></span><span></span><span></span></button><a class="ad-brand" href="index.html" target="_blank" rel="noopener"><span class="logo-part lp-mark ad-brand-mark" aria-hidden="true"></span><b>Admin</b></a>' +
+          '<span class="ad-pill" title="Firebase project">' + esc(F.projectId) + "</span><span class=\"ad-cur\" id=\"ad-cur\"></span>" +
           '<span class="ad-top-end"><a class="btn ad-small" href="index.html" target="_blank" rel="noopener">Site එක ' + icon(I.ext) + "</a>" +
           '<button class="btn ad-small" type="button" data-act="lock">' + icon(I.lock) + " Lock</button></span></header>" +
+        '<div class="ad-scrim" data-act="menu-close" aria-hidden="true"></div>' +
         '<nav class="ad-tabs" role="tablist" aria-label="Admin sections" id="ad-tabs"></nav>' +
         '<section class="ad-main" id="ad-main"></section>' +
         '<div class="ad-savebar" id="ad-savebar" hidden><div class="ad-save-info" id="ad-save-info"></div>' +
@@ -427,7 +437,8 @@
           '<button class="btn btn-primary" type="button" data-act="save" id="save-btn">Save කරන්න</button></div>' +
         '<div class="toast" id="ad-toast" role="status"></div>' +
       "</div>";
-    paintTabs(); renderTab(); updateSaveBar();
+    paintTabs(); renderTab(); updateSaveBar(); syncDrawer();
+    if (window.HXScrollFx && !S.fx) S.fx = window.HXScrollFx.watch($("#ad-main"), ".ad-card, .ad-req, .ad-hist-btn", { top: () => { const t = $(".ad-top"); return t ? t.getBoundingClientRect().bottom : 0; }, bottom: () => { const s = $("#ad-savebar"); return s && !s.hidden ? s.getBoundingClientRect().top : innerHeight; } });
   }
   const TAB_ICONS = {
     home: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
@@ -440,7 +451,7 @@
     const nav = $("#ad-tabs"); if (!nav) return;
     const n = newCount();
     nav.innerHTML = '<span class="ad-pill-ind" aria-hidden="true"></span>' + TAB_GROUPS.map(([label, tabs]) => '<div class="ad-tabgroup"' + (label ? ' role="group" aria-label="' + label + '"' : "") + ">" + (label ? '<span class="ad-tabgroup-l" aria-hidden="true">' + label + "</span>" : "") +
-      tabs.map(([k, t]) => '<button type="button" role="tab" data-act="tab" data-tab="' + k + '" aria-selected="' + (k === S.tab) + '">' + icon(TAB_ICONS[k] || "") + '<span class="ad-tab-t">' + t + "</span>" +
+      tabs.map(([k, t]) => '<button type="button" role="tab" data-act="tab" data-tab="' + k + '" style="--i:' + TABS.findIndex(x => x[0] === k) + '" aria-selected="' + (k === S.tab) + '">' + icon(TAB_ICONS[k] || "") + '<span class="ad-tab-t">' + t + "</span>" +
       (k === "requests" && (n + unreadCount()) ? ' <span class="ad-badge">' + (n + unreadCount()) + "</span>" : "") +
       (k === "live" && unreadGuests() ? ' <span class="ad-badge">' + unreadGuests() + "</span>" : "") +
       (k === "customers" && S.pinReqs.length ? ' <span class="ad-badge">' + S.pinReqs.length + "</span>" : "") + "</button>").join("") + "</div>").join("");
@@ -472,6 +483,14 @@
     const main = $("#ad-main"); if (!main) return;
     const y = window.scrollY;
     main.innerHTML = VIEWS[S.tab]();
+    // a new section slides in from below when it is further down the menu, from above when it is higher up (a re-draw of the same section does not animate)
+    if (S.shownTab && S.shownTab !== S.tab) {
+      const at = k => TABS.findIndex(t => t[0] === k);
+      main.dataset.dir = at(S.tab) > at(S.shownTab) ? "down" : "up";
+      main.classList.remove("swap"); void main.offsetWidth; main.classList.add("swap");
+    }
+    S.shownTab = S.tab;
+    const cur = $("#ad-cur"); if (cur) cur.textContent = (TABS.find(t => t[0] === S.tab) || [, ""])[1];
     $$("#ad-tabs [data-tab]").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === S.tab)));
     movePill(true);
     if (S.tab === "history") loadHistory();
@@ -1044,7 +1063,9 @@
         const rows = [["Name", "Phone", "Joined"]]; S.customers.forEach(c => rows.push([c.name, c.phone, c.createdAt]));   // PINs are never exported
         downloadCsv("hexora-customers-" + csvDay() + ".csv", rows); toast("CSV එක download උනා (" + (rows.length - 1) + " rows)."); break;
       }
-      case "tab": setTab(d.tab); renderTab(); window.scrollTo(0, 0); break;
+      case "menu": setMenu(!document.documentElement.classList.contains("ad-nav-open")); break;
+      case "menu-close": setMenu(false); break;
+      case "tab": setMenu(false); setTab(d.tab); renderTab(); window.scrollTo(0, 0); break;
       case "lock": if (anyDirty() && !armed(b, "Save නොකරපු වෙනස් නැති වෙනවා. ආයෙත් ඔබන්න")) return; lockScreen(); break;
       case "save": saveAll(b); break;
       case "discard":
@@ -1142,7 +1163,17 @@
     }
   });
 
-  window.addEventListener("resize", () => movePill(false));
+  window.addEventListener("resize", () => { movePill(false); syncDrawer(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && document.documentElement.classList.contains("ad-nav-open")) { setMenu(false); const m = $(".ad-menu"); if (m) m.focus(); } });
+  // swipe: from the left edge to open the menu, leftwards on the menu to close it
+  { let x0 = 0, y0 = 0, on = false;
+    document.addEventListener("touchstart", e => { const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; on = !!$("#ad-tabs"); }, { passive: true });
+    document.addEventListener("touchend", e => {
+      if (!on || !isDrawer()) return; on = false;
+      const t = e.changedTouches[0], dx = t.clientX - x0, dy = Math.abs(t.clientY - y0), open = document.documentElement.classList.contains("ad-nav-open");
+      if (!open && x0 < 24 && dx > 70 && dy < 60) setMenu(true);
+      else if (open && dx < -60 && dy < 70) setMenu(false);
+    }, { passive: true }); }
   window.addEventListener("hashchange", () => {   // Back / Forward between tabs
     if (!S.auth || !$("#ad-main")) return;
     const t = tabFromHash() || "home";
