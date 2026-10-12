@@ -39,7 +39,7 @@
     if (navigator.connection && navigator.connection.saveData) return;
     if (navigator.deviceMemory && navigator.deviceMemory < 3) return;
     try { const gl = document.createElement("canvas").getContext("webgl"); if (!gl) return; const x = gl.getExtension("WEBGL_lose_context"); if (x) x.loseContext(); } catch (e) { return; }
-    lib3d = lib3d || new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = "assets/js/hx3d.js?v=20261013b"; sc.onload = () => (window.HX3D ? res(window.HX3D) : rej()); sc.onerror = rej; document.head.appendChild(sc); });
+    lib3d = lib3d || new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = "assets/js/hx3d.js?v=20261013c"; sc.onload = () => (window.HX3D ? res(window.HX3D) : rej()); sc.onerror = rej; document.head.appendChild(sc); });
     lib3d.then(H => { if (document.body.contains(el) && H.mount(el, { kind: "mark" })) el.classList.add("hx3d-live"); }).catch(() => {});
   }
   new MutationObserver(() => mount3d()).observe(document.getElementById("admin-root") || document.body, { childList: true });
@@ -869,14 +869,16 @@
   VIEWS.pages = () => {
     S.pgFile = S.pgFile || "index.html"; S.pgDev = S.pgDev || (innerWidth < 700 ? "phone" : "desktop");
     return card("Pages",
-      '<p class="ad-note">Page එකක් තෝරන්න. Preview එකේ <b>ඕන text එකක් click කරලා එතනම type කරන්න</b> (Enter = හරි, Esc = අයින් කරන්න). එක text එකක් වෙනස් කළාම <b>ඒ text එක තියෙන හැම තැනම (හැම page එකකම)</b> වෙනස් වෙනවා. පස්සේ <b>Save කරන්න</b>.</p>' +
-      '<div class="pg-bar"><select class="input" id="pg-page" aria-label="Page">' + PAGES.map(p => '<option value="' + p[0] + '"' + (p[0] === S.pgFile ? " selected" : "") + ">" + p[1] + "</option>").join("") + "</select>" +
+      '<p class="ad-note">Page එකක් තෝරන්න. Preview එකේ <b>ඕන text එකක් click කරලා එතනම type කරන්න</b> (Enter = හරි, Esc = අයින් කරන්න). එක text එකක් වෙනස් කළාම <b>ඒ text එක තියෙන හැම තැනම (හැම page එකකම)</b> වෙනස් වෙනවා. පස්සේ <b>Save කරන්න</b>. FAQ, steps, packages, form options වගේ site එක අඳින ඒවාත් මෙතනින්ම edit වෙනවා. ගණන්, phone / email ඒවා click කළොත් ඒවා edit කරන tab එකට යනවා (නිල් border).</p>' +
+      '<div class="pg-bar"><select class="input" id="pg-page" aria-label="Page">' + PAGES.map(p => '<option value="' + p[0] + '"' + (p[0] === S.pgFile ? " selected" : "") + ">" + p[1] + "</option>").join("") +
+      '<optgroup label="Service pages">' + ((S.data.services && S.data.services.list) || []).map(sv => { const f = "service.html?s=" + encodeURIComponent(sv.slug); return '<option value="' + esc(f) + '"' + (f === S.pgFile ? " selected" : "") + ">" + esc(sv.name) + "</option>"; }).join("") + "</optgroup></select>" +
       '<span class="pg-dev" role="group" aria-label="Preview size"><button type="button" class="btn ad-small" data-act="pg-dev" data-dev="desktop" aria-pressed="' + (S.pgDev === "desktop") + '">Desktop</button><button type="button" class="btn ad-small" data-act="pg-dev" data-dev="phone" aria-pressed="' + (S.pgDev === "phone") + '">Phone</button></span>' +
       '<button class="btn ad-small" type="button" data-act="pg-reload">Reload</button></div>' +
-      '<div class="pg-wrap" id="pg-wrap"><iframe class="pg-frame" id="pg-frame" title="Page preview" src="' + S.pgFile + '?hxedit=1"></iframe></div>', "Preview එකේ පේන්නේ site එකේ ඇත්තම page එක; ඒකේ buttons / links වැඩ කරන්නේ නෑ.") +
+      '<div class="pg-wrap" id="pg-wrap"><iframe class="pg-frame" id="pg-frame" title="Page preview" src="' + pgSrc(S.pgFile) + '"></iframe></div>', "Preview එකේ පේන්නේ site එකේ ඇත්තම page එක; ඒකේ buttons / links වැඩ කරන්නේ නෑ.") +
       card("Texts", '<div id="pg-dyn"></div><details class="pg-det" id="pg-det"><summary>List එකෙන් edit කරන්න (search, page title, Google description)</summary><div class="pg-tools"><input class="input" id="pg-q" type="search" placeholder="Text එකක් හොයන්න…" aria-label="Search texts"><span class="ad-pill" id="pg-count"></span><button class="btn ad-small" type="button" data-act="pg-resetall">Reset (මේ page එකේ)</button></div><div class="pg-list" id="pg-list"><p class="muted">Preview එක load වෙනකන් ඉන්න…</p></div></details>',
         "මේවා text විතරයි. Prices, contact, FAQ, packages, services වලට ඒවාගෙම tab තියෙනවා.");
   };
+  const pgSrc = f => f + (f.indexOf("?") < 0 ? "?" : "&") + "hxedit=1";
   const pgFrame = () => $("#pg-frame");
   function pgFit() {
     const wrap = $("#pg-wrap"), fr = pgFrame(); if (!wrap || !fr) return;
@@ -895,7 +897,8 @@
     const m = S.pg; if (!m) return [];
     const rows = [{ key: m.title.key, orig: m.title.orig, n: 1, label: "Page title (browser tab & Google)" }];
     if (m.desc.orig || true) rows.push({ key: m.desc.key, orig: m.desc.orig, n: 1, label: "Google description" });
-    m.items.forEach(it => rows.push({ key: it.key, orig: it.key, n: it.n, label: "" }));
+    const KIND = { placeholder: "Form hint (placeholder)", label: "Hidden label (screen reader / tooltip)", alt: "Image description (alt)" };
+    m.items.forEach(it => rows.push({ key: it.key, orig: it.key, n: it.n, label: KIND[it.kind] || "" }));
     return rows;
   }
   const pgVal = r => { const t = (S.data.texts || {})[r.key]; return typeof t === "string" ? t : r.orig; };
@@ -946,10 +949,11 @@
     if (e.origin !== location.origin || !S.auth || !fr || e.source !== fr.contentWindow || !e.data || e.data.hx !== 1) return;
     const d = e.data;
     if (d.type === "nodes") {
-      S.pg = { file: d.page, items: Array.isArray(d.items) ? d.items : [], title: d.title || { key: "@title|" + d.page, orig: "" }, desc: d.desc || { key: "@desc|" + d.page, orig: "" }, dyn: (d.dyn || []).filter(n => DYN_TAB[n]) };
+      S.pg = { file: d.page, items: Array.isArray(d.items) ? d.items : [], title: d.title || { key: "@title|" + d.page, orig: "" }, desc: d.desc || { key: "@desc|" + d.page, orig: "" }, dyn: [] };
       paintPgList(); pgSend();
     } else if (d.type === "ready") pgSend();
     else if (d.type === "focus" && typeof d.key === "string") pgFocus(d.key);
+    else if (d.type === "goto" && /^(prices|contact)$/.test(d.tab)) { S.tab = d.tab; paintTabs(); renderTab(); window.scrollTo(0, 0); toast(d.tab === "prices" ? "මේ ගණන් / % වෙනස් කරන්නේ Prices tab එකෙන්." : "මේ phone / email / WhatsApp වෙනස් කරන්නේ Contact tab එකෙන්."); }
     else if (d.type === "edit" && typeof d.key === "string") pgSet(d.key, typeof d.value === "string" ? d.value : "");
   });
   root.addEventListener("input", e => {
@@ -970,7 +974,7 @@
   root.addEventListener("change", e => {
     if (e.target.id !== "pg-page") return;
     S.pgFile = e.target.value; S.pg = null; S.pgRows = null;
-    const fr = pgFrame(); if (fr) fr.src = S.pgFile + "?hxedit=1";
+    const fr = pgFrame(); if (fr) fr.src = pgSrc(S.pgFile);
     const box = $("#pg-list"); if (box) box.innerHTML = '<p class="muted">Preview එක load වෙනකන් ඉන්න…</p>';
   });
   window.addEventListener("resize", pgFit);
@@ -1190,7 +1194,7 @@
         downloadCsv("hexora-customers-" + csvDay() + ".csv", rows); toast("CSV එක download උනා (" + (rows.length - 1) + " rows)."); break;
       }
       case "pg-dev": S.pgDev = d.dev; $$('[data-act="pg-dev"]').forEach(x => x.setAttribute("aria-pressed", String(x.dataset.dev === S.pgDev))); pgFit(); break;
-      case "pg-reload": { const fr = pgFrame(); if (fr) { S.pg = null; fr.src = S.pgFile + "?hxedit=1"; } break; }
+      case "pg-reload": { const fr = pgFrame(); if (fr) { S.pg = null; fr.src = pgSrc(S.pgFile); } break; }
       case "pg-reset": { const r = (S.pgRows || [])[Number(d.i)]; if (!r) return; delete S.data.texts[r.key]; const ta = $('[data-pgi="' + d.i + '"]'); if (ta) ta.value = r.orig; const row = ta && ta.closest(".pg-row"); if (row) { row.classList.remove("changed"); const w = row.querySelector(".pg-was"); if (w) w.remove(); } pgCount(); updateSaveBar(); pgSend(); break; }
       case "pg-resetall": { if (!armed(b, "ඇත්තටම? ආයෙත් ඔබන්න")) return; (S.pgRows || []).forEach(r => { delete S.data.texts[r.key]; }); S.pg && paintPgList(); const l = $("#pg-list"); if (l) { l.innerHTML = ""; paintPgList(); } updateSaveBar(); pgSend(); break; }
       case "menu": setMenu(!document.documentElement.classList.contains("ad-nav-open")); break;
