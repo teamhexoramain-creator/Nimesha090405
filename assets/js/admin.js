@@ -39,7 +39,7 @@
     if (navigator.connection && navigator.connection.saveData) return;
     if (navigator.deviceMemory && navigator.deviceMemory < 3) return;
     try { const gl = document.createElement("canvas").getContext("webgl"); if (!gl) return; const x = gl.getExtension("WEBGL_lose_context"); if (x) x.loseContext(); } catch (e) { return; }
-    lib3d = lib3d || new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = "assets/js/hx3d.js?v=20261012d"; sc.onload = () => (window.HX3D ? res(window.HX3D) : rej()); sc.onerror = rej; document.head.appendChild(sc); });
+    lib3d = lib3d || new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = "assets/js/hx3d.js?v=20261012e"; sc.onload = () => (window.HX3D ? res(window.HX3D) : rej()); sc.onerror = rej; document.head.appendChild(sc); });
     lib3d.then(H => { if (document.body.contains(el) && H.mount(el, { kind: "mark" })) el.classList.add("hx3d-live"); }).catch(() => {});
   }
   new MutationObserver(() => mount3d()).observe(document.getElementById("admin-root") || document.body, { childList: true });
@@ -200,6 +200,9 @@
     let entry = "", busy = false;
     const touch = matchMedia("(pointer: coarse)").matches;   // on a phone / tablet the on-screen pad is used and the keyboard stays closed
     const input = $("#pin-input"), dotBox = $("#pin-dots"), msgEl = $("#pin-msg"), go = $("#pin-go"), hint = pinLen();
+    // the PIN is sent by itself only once this device has seen a successful login (then its length is known); before that, any length from 6 to 12
+    // is typed until the Login button / Enter, so a longer PIN is never sent (and counted as a wrong try) after its first 6 digits
+    let known = Number(store.get(KEYS.len)) >= PIN_MIN;
     const paint = () => {
       const n = Math.max(hint, entry.length);
       if (dotBox.children.length !== n) dotBox.innerHTML = "<i></i>".repeat(n);
@@ -219,6 +222,7 @@
         busy = false; paint();
         const wrong = /INVALID_LOGIN_CREDENTIALS|INVALID_PASSWORD|EMAIL_NOT_FOUND/.test((e.msg || "") + e.message);
         if (wrong) {
+          if (known) { known = false; store.del(KEYS.len); }   // the remembered length was not right (PIN changed elsewhere): stop sending by itself
           tries.n += 1;
           if (tries.n >= MAX_TRIES) { tries.n = 0; tries.until = Date.now() + LOCK_MS; }
           store.set(KEYS.tries, tries);
@@ -233,10 +237,10 @@
       if (k === "back") entry = entry.slice(0, -1);
       else if (entry.length < PIN_MAX) entry += k;
       input.value = entry; paint();
-      if (entry.length === hint) check();   // the usual length: no extra tap
+      if (known && entry.length === hint) check();   // the usual length: no extra tap
     }
     root.querySelector(".pin-pad").addEventListener("click", e => { const b = e.target.closest("[data-key]"); if (b) press(b.dataset.key); if (!touch) input.focus({ preventScroll: true }); });
-    input.addEventListener("input", () => { if (busy) { input.value = entry; return; } entry = input.value.replace(/\D/g, "").slice(0, PIN_MAX); input.value = entry; paint(); if (entry.length === hint) check(); });
+    input.addEventListener("input", () => { if (busy) { input.value = entry; return; } entry = input.value.replace(/\D/g, "").slice(0, PIN_MAX); input.value = entry; paint(); if (known && entry.length === hint) check(); });
     input.addEventListener("keydown", e => { if (e.key === "Enter" && entry.length >= PIN_MIN && !busy) { e.preventDefault(); check(); } });
     go.addEventListener("click", () => { if (entry.length >= PIN_MIN && !busy) check(); });
     if (!touch) input.focus({ preventScroll: true });
