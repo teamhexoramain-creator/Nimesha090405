@@ -1549,3 +1549,11 @@ section { --sec-pad: clamp(44px, 5.5vw, 76px); padding-block: var(--sec-pad); }
 .js .rv { transform: translateY(34px) scale(.985); transition: opacity 1s cubic-bezier(.22, 1, .36, 1), transform 1s cubic-bezier(.22, 1, .36, 1); transition-delay: calc(var(--rd, 0) * 90ms); }
 .js .rv.in { opacity: 1; transform: none; }
 @media (prefers-reduced-motion: reduce) { .hs > .tl-item > .tl-body, .hs > .rung { filter: none; scale: 1; } .js .rv { transform: none; } .ladder-list, .timeline { scroll-behavior: auto; } }
+
+/* ---- Switching tabs (pricing): the new content slides in from the side the choice moved to ---- */
+@keyframes tp-in { from { opacity: 0; translate: var(--tx, 34px) 0; } to { opacity: 1; translate: 0 0; } }
+.tp.on { animation: tp-in .55s var(--ease-elastic) both; --tx: 34px; }
+[data-tabs][data-dir="prev"] > .tp.on { --tx: -34px; }
+@media (prefers-reduced-motion: reduce) { .tp.on { animation: none; } }
+/* panels that slide in sideways must never widen the page (a phone would zoom out while they move) */
+[data-tabs], .ladder, .ladder-panel { overflow-x: clip; }
