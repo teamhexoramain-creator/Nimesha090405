@@ -39,7 +39,7 @@
     if (navigator.connection && navigator.connection.saveData) return;
     if (navigator.deviceMemory && navigator.deviceMemory < 3) return;
     try { const gl = document.createElement("canvas").getContext("webgl"); if (!gl) return; const x = gl.getExtension("WEBGL_lose_context"); if (x) x.loseContext(); } catch (e) { return; }
-    lib3d = lib3d || new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = "assets/js/hx3d.js?v=20261012f"; sc.onload = () => (window.HX3D ? res(window.HX3D) : rej()); sc.onerror = rej; document.head.appendChild(sc); });
+    lib3d = lib3d || new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = "assets/js/hx3d.js?v=20261013a"; sc.onload = () => (window.HX3D ? res(window.HX3D) : rej()); sc.onerror = rej; document.head.appendChild(sc); });
     lib3d.then(H => { if (document.body.contains(el) && H.mount(el, { kind: "mark" })) el.classList.add("hx3d-live"); }).catch(() => {});
   }
   new MutationObserver(() => mount3d()).observe(document.getElementById("admin-root") || document.body, { childList: true });
@@ -131,7 +131,7 @@
 
   /* ---------- small helpers ---------- */
   const dirty = k => S.saved[k] != null && JSON.stringify(S.data[k]) !== S.saved[k];
-  const anyDirty = () => dirty("config") || dirty("services");
+  const anyDirty = () => dirty("config") || dirty("services") || dirty("texts");
   const icon = (inner, cls) => '<svg class="' + (cls || "ad-ico") + '" viewBox="0 0 24 24" aria-hidden="true">' + inner + "</svg>";
   const I = {
     lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
@@ -256,6 +256,8 @@
     if (S.data.services && S.data.services.list) S.data.services.list.forEach(x => { if (x.packages === undefined && x.slug === "mobile-apps") x.packages = true; });
     if (S.data.services && !S.data.services.home && window.HX_SERVICES && window.HX_SERVICES.home) S.data.services.home = clone(window.HX_SERVICES.home);
   }
+  // the Pages tab's text changes: { "original text": "new text" }
+  function parseTexts(s) { let t = {}; try { t = s ? JSON.parse(s) : {}; } catch (e) { t = {}; } return t && typeof t === "object" && !Array.isArray(t) ? t : {}; }
   async function loadAll() {
     root.innerHTML = gate('<p class="muted">Firebase එකෙන් data ගන්නවා…</p>');
     try {
@@ -265,13 +267,15 @@
         S.data.config = JSON.parse(doc.config); S.data.services = JSON.parse(doc.services);
         S.content = { exists: true, updateTime: doc.updateTime, updatedAt: doc.updatedAt };
         normalize();
-        S.saved = { config: JSON.stringify(S.data.config), services: JSON.stringify(S.data.services) };
+        S.data.texts = parseTexts(doc.texts);
+        S.saved = { config: JSON.stringify(S.data.config), services: JSON.stringify(S.data.services), texts: JSON.stringify(S.data.texts) };
       } else {
         // first run: start from the site's built-in config.js / services.js and offer to publish them
         S.data.config = clone(window.HEXORA); S.data.services = clone(window.HX_SERVICES);
         S.content = { exists: !!doc, updateTime: doc ? doc.updateTime : "" };
         normalize();
-        S.saved = { config: "", services: "" };
+        S.data.texts = {};
+        S.saved = { config: "", services: "", texts: "{}" };
       }
       S.svc = Math.min(S.svc, S.data.services.list.length - 1);
       S.tab = tabFromHash() || S.tab;   // admin.html#prices opens Prices straight after the PIN
@@ -413,7 +417,7 @@
 
   // grouped so the ten tabs are easy to find: the inbox (people writing to you), the site (what visitors read), the system
   const TAB_GROUPS = [["", [["home", "Dashboard"]]], ["Inbox", [["requests", "Requests"], ["live", "Live chats"], ["customers", "Customers"]]],
-    ["Site", [["content", "Home page"], ["notice", "Notice"], ["contact", "Contact"], ["prices", "Prices"], ["services", "Services"]]], ["System", [["history", "History"], ["security", "Security"]]]];
+    ["Site", [["pages", "Pages"], ["content", "Home page"], ["notice", "Notice"], ["contact", "Contact"], ["prices", "Prices"], ["services", "Services"]]], ["System", [["history", "History"], ["security", "Security"]]]];
   const TABS = TAB_GROUPS.reduce((a, g) => a.concat(g[1]), []);
   const newCount = () => (S.reqs || []).filter(r => r.status === "new").length;
   // phone: the menu is a drawer that slides in from the left (same curved-tab highlight as the wide-screen side menu)
@@ -449,6 +453,7 @@
     requests: '<path d="M4 13l2-8h12l2 8v6H4z"/><path d="M4 13h5l1 2h4l1-2h5"/>', live: I.chat, customers: I.user,
     content: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 9h16M9 9v11"/>', notice: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 8-3 8h18s-3-1-3-8M10 21h4"/>',
     contact: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 8l9 6 9-6"/>', prices: '<path d="M12 3v18M16 7H10a3 3 0 0 0 0 6h4a3 3 0 0 1 0 6H8"/>',
+    pages: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>',
     services: '<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>', history: '<path d="M4 12a8 8 0 1 0 2.3-5.7M4 4v5h5M12 8v5l3 2"/>', security: I.lock
   };
   function paintTabs() {
@@ -497,6 +502,7 @@
     const cur = $("#ad-cur"); if (cur) cur.textContent = (TABS.find(t => t[0] === S.tab) || [, ""])[1];
     $$("#ad-tabs [data-tab]").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === S.tab)));
     movePill(true);
+    if (S.tab === "pages") { S.pg = null; pgFit(); }
     if (S.tab === "history") loadHistory();
     stopChat();
     if (S.tab === "requests" && S.chatOpen && $('[data-chat="' + S.chatOpen + '"]')) openChatBox(S.chatOpen);
@@ -855,6 +861,109 @@
       card("Services list", '<p class="ad-note">Home page එකේ services list එක (ඒකේ icon, නම, කෙටි විස්තරය) ගන්නේ <b>Services</b> tab එකෙන්. ඒකේ service එකක් add / edit / මකපුවම ඒක home page එකේත් පේනවා.</p><div class="ad-add"><button type="button" class="btn ad-small" data-act="tab" data-tab="services">Services tab එකට</button></div>');
   };
 
+
+  /* ---------- Pages tab: a live preview of the real page, and every text on it ---------- */
+  const PAGES = [["index.html", "Home"], ["service.html", "Services"], ["start-project.html", "Start a project"], ["account.html", "Login / account"], ["terms.html", "Terms"], ["privacy.html", "Privacy"], ["404.html", "404 page"]];
+  const DYN_TAB = { steps: ["content", "Home page"], faq: ["content", "Home page"], packages: ["prices", "Prices"], services: ["services", "Services"], estimate: ["prices", "Prices"] };
+  const DYN_WORD = { steps: "process steps", faq: "FAQ", packages: "app packages", services: "service list", estimate: "estimate / options" };
+  VIEWS.pages = () => {
+    S.pgFile = S.pgFile || "index.html"; S.pgDev = S.pgDev || (innerWidth < 700 ? "phone" : "desktop");
+    return card("Pages",
+      '<p class="ad-note">Page එකක් තෝරන්න. Preview එකේ text එකක් <b>click</b> කළොත් ඒකේ box එක පහළින් open වෙනවා; නැත්නම් පහළ list එකේම edit කරන්න. එක text එකක් වෙනස් කළාම <b>ඒ text එක තියෙන හැම තැනම (හැම page එකකම)</b> වෙනස් වෙනවා. පස්සේ <b>Save කරන්න</b>.</p>' +
+      '<div class="pg-bar"><select class="input" id="pg-page" aria-label="Page">' + PAGES.map(p => '<option value="' + p[0] + '"' + (p[0] === S.pgFile ? " selected" : "") + ">" + p[1] + "</option>").join("") + "</select>" +
+      '<span class="pg-dev" role="group" aria-label="Preview size"><button type="button" class="btn ad-small" data-act="pg-dev" data-dev="desktop" aria-pressed="' + (S.pgDev === "desktop") + '">Desktop</button><button type="button" class="btn ad-small" data-act="pg-dev" data-dev="phone" aria-pressed="' + (S.pgDev === "phone") + '">Phone</button></span>' +
+      '<button class="btn ad-small" type="button" data-act="pg-reload">Reload</button></div>' +
+      '<div class="pg-wrap" id="pg-wrap"><iframe class="pg-frame" id="pg-frame" title="Page preview" src="' + S.pgFile + '?hxedit=1"></iframe></div>', "Preview එකේ පේන්නේ site එකේ ඇත්තම page එක; ඒකේ buttons / links වැඩ කරන්නේ නෑ.") +
+      card("Texts", '<div id="pg-dyn"></div><div class="pg-tools"><input class="input" id="pg-q" type="search" placeholder="Text එකක් හොයන්න…" aria-label="Search texts"><span class="ad-pill" id="pg-count"></span><button class="btn ad-small" type="button" data-act="pg-resetall">Reset (මේ page එකේ)</button></div><div class="pg-list" id="pg-list"><p class="muted">Preview එක load වෙනකන් ඉන්න…</p></div>',
+        "මේවා text විතරයි. Prices, contact, FAQ, packages, services වලට ඒවාගෙම tab තියෙනවා.");
+  };
+  const pgFrame = () => $("#pg-frame");
+  function pgFit() {
+    const wrap = $("#pg-wrap"), fr = pgFrame(); if (!wrap || !fr) return;
+    const phone = S.pgDev === "phone", W = phone ? 390 : 1280, H = phone ? 760 : 820, k = Math.min(1, (wrap.clientWidth || W) / W);
+    fr.style.width = W + "px"; fr.style.height = H + "px"; fr.style.transform = "scale(" + k + ")"; fr.style.transformOrigin = "0 0";
+    fr.style.marginLeft = Math.max(0, Math.round(((wrap.clientWidth || W) - W * k) / 2)) + "px";
+    wrap.style.height = Math.round(H * k) + "px";
+  }
+  function pgSend() {
+    const fr = pgFrame(); if (!fr || !fr.contentWindow) return;
+    try { fr.contentWindow.postMessage({ hx: 1, type: "set", map: S.data.texts || {} }, location.origin); } catch (e) { /* frame gone */ }
+  }
+  let pgTimer = 0;
+  const pgSendSoon = () => { clearTimeout(pgTimer); pgTimer = setTimeout(pgSend, 120); };
+  function pgRows() {
+    const m = S.pg; if (!m) return [];
+    const rows = [{ key: m.title.key, orig: m.title.orig, n: 1, label: "Page title (browser tab & Google)" }];
+    if (m.desc.orig || true) rows.push({ key: m.desc.key, orig: m.desc.orig, n: 1, label: "Google description" });
+    m.items.forEach(it => rows.push({ key: it.key, orig: it.key, n: it.n, label: "" }));
+    return rows;
+  }
+  const pgVal = r => { const t = (S.data.texts || {})[r.key]; return typeof t === "string" ? t : r.orig; };
+  function pgCount() {
+    const el = $("#pg-count"); if (!el || !S.pgRows) return;
+    const n = S.pgRows.filter(r => typeof (S.data.texts || {})[r.key] === "string").length;
+    el.textContent = n ? n + " changed (මේ page එකේ)" : "වෙනස්කම් නෑ";
+    el.classList.toggle("ok", !!n);
+  }
+  function paintPgList() {
+    const box = $("#pg-list"); if (!box || !S.pg) return;
+    const q = (($("#pg-q") || {}).value || "").trim().toLowerCase();
+    S.pgRows = pgRows();
+    const keep = document.activeElement && document.activeElement.dataset && document.activeElement.dataset.pgi;   // do not steal the cursor from a box being typed in
+    const dyn = $("#pg-dyn");
+    if (dyn) dyn.innerHTML = S.pg.dyn.length ? '<p class="ad-note pg-dynnote">මේ page එකේ ' + S.pg.dyn.map(n => "<b>" + esc(DYN_WORD[n] || n) + "</b> (<button type=\"button\" class=\"acc-link\" data-act=\"tab\" data-tab=\"" + DYN_TAB[n][0] + "\">" + DYN_TAB[n][1] + " tab එකෙන්</button>)").join(", ") + " edit කරන්නේ ඒ tab එකෙන්.</p>" : "";
+    if (keep !== undefined && keep !== null && box.children.length === S.pgRows.length && !q) { S.pgRows.forEach((r, i) => { const ta = box.querySelector('[data-pgi="' + i + '"]'); if (ta && ta !== document.activeElement) ta.value = pgVal(r); }); pgCount(); return; }
+    box.innerHTML = S.pgRows.map((r, i) => {
+      const v = pgVal(r);
+      if (q && (v + " " + r.orig).toLowerCase().indexOf(q) < 0) return "";
+      const ch = typeof (S.data.texts || {})[r.key] === "string";
+      return '<div class="pg-row' + (ch ? " changed" : "") + '" data-row="' + i + '"><label for="pgt-' + i + '">' + (r.label ? esc(r.label) : "Text") + (r.n > 1 ? ' <span class="pg-n">මේ page එකේ ' + r.n + " තැනක්</span>" : "") + "</label>" +
+        '<div class="pg-edit"><textarea class="input" id="pgt-' + i + '" data-pgi="' + i + '" rows="' + Math.min(6, Math.max(1, Math.ceil(v.length / 52))) + '" maxlength="2000">' + esc(v) + "</textarea>" +
+        '<button type="button" class="ad-mini" data-act="pg-reset" data-i="' + i + '" aria-label="මුල් text එකට ආපහු" title="මුල් text එකට ආපහු">' + icon(I.back) + "</button></div>" +
+        (ch ? '<small class="pg-was">මුල්: ' + esc(r.orig) + "</small>" : "") + "</div>";
+    }).join("") || '<p class="muted">මොකවත් හම්බුනේ නෑ.</p>';
+    pgCount();
+  }
+  function pgFocus(key) {
+    const q = $("#pg-q"); if (q && q.value) { q.value = ""; paintPgList(); }
+    const i = (S.pgRows || []).findIndex(r => r.key === key); if (i < 0) return;
+    const row = $('[data-row="' + i + '"]'), ta = $('[data-pgi="' + i + '"]'); if (!row || !ta) return;
+    row.scrollIntoView({ block: "center", behavior: "smooth" }); ta.focus({ preventScroll: true }); ta.select();
+    row.classList.add("flash"); setTimeout(() => row.classList.remove("flash"), 1500);
+  }
+  window.addEventListener("message", e => {
+    const fr = pgFrame();
+    if (e.origin !== location.origin || !S.auth || !fr || e.source !== fr.contentWindow || !e.data || e.data.hx !== 1) return;
+    const d = e.data;
+    if (d.type === "nodes") {
+      S.pg = { file: d.page, items: Array.isArray(d.items) ? d.items : [], title: d.title || { key: "@title|" + d.page, orig: "" }, desc: d.desc || { key: "@desc|" + d.page, orig: "" }, dyn: (d.dyn || []).filter(n => DYN_TAB[n]) };
+      paintPgList(); pgSend();
+    } else if (d.type === "ready") pgSend();
+    else if (d.type === "focus" && typeof d.key === "string") pgFocus(d.key);
+  });
+  root.addEventListener("input", e => {
+    const t = e.target;
+    if (t.id === "pg-q") return paintPgList();
+    if (!t.dataset || t.dataset.pgi === undefined) return;
+    const r = (S.pgRows || [])[Number(t.dataset.pgi)]; if (!r) return;
+    if (!S.data.texts) S.data.texts = {};
+    if (t.value === "" || t.value === r.orig) delete S.data.texts[r.key]; else S.data.texts[r.key] = t.value.slice(0, 2000);
+    const row = t.closest(".pg-row"); if (row) row.classList.toggle("changed", typeof S.data.texts[r.key] === "string");
+    pgCount(); updateSaveBar(); pgSendSoon();
+  });
+  root.addEventListener("focusin", e => {
+    const t = e.target; if (!t.dataset || t.dataset.pgi === undefined) return;
+    const r = (S.pgRows || [])[Number(t.dataset.pgi)], fr = pgFrame();
+    if (r && fr && fr.contentWindow && r.key.charAt(0) !== "@") { try { fr.contentWindow.postMessage({ hx: 1, type: "hl", key: r.key }, location.origin); } catch (x) { /* frame gone */ } }
+  });
+  root.addEventListener("change", e => {
+    if (e.target.id !== "pg-page") return;
+    S.pgFile = e.target.value; S.pg = null; S.pgRows = null;
+    const fr = pgFrame(); if (fr) fr.src = S.pgFile + "?hxedit=1";
+    const box = $("#pg-list"); if (box) box.innerHTML = '<p class="muted">Preview එක load වෙනකන් ඉන්න…</p>';
+  });
+  window.addEventListener("resize", pgFit);
+
   VIEWS.history = () => card("History",
     '<div id="history-list" class="ad-history"><p class="muted">Firebase එකෙන් ගන්නවා…</p></div>',
     "Save කරපු අන්තිම versions 20. කලින් version එකක් load කරලා Save කළොත් site එක ඒ version එකට යනවා.");
@@ -867,7 +976,7 @@
       const shown = {};
       box.innerHTML = rows.length ? rows.map((h, i) => {
         const current = !shown[h.file] && h.json === S.saved[h.file]; shown[h.file] = 1;
-        return '<div class="ad-hist"><div><b>' + esc(h.note || (h.file === "config" ? "Site settings" : "Services")) + "</b><small>" + esc(fmtDate(h.at)) + " · " + esc(h.by || "") + " · <code>" + esc(h.file) + "</code></small></div>" +
+        return '<div class="ad-hist"><div><b>' + esc(h.note || (h.file === "config" ? "Site settings" : h.file === "texts" ? "Page texts" : "Services")) + "</b><small>" + esc(fmtDate(h.at)) + " · " + esc(h.by || "") + " · <code>" + esc(h.file) + "</code></small></div>" +
           '<div class="ad-hist-actions">' + (current ? '<span class="ad-pill ok">දැන් තියෙන්නේ</span>' : '<button type="button" class="btn ad-small" data-act="restore" data-i="' + i + '">මේක load කරන්න</button>') + "</div></div>";
       }).join("") : '<p class="muted">තාම save කරලා නෑ.</p>';
     } catch (e) { box.innerHTML = '<p class="ad-gate-msg">' + esc(errText(e)) + "</p>"; }
@@ -903,7 +1012,9 @@
 
   /* ---------- save bar + checks ---------- */
   function problems() {
-    const out = [], c = S.data.config, sv = S.data.services;
+    const out = [], c = S.data.config, sv = S.data.services, tx = S.data.texts || {};
+    if (Object.keys(tx).length > 800) out.push("Pages: text වෙනස්කම් ගොඩක් වැඩියි (800 ට වඩා).");
+    Object.keys(tx).forEach(k => { if (typeof tx[k] !== "string" || tx[k].length > 2000) out.push("Pages: text එකක් දිග වැඩියි (අකුරු 2000 ට වැඩි)."); });
     if (!/^\d{10,15}$/.test(c.whatsapp || "")) out.push("Contact: WhatsApp number එක digits 10–15ක් වෙන්න ඕන (Ex: 94766792617).");
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email || "")) out.push("Contact: Email එක හරියට දාන්න.");
     ["facebook", "youtube"].forEach(k => { if (c[k] && !/^https:\/\//.test(c[k])) out.push("Contact: " + k + " link එක https:// වලින් පටන් ගන්න ඕන."); });
@@ -943,11 +1054,11 @@
   }
   function updateSaveBar() {
     const bar = $("#ad-savebar"); if (!bar) return;
-    const files = ["config", "services"].filter(dirty);
+    const files = ["config", "services", "texts"].filter(dirty);
     bar.hidden = !files.length;
     if (!files.length) return;
     const errs = problems();
-    const names = { config: "Site settings", services: "Services" };
+    const names = { config: "Site settings", services: "Services", texts: "Page texts" };
     $("#ad-save-info").innerHTML = "<b>Save නොකරපු වෙනස්:</b> " + files.map(f => names[f]).join(", ") +
       (errs.length ? '<span class="ad-bad">' + esc(errs[0]) + (errs.length > 1 ? " (+" + (errs.length - 1) + ")" : "") + "</span>" : "");
     $("#save-btn").disabled = !!errs.length;
@@ -956,7 +1067,7 @@
     const errs = problems();
     if (errs.length) return toast(errs[0], true);
     const note = ($("#commit-msg").value || "").trim();
-    const files = ["config", "services"].filter(dirty), now = new Date();
+    const files = ["config", "services", "texts"].filter(dirty), now = new Date();
     const fields = { updatedAt: now, updatedBy: S.auth.email };
     files.forEach(k => { fields[k] = JSON.stringify(S.data[k]); });
     // the precondition goes in the commit body: the document must still be the version this panel loaded (nobody saved in between)
@@ -968,7 +1079,7 @@
       S.content = { exists: true, updateTime: doc.updateTime, updatedAt: now.toISOString() };
       files.forEach(k => { S.saved[k] = fields[k]; });
       // this browser's copy for boot.js, so the site shows the change here right away
-      store.set("hx_content_v1", { at: Date.now(), config: S.saved.config, services: S.saved.services });
+      store.set("hx_content_v1", { at: Date.now(), config: S.saved.config, services: S.saved.services, texts: S.saved.texts === "{}" ? "" : S.saved.texts });
       $("#commit-msg").value = "";
       toast("Save උනා ✓ Site එකට එන අයට අලුත් data පේනවා.");
       // keep a copy for the History tab (a failure here does not undo the save)
@@ -1067,6 +1178,10 @@
         const rows = [["Name", "Phone", "Joined"]]; S.customers.forEach(c => rows.push([c.name, c.phone, c.createdAt]));   // PINs are never exported
         downloadCsv("hexora-customers-" + csvDay() + ".csv", rows); toast("CSV එක download උනා (" + (rows.length - 1) + " rows)."); break;
       }
+      case "pg-dev": S.pgDev = d.dev; $$('[data-act="pg-dev"]').forEach(x => x.setAttribute("aria-pressed", String(x.dataset.dev === S.pgDev))); pgFit(); break;
+      case "pg-reload": { const fr = pgFrame(); if (fr) { S.pg = null; fr.src = S.pgFile + "?hxedit=1"; } break; }
+      case "pg-reset": { const r = (S.pgRows || [])[Number(d.i)]; if (!r) return; delete S.data.texts[r.key]; const ta = $('[data-pgi="' + d.i + '"]'); if (ta) ta.value = r.orig; const row = ta && ta.closest(".pg-row"); if (row) { row.classList.remove("changed"); const w = row.querySelector(".pg-was"); if (w) w.remove(); } pgCount(); updateSaveBar(); pgSend(); break; }
+      case "pg-resetall": { if (!armed(b, "ඇත්තටම? ආයෙත් ඔබන්න")) return; (S.pgRows || []).forEach(r => { delete S.data.texts[r.key]; }); S.pg && paintPgList(); const l = $("#pg-list"); if (l) { l.innerHTML = ""; paintPgList(); } updateSaveBar(); pgSend(); break; }
       case "menu": setMenu(!document.documentElement.classList.contains("ad-nav-open")); break;
       case "menu-close": setMenu(false); break;
       case "tab": setMenu(false); setTab(d.tab); renderTab(); window.scrollTo(0, 0); break;
@@ -1075,7 +1190,7 @@
       case "discard":
         if (S.saved.config === "") return toast("පළවෙනි පාර නිසා discard කරන්න දෙයක් නෑ. Save කරන්න.", true);
         if (!armed(b, "ඇත්තටම? ආයෙත් ඔබන්න")) return;
-        S.data.config = JSON.parse(S.saved.config); S.data.services = JSON.parse(S.saved.services); normalize();
+        S.data.config = JSON.parse(S.saved.config); S.data.services = JSON.parse(S.saved.services); S.data.texts = parseTexts(S.saved.texts); normalize();
         S.svc = Math.min(S.svc, S.data.services.list.length - 1); renderTab(); updateSaveBar(); break;
       case "reload-reqs": S.reqs = null; S.reqErr = ""; renderTab(); loadRequests(); break;
       case "req-filter": S.reqFilter = d.f; renderTab(); break;
@@ -1158,7 +1273,7 @@
       }
       case "restore": {
         const h = S.hist && S.hist[Number(d.i)]; if (!h) return;
-        S.data[h.file] = JSON.parse(h.json); normalize();
+        S.data[h.file] = JSON.parse(h.json); if (h.file === "texts") S.data.texts = parseTexts(h.json); normalize();
         S.svc = Math.min(S.svc, S.data.services.list.length - 1);
         updateSaveBar(); loadHistory();
         toast("ඒ version එක load උනා. Save කළොත් site එක ඒ version එකට යනවා.");

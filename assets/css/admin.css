@@ -342,3 +342,23 @@ details.ad-req > summary.ad-req-head > div { flex: 1; }
 .ad-top::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 40px; pointer-events: none; background: linear-gradient(180deg, rgba(10, 10, 11, .95), rgba(10, 10, 11, 0)); }
 .ad-shell::after { content: ""; position: fixed; left: 0; right: 0; bottom: 0; height: calc(48px + env(safe-area-inset-bottom, 0px)); z-index: 9; pointer-events: none; background: linear-gradient(0deg, rgba(10, 10, 11, .85), rgba(10, 10, 11, 0)); }
 @media (min-width: 960px) { .ad-shell::after { left: 252px; } }
+
+/* ---- Pages tab: live preview + text list ---- */
+.pg-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.pg-bar .input { width: auto; min-width: 190px; }
+.pg-dev { display: inline-flex; gap: 6px; }
+.pg-dev .btn[aria-pressed="true"] { border-color: var(--cyan); color: var(--cyan); background: rgba(255, 90, 74, .1); }
+.pg-wrap { position: relative; overflow: hidden; border-radius: 16px; border: 1px solid var(--line-strong); background: #0a0a0b; }
+.pg-frame { display: block; border: 0; background: #0a0a0b; }
+.pg-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.pg-tools .input { flex: 1 1 200px; min-width: 0; }
+.pg-list { display: grid; gap: 12px; }
+.pg-row { display: grid; gap: 6px; padding: 12px; border-radius: 14px; border: 1px solid var(--line); background: rgba(255, 255, 255, .02); transition: border-color .25s ease, background-color .25s ease; }
+.pg-row.changed { border-color: rgba(255, 90, 74, .55); background: rgba(255, 90, 74, .06); }
+.pg-row.flash { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(255, 90, 74, .25); }
+.pg-row label { font-size: .78rem; color: var(--muted); font-weight: 700; }
+.pg-n { font-weight: 500; color: var(--faint); margin-left: 6px; }
+.pg-edit { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: start; }
+.pg-edit textarea { resize: vertical; min-height: 44px; line-height: 1.5; }
+.pg-was { color: var(--faint); font-size: .76rem; overflow-wrap: anywhere; }
+.pg-dynnote { margin-bottom: 10px; }
