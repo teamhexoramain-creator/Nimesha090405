@@ -202,7 +202,7 @@
   })();
   if (can3d) {
     let lib = null;
-    const load3d = () => lib || (lib = new Promise((res, rej) => { const s = document.createElement("script"); s.src = "assets/js/hx3d.js?v=20261012c"; s.onload = () => (window.HX3D ? res(window.HX3D) : rej()); s.onerror = rej; document.head.appendChild(s); }));
+    const load3d = () => lib || (lib = new Promise((res, rej) => { const s = document.createElement("script"); s.src = "assets/js/hx3d.js?v=20261012d"; s.onload = () => (window.HX3D ? res(window.HX3D) : rej()); s.onerror = rej; document.head.appendChild(s); }));
     const idle = cb => (window.requestIdleCallback ? requestIdleCallback(cb, { timeout: 1500 }) : setTimeout(cb, 200));
     const begin = () => idle(() => {
       const io = new IntersectionObserver(es => es.forEach(e => {

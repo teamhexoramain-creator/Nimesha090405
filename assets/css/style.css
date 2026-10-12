@@ -1557,3 +1557,11 @@ section { --sec-pad: clamp(44px, 5.5vw, 76px); padding-block: var(--sec-pad); }
 @media (prefers-reduced-motion: reduce) { .tp.on { animation: none; } }
 /* panels that slide in sideways must never widen the page (a phone would zoom out while they move) */
 [data-tabs], .ladder, .ladder-panel { overflow-x: clip; }
+
+/* ---- Edge fades: the page fades out under the header and above the bottom edge instead of being cut off ---- */
+.site-header::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 56px; pointer-events: none; opacity: 0; transition: opacity .3s ease;
+  background: linear-gradient(180deg, rgba(10, 10, 11, .96) 0%, rgba(10, 10, 11, .6) 38%, rgba(10, 10, 11, 0) 100%); }
+.site-header.scrolled::after { opacity: 1; }
+body::after { content: ""; position: fixed; left: 0; right: 0; bottom: 0; height: calc(52px + env(safe-area-inset-bottom, 0px)); z-index: 40; pointer-events: none;
+  background: linear-gradient(0deg, rgba(10, 10, 11, .88) 0%, rgba(10, 10, 11, .45) 45%, rgba(10, 10, 11, 0) 100%); }
+@media print { .site-header::after, body::after { display: none; } }
