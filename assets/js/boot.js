@@ -34,6 +34,8 @@
         window.HEXORA = Object.assign({}, built, conf);
       }
       if (svc && Array.isArray(svc.list)) window.HX_SERVICES = Object.assign({}, window.HX_SERVICES, svc);
+      const tx = c.texts ? JSON.parse(c.texts) : null;   // text changes from the admin panel's Pages tab (sitetext.js applies them)
+      if (tx && typeof tx === "object" && !Array.isArray(tx)) window.HX_TEXTS = tx;
     } catch (e) { /* a broken copy: keep the built-in data */ }
   }
   function start(c) {
@@ -54,7 +56,7 @@
   if (fresh) start(cache);
 
   const url = "https://firestore.googleapis.com/v1/projects/" + encodeURIComponent(F.projectId) +
-    "/databases/(default)/documents/site/content?mask.fieldPaths=config&mask.fieldPaths=services" +
+    "/databases/(default)/documents/site/content?mask.fieldPaths=config&mask.fieldPaths=services&mask.fieldPaths=texts" +
     (F.apiKey ? "&key=" + encodeURIComponent(F.apiKey) : "");
   const ctrl = "AbortController" in window ? new AbortController() : null;
   const timer = setTimeout(() => { start(cache); if (ctrl) setTimeout(() => ctrl.abort(), 10000); }, WAIT);
@@ -63,7 +65,7 @@
     .then(r => (r.ok ? r.json() : r.status === 404 ? null : Promise.reject(r.status)))
     .then(doc => {
       const f = (doc && doc.fields) || {};
-      const c = f.config && f.services ? { at: Date.now(), config: f.config.stringValue, services: f.services.stringValue } : null;
+      const c = f.config && f.services ? { at: Date.now(), config: f.config.stringValue, services: f.services.stringValue, texts: f.texts ? f.texts.stringValue : "" } : null;
       if (c) writeCache(c);
       else try { localStorage.removeItem(KEY); } catch (e) { /* storage blocked */ }
       clearTimeout(timer);

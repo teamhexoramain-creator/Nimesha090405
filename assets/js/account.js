@@ -5,7 +5,12 @@
    automatically (planner.js keeps a claim for each); other projects are linked from the admin panel. */
 (function () {
   "use strict";
-  if (window.top !== window.self) { document.documentElement.textContent = ""; return; }   // never run inside another site's frame (clickjacking)
+  // never run inside another site's frame (clickjacking); the admin panel's own text preview (same site, ?hxedit=1) is the one exception
+  if (window.top !== window.self) {
+    let own = false;
+    try { own = /[?&]hxedit=1(&|$)/.test(location.search) && window.parent.location.origin === location.origin; } catch (e) { own = false; }
+    if (!own) { document.documentElement.textContent = ""; return; }
+  }
   // a PIN anyone would try first: one repeated digit, a run (123456 / 654321), pairs (121212, 112233) and a few famous ones
   const weakPin = p => /^(\d)\1+$/.test(p) || "0123456789".indexOf(p) !== -1 || "9876543210".indexOf(p) !== -1 || /^(\d\d)\1\1$/.test(p) || /^(\d)\1(\d)\2(\d)\3$/.test(p) || ["696969", "159753", "147258", "123321", "100000", "010203", "202020"].indexOf(p) !== -1;
   const FB = window.HXFB, C = window.HEXORA || {};
