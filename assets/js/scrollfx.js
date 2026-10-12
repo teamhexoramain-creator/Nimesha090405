@@ -48,7 +48,7 @@
     const hdr = document.querySelector(".site-header");
     if (!hdr || document.querySelector(".ad-shell")) return;
     watch(document.querySelector("main") || document.body,
-      ".section-head, .price-card, .faq details, .cta-band, .term, .picker-wrap, .svc-box, .form-step, .acc-card, .acc-proj, .legal-sec, .terms-line",
+      ".section-head, .price-card, .faq details, .cta-band, .term, .picker-wrap, .svc-box, .form-step, .acc-card, .acc-proj, .legal-sec, .terms-line, .sec-cta, .tabs, .timeline, .ladder, .svx, .hero-actions",
       { top: () => hdr.getBoundingClientRect().bottom, bottom: () => innerHeight });
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", auto); else auto();
